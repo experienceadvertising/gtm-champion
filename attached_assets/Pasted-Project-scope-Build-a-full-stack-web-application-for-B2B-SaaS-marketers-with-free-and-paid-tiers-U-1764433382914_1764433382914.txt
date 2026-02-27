@@ -1,0 +1,40 @@
+Project scope: Build a full‑stack web application for B2B/SaaS marketers with free and paid tiers. Users sign up with name, email, and company URL. The app scrapes the company’s website, learns what the company does, and provides personalized go‑to‑market (GTM) recommendations. It automatically sends a welcome email via Postmark and a weekly personalized GTM ideas email. The app must be responsive and modern, with an easy upgrade path to premium features.
+
+1. Use Design Mode for UI prototypes. Start by switching to Design Mode and generate polished mockups for the landing page, sign‑up page, user dashboard, and email templates. Once satisfied, convert them to a full app using Replit’s “convert to app” option
+blog.replit.com
+.
+
+2. Build the backend.
+• Choose a modern full‑stack framework (Node/Express + React or Python/FastAPI + React).
+• Implement user authentication with Replit Auth. Store users, subscription status, and GTM recommendations in a database (either Replit’s built‑in DB or a warehouse via Data Connectors if needed
+blog.replit.com
+).
+• On registration, fetch and parse the company’s homepage and call a language model (via Replit’s AI Integrations) to summarize the business and classify its GTM motion. Save the summary and recommended channels.
+• Implement a paid upgrade flow that toggles premium features.
+
+3. Integrate email with Postmark.
+• In the backend, install the official Postmark SDK for your language (e.g., @postmark/postmark for Node.js) or send HTTP requests directly. To send an email, make a POST request to https://api.postmarkapp.com/email with a JSON body containing From, To, Subject, TextBody/HtmlBody, and set the X‑Postmark‑Server‑Token header to your server token
+postmarkapp.com
+.
+• Store the Postmark server token in a secure environment variable or Replit secret.
+• When a user signs up, trigger a function that sends a welcome email with their personalized GTM summary.
+• Schedule weekly emails by creating a separate automation using Agent 3’s “Agents & Automations” feature. This automation should query the database for each user’s current recommendations, assemble a personalized GTM ideas email, and send it via Postmark on a weekly interval.
+
+4. Use Connectors for other integrations. You can still leverage Replit’s Connectors to integrate optional services like HubSpot, Notion, or Slack for richer workflows
+blog.replit.com
+—for example, syncing leads to a CRM or posting weekly GTM ideas in a Slack channel. Connectors handle OAuth and credentials for these services.
+
+5. Implement AI‑powered content and automations.
+• Use Replit’s AI Integrations to generate personalized content for the emails—e.g., select 3–5 GTM ideas based on the user’s company data.
+• Enable Agent 3’s automatic testing so the app runs end‑to‑end tests and fixes itself
+blog.replit.com
+.
+• Use extended autonomy and, if needed, allow the agent to spin up other agents to handle periodic tasks like the weekly email scheduler
+blog.replit.com
+.
+
+6. Development workflow. Begin in Plan Mode for task breakdown and brainstorming
+blog.replit.com
+, switch to Build Mode to implement features, and use Fast Mode for quick fixes and iterations
+blog.replit.com
+. Once core features are ready, test with Agent 3’s browser‑based testing and deploy.

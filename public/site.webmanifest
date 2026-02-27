@@ -1,0 +1,16 @@
+{
+  "name": "GTM Champion",
+  "short_name": "GTM Champion",
+  "description": "AI-Powered Go-To-Market Strategy for B2B SaaS",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#6366f1",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
