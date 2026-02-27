@@ -2,16 +2,16 @@
 
 ## Overview
 
-GTM Champion is a B2B SaaS marketing intelligence platform that helps companies optimize their go-to-market strategies. The application scrapes company websites, analyzes their business model using AI, and provides personalized GTM recommendations based on proven 2025 B2B SaaS marketing strategies, with weekly strategy updates delivered via email.
+GTM Champion is a B2B SaaS marketing intelligence platform that helps companies optimize their go-to-market strategies. The application scrapes company websites, analyzes their business model using AI, and provides personalized GTM recommendations based on proven B2B SaaS marketing strategies, with weekly strategy updates delivered via email.
 
 **Core Features:**
 - User authentication and account management
 - Automated website scraping and content analysis
 - AI-powered GTM motion classification and recommendations
-- Tiered subscription model (free and premium)
+- 100% free tool — all features accessible to every user (no paywalls or premium gating)
 - Automated email campaigns via Postmark
 - Real-time dashboard for tracking recommendations
-- Premium Content Tools: LinkedIn post generator, email campaign writer, blog article writer
+- Content Tools: LinkedIn post generator, email campaign writer, blog article writer
 
 ## User Preferences
 

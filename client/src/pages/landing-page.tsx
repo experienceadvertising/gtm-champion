@@ -61,7 +61,7 @@ const FAQ_ITEMS = [
   },
   {
     question: "Is GTM Champion free to use?",
-    answer: "Yes, GTM Champion offers a free Starter plan that includes basic GTM analysis and 3 monthly recommendations. The Growth plan at $49/month provides unlimited recommendations, weekly AI content sprints, and CRM integrations."
+    answer: "Yes! GTM Champion is 100% free. You get full access to all 13 channel strategies, unlimited AI chat, content tools, weekly strategy emails, and integrations — no credit card required, no hidden fees."
   },
   {
     question: "What are the weekly AI content sprints?",
@@ -78,20 +78,24 @@ export default function LandingPage() {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
   const containerVariants = {
-    hidden: { opacity: 0 },
+    hidden: { opacity: 1 },
     visible: {
       opacity: 1,
       transition: {
-        staggerChildren: 0.1,
+        staggerChildren: 0.08,
       },
     },
   };
 
   const itemVariants = {
-    hidden: { y: 20, opacity: 0 },
+    hidden: { y: 15, opacity: 0 },
     visible: {
       y: 0,
       opacity: 1,
+      transition: {
+        duration: 0.4,
+        ease: "easeOut",
+      },
     },
   };
 
@@ -118,7 +122,7 @@ export default function LandingPage() {
             <a href="#faq" className="hover:text-primary transition-colors">FAQ</a>
           </div>
           <div className="flex items-center gap-4">
-            <Button variant="ghost" onClick={() => setLocation("/auth")} data-testid="button-login">Log in</Button>
+            <Button variant="ghost" onClick={() => setLocation("/auth?mode=login")} data-testid="button-login">Log in</Button>
             <Button onClick={() => setLocation("/auth")} data-testid="button-get-started">Get Started</Button>
           </div>
         </div>
@@ -222,10 +226,10 @@ export default function LandingPage() {
               ].map((item, idx) => (
                 <motion.div
                   key={idx}
-                  initial={{ opacity: 0, y: 20 }}
+                  initial={{ opacity: 0, y: 15 }}
                   whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: idx * 0.1 }}
+                  viewport={{ once: true, amount: 0.1 }}
+                  transition={{ delay: idx * 0.1, duration: 0.4 }}
                   className="relative"
                 >
                   <Card className="border-none shadow-lg bg-background h-full">
@@ -307,10 +311,10 @@ export default function LandingPage() {
               ].map((feature, idx) => (
                 <motion.div
                   key={idx}
-                  initial={{ opacity: 0, y: 20 }}
+                  initial={{ opacity: 0, y: 15 }}
                   whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: idx * 0.05 }}
+                  viewport={{ once: true, amount: 0.1 }}
+                  transition={{ delay: idx * 0.05, duration: 0.4 }}
                 >
                   <Card className="border-none shadow-lg hover:shadow-xl transition-shadow bg-background h-full">
                     <CardHeader>
@@ -349,10 +353,10 @@ export default function LandingPage() {
                 return (
                   <motion.div
                     key={channel.id}
-                    initial={{ opacity: 0, scale: 0.9 }}
+                    initial={{ opacity: 0, scale: 0.95 }}
                     whileInView={{ opacity: 1, scale: 1 }}
-                    viewport={{ once: true }}
-                    transition={{ delay: idx * 0.03 }}
+                    viewport={{ once: true, amount: 0.1 }}
+                    transition={{ delay: idx * 0.03, duration: 0.3 }}
                     className="bg-background rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow border border-slate-100 dark:border-slate-800 text-center"
                   >
                     <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center mx-auto mb-3">
@@ -428,64 +432,36 @@ export default function LandingPage() {
           <div className="container mx-auto px-4 md:px-8">
             <div className="text-center max-w-3xl mx-auto mb-16">
               <h2 id="pricing-heading" className="text-3xl md:text-4xl font-display font-bold mb-6">
-                Simple, Transparent Pricing
+                100% Free. No Catch.
               </h2>
               <p className="text-lg text-muted-foreground">
-                Start free. Upgrade when you're ready to scale your marketing.
+                Every feature, every channel, every tool — completely free. We're on a mission to help B2B SaaS companies grow.
               </p>
             </div>
 
-            <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-              {/* Free Tier */}
-              <Card className="relative border-slate-200 shadow-sm hover:shadow-md transition-shadow">
-                <CardHeader>
-                  <CardTitle className="text-2xl font-bold">Starter</CardTitle>
-                  <CardDescription>Perfect for early-stage founders exploring their GTM strategy</CardDescription>
+            <div className="max-w-lg mx-auto">
+              <Card className="relative border-primary/20 shadow-2xl shadow-primary/10 bg-background">
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-primary text-primary-foreground text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide">
+                  All Features Included
+                </div>
+                <CardHeader className="text-center">
+                  <CardTitle className="text-2xl font-bold text-primary">GTM Champion</CardTitle>
+                  <CardDescription>Everything you need to build a winning Go-To-Market strategy</CardDescription>
                   <div className="mt-4">
-                    <span className="text-4xl font-bold">$0</span>
-                    <span className="text-muted-foreground">/month</span>
+                    <span className="text-5xl font-bold">Free</span>
+                    <p className="text-sm text-muted-foreground mt-1">No credit card required. Ever.</p>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {[
                     "AI-powered GTM analysis",
                     "All 13 channel strategies",
-                    "3 monthly AI chat questions",
-                    "Email support"
-                  ].map((item) => (
-                    <div key={item} className="flex items-center gap-3">
-                      <CheckCircle2 className="h-5 w-5 text-primary" aria-hidden="true" />
-                      <span className="text-slate-600 dark:text-slate-300">{item}</span>
-                    </div>
-                  ))}
-                </CardContent>
-                <CardFooter>
-                  <Button variant="outline" className="w-full h-12" onClick={() => setLocation("/auth")} data-testid="button-starter-plan">
-                    Get Started Free
-                  </Button>
-                </CardFooter>
-              </Card>
-
-              {/* Paid Tier */}
-              <Card className="relative border-primary/20 shadow-2xl shadow-primary/10 scale-105 z-10 bg-background">
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-primary text-primary-foreground text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide">
-                  Most Popular
-                </div>
-                <CardHeader>
-                  <CardTitle className="text-2xl font-bold text-primary">Growth</CardTitle>
-                  <CardDescription>For scaling SaaS companies serious about growth</CardDescription>
-                  <div className="mt-4">
-                    <span className="text-4xl font-bold">$49</span>
-                    <span className="text-muted-foreground">/month</span>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {[
-                    "Everything in Starter",
                     "Unlimited AI chat questions",
-                    "Weekly content sprint emails",
+                    "Content tools (LinkedIn, Email, Blog)",
+                    "Weekly strategy emails",
                     "CRM & analytics integrations",
-                    "Priority support"
+                    "Competitor insights",
+                    "Email support"
                   ].map((item) => (
                     <div key={item} className="flex items-center gap-3">
                       <CheckCircle2 className="h-5 w-5 text-primary" aria-hidden="true" />
@@ -494,8 +470,8 @@ export default function LandingPage() {
                   ))}
                 </CardContent>
                 <CardFooter>
-                  <Button className="w-full h-12 text-lg shadow-lg shadow-primary/20" onClick={() => setLocation("/auth")} data-testid="button-growth-plan">
-                    Start Free Trial
+                  <Button className="w-full h-12 text-lg shadow-lg shadow-primary/20" onClick={() => setLocation("/auth")} data-testid="button-get-started-free">
+                    Get Started Free
                   </Button>
                 </CardFooter>
               </Card>
@@ -521,8 +497,8 @@ export default function LandingPage() {
                   key={idx}
                   initial={{ opacity: 0, y: 10 }}
                   whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: idx * 0.05 }}
+                  viewport={{ once: true, amount: 0.1 }}
+                  transition={{ delay: idx * 0.05, duration: 0.3 }}
                   className="border rounded-lg overflow-hidden"
                 >
                   <button
@@ -613,7 +589,7 @@ export default function LandingPage() {
           </div>
           <div className="border-t border-slate-700 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
             <p className="text-sm text-slate-400">
-              © 2025 GTM Champion. All rights reserved.
+              © {new Date().getFullYear()} GTM Champion. All rights reserved.
             </p>
             <p className="text-xs text-slate-500">
               Built with AI to help B2B SaaS companies grow faster.

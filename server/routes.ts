@@ -453,11 +453,7 @@ Allow: /
         return res.status(400).json({ error: "Topic, tone, and author role are required" });
       }
 
-      // Check premium status
       const user = await storage.getUser(userId);
-      if (!user?.isPremium) {
-        return res.status(403).json({ error: "Premium subscription required" });
-      }
 
       const company = await storage.getCompanyByUserId(userId);
       if (!company) {
@@ -490,11 +486,7 @@ Allow: /
         return res.status(400).json({ error: "Campaign type, email count, and goal are required" });
       }
 
-      // Check premium status
       const user = await storage.getUser(userId);
-      if (!user?.isPremium) {
-        return res.status(403).json({ error: "Premium subscription required" });
-      }
 
       const company = await storage.getCompanyByUserId(userId);
       if (!company) {
@@ -527,11 +519,7 @@ Allow: /
         return res.status(400).json({ error: "Topic, target keyword, and article type are required" });
       }
 
-      // Check premium status
       const user = await storage.getUser(userId);
-      if (!user?.isPremium) {
-        return res.status(403).json({ error: "Premium subscription required" });
-      }
 
       const company = await storage.getCompanyByUserId(userId);
       if (!company) {

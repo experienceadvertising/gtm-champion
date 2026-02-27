@@ -163,7 +163,7 @@ export default function ContentTools() {
     );
   }
 
-  if (!isPremium) {
+  if (false) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white flex items-center justify-center p-4">
         <Card className="max-w-lg w-full text-center">

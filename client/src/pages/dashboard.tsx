@@ -38,8 +38,7 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useToast } from "@/hooks/use-toast";
-import { fetchDashboard, retryAnalysis, getSession, clearSession, type DashboardData, type ChannelInsight, getStripeProducts, createCheckoutSession, createPortalSession, getSubscriptionStatus, type StripeProduct } from "@/lib/api";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { fetchDashboard, retryAnalysis, getSession, clearSession, type DashboardData, type ChannelInsight } from "@/lib/api";
 import { AIChat } from "@/components/AIChat";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { CheckCircle2, Circle, Clock, BarChart3, Bookmark, ArrowRight, Sparkles } from "lucide-react";
@@ -71,8 +70,6 @@ export default function Dashboard() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [selectedChannel, setSelectedChannel] = useState<string>("all");
-  const [showPricingModal, setShowPricingModal] = useState(false);
-  const [isCheckoutLoading, setIsCheckoutLoading] = useState<string | null>(null);
 
   // Get userId from URL or session
   const urlParams = new URLSearchParams(searchString);
@@ -95,58 +92,6 @@ export default function Dashboard() {
     refetchInterval: 10000, // Poll every 10 seconds while analysis might be in progress
   });
 
-  // Fetch Stripe products
-  const { data: stripeProducts } = useQuery({
-    queryKey: ["stripe-products"],
-    queryFn: () => getStripeProducts(),
-  });
-
-  // Handle URL params for checkout result
-  useEffect(() => {
-    const upgradeResult = urlParams.get("upgrade");
-    if (upgradeResult === "success" && userId) {
-      // Track purchase in GA4
-      if (typeof window !== 'undefined' && (window as any).gtag) {
-        (window as any).gtag('event', 'purchase', {
-          transaction_id: `gtm_${userId}_${Date.now()}`,
-          value: 29.00,
-          currency: 'USD',
-          items: [{
-            item_id: 'gtm_champion_pro',
-            item_name: 'GTM Champion Pro',
-            category: 'subscription',
-            quantity: 1,
-            price: 29.00
-          }]
-        });
-      }
-      
-      const syncSubscription = async () => {
-        try {
-          await getSubscriptionStatus(userId);
-          queryClient.invalidateQueries({ queryKey: ["dashboard", userId] });
-          toast({
-            title: "Welcome to GTM Champion Pro!",
-            description: "Your subscription is now active. Enjoy all premium features!",
-          });
-        } catch (err) {
-          toast({
-            title: "Subscription Active",
-            description: "Your subscription is processing. Features will unlock shortly.",
-          });
-        }
-      };
-      syncSubscription();
-      window.history.replaceState({}, "", "/dashboard");
-    } else if (upgradeResult === "cancelled") {
-      toast({
-        title: "Checkout Cancelled",
-        description: "No changes were made to your account.",
-        variant: "destructive",
-      });
-      window.history.replaceState({}, "", "/dashboard");
-    }
-  }, [searchString]);
 
   // Handle manual refresh with feedback
   const handleRefresh = async () => {
@@ -193,41 +138,6 @@ export default function Dashboard() {
   });
 
   // Handle Stripe checkout
-  const handleCheckout = async (priceId: string) => {
-    if (!userId) return;
-    setIsCheckoutLoading(priceId);
-    try {
-      const { url } = await createCheckoutSession(userId, priceId);
-      if (url) {
-        window.location.href = url;
-      }
-    } catch (error: any) {
-      toast({
-        title: "Checkout Error",
-        description: error.message || "Failed to start checkout",
-        variant: "destructive",
-      });
-      setIsCheckoutLoading(null);
-    }
-  };
-
-  // Handle customer portal
-  const handleManageSubscription = async () => {
-    if (!userId) return;
-    try {
-      const { url } = await createPortalSession(userId);
-      if (url) {
-        window.location.href = url;
-      }
-    } catch (error: any) {
-      toast({
-        title: "Portal Error",
-        description: error.message || "Failed to open portal",
-        variant: "destructive",
-      });
-    }
-  };
-
   const handleLogout = () => {
     clearSession();
     setLocation("/");
@@ -280,7 +190,6 @@ export default function Dashboard() {
   }
 
   const { user, company, recommendations, weeklyIdeas, channelInsights = [] } = data;
-  const isPremium = user.isPremium;
   
   // Check if analysis is still in progress or failed
   const isAnalyzing = !company.name && company.summary === "Analyzing your website...";
@@ -295,6 +204,8 @@ export default function Dashboard() {
     const diffMs = now.getTime() - date.getTime();
     const diffMins = Math.floor(diffMs / 60000);
     
+    if (diffMins === 0) return "Just now";
+    if (diffMins === 1) return "1 minute ago";
     if (diffMins < 60) return `${diffMins} minutes ago`;
     if (diffMins < 1440) return `${Math.floor(diffMins / 60)} hours ago`;
     return date.toLocaleDateString();
@@ -374,51 +285,23 @@ export default function Dashboard() {
             <Settings className="mr-2 h-3 w-3" /> Integrations
           </Button>
 
-          {isPremium && (
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="w-full justify-start text-xs bg-gradient-to-r from-amber-50 to-orange-50 border-amber-200 hover:bg-amber-100" 
-              onClick={() => setLocation(`/content-tools?userId=${userId}`)}
-              data-testid="button-content-tools"
-            >
-              <Sparkles className="mr-2 h-3 w-3 text-amber-600" /> Content Tools
-            </Button>
-          )}
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="w-full justify-start text-xs bg-gradient-to-r from-amber-50 to-orange-50 border-amber-200 hover:bg-amber-100" 
+            onClick={() => setLocation(`/content-tools?userId=${userId}`)}
+            data-testid="button-content-tools"
+          >
+            <Sparkles className="mr-2 h-3 w-3 text-amber-600" /> Content Tools
+          </Button>
 
-          {!isPremium ? (
-             <div className="bg-primary/5 border border-primary/10 rounded-xl p-3">
-              <div className="flex items-center gap-2 mb-1">
-                <Zap className="h-3 w-3 text-primary fill-primary" />
-                <span className="font-bold text-xs text-primary">Free Plan</span>
-              </div>
-              <p className="text-xs text-muted-foreground mb-2">Upgrade for all channels.</p>
-              <Button 
-                size="sm" 
-                className="w-full h-8 text-xs" 
-                onClick={() => setLocation(`/upgrade?userId=${userId}`)}
-                data-testid="button-upgrade"
-              >
-                Upgrade
-              </Button>
+          <div className="bg-primary/5 border border-primary/10 rounded-xl p-3">
+            <div className="flex items-center gap-2 mb-1">
+              <Zap className="h-3 w-3 text-primary fill-primary" />
+              <span className="font-bold text-xs text-primary">Free Plan</span>
             </div>
-          ) : (
-            <div className="bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-3">
-              <div className="flex items-center gap-2 mb-1">
-                <Zap className="h-3 w-3 text-amber-600 fill-amber-600" />
-                <span className="font-bold text-xs text-amber-700">Pro Plan</span>
-              </div>
-              <Button 
-                variant="outline"
-                size="sm" 
-                className="w-full h-8 text-xs border-amber-200 hover:bg-amber-50" 
-                onClick={handleManageSubscription}
-                data-testid="button-manage-subscription"
-              >
-                Manage Subscription
-              </Button>
-            </div>
-          )}
+            <p className="text-xs text-muted-foreground">All features included</p>
+          </div>
          
           <div className="flex items-center gap-2">
             <Avatar className="h-8 w-8 border">
@@ -516,7 +399,7 @@ export default function Dashboard() {
                           )}
                         </div>
                         <div>
-                          <p className="text-muted-foreground mb-1">Last Scrape</p>
+                          <p className="text-muted-foreground mb-1">Last Analyzed</p>
                           <p className="font-medium">{formatDate(company.lastScraped)}</p>
                         </div>
                         <div>
@@ -633,28 +516,16 @@ export default function Dashboard() {
                    </Card>
                  </div>
 
-                 {/* Locked Premium Feature Mockup */}
+                 {/* Competitor Intel */}
                  <div>
                    <h2 className="text-xl font-bold font-display mb-6">Competitor Intel</h2>
-                   <Card className={`border-dashed border-2 border-slate-200 bg-slate-50/50 relative overflow-hidden`}>
-                     {!isPremium && (
-                       <div className="absolute inset-0 backdrop-blur-[2px] z-10 flex flex-col items-center justify-center p-6 text-center bg-white/30">
-                         <div className="h-12 w-12 bg-slate-900 rounded-full flex items-center justify-center mb-4 shadow-xl">
-                           <Lock className="h-5 w-5 text-white" />
-                         </div>
-                         <h3 className="font-bold text-lg mb-2">Unlock Competitor Intel</h3>
-                         <p className="text-sm text-muted-foreground mb-6">See what your top 3 competitors are doing on LinkedIn and SEO.</p>
-                         <Button onClick={() => setLocation(`/upgrade?userId=${userId}`)}>
-                           Upgrade to Unlock
-                         </Button>
+                   <Card className="border-dashed border-2 border-slate-200 bg-slate-50/50">
+                     <CardContent className="p-6 text-center">
+                       <div className="h-12 w-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                         <TrendingUp className="h-6 w-6 text-primary" />
                        </div>
-                     )}
-                     <CardContent className={`${isPremium ? '' : 'opacity-40 pointer-events-none blur-sm'}`}>
-                        <div className="space-y-4 mt-6">
-                          <div className="h-4 bg-slate-200 rounded w-3/4" />
-                          <div className="h-4 bg-slate-200 rounded w-1/2" />
-                          <div className="h-20 bg-slate-200 rounded w-full" />
-                        </div>
+                       <h3 className="font-bold text-lg mb-2">Competitor Intel Coming Soon</h3>
+                       <p className="text-sm text-muted-foreground">We're building tools to show what your top competitors are doing across LinkedIn, SEO, and more.</p>
                      </CardContent>
                    </Card>
                  </div>
@@ -677,7 +548,7 @@ export default function Dashboard() {
                         <ArrowUpRight className="mr-2 h-4 w-4 rotate-[225deg]" /> Back
                       </Button>
                       <Separator orientation="vertical" className="h-6" />
-                      <h1 className="font-display font-bold text-lg">{selectedChannel}</h1>
+                      <h1 className="font-display font-bold text-lg">{channelData?.label || selectedChannel}</h1>
                     </div>
                     <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isFetching}>
                       <RefreshCw className={`mr-2 h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} /> {isFetching ? 'Refreshing...' : 'Refresh'}
@@ -697,7 +568,7 @@ export default function Dashboard() {
                         </div>
                         <div className="flex-1">
                           <div className="flex items-center gap-3 mb-2">
-                            <h1 className="text-3xl font-bold font-display">{selectedChannel} Strategy</h1>
+                            <h1 className="text-3xl font-bold font-display">{channelData?.label || selectedChannel} Strategy</h1>
                             {channelInsight?.priority && (
                               <Badge className={`
                                 ${channelInsight.priority === 'High' ? 'bg-green-100 text-green-700 border-green-200' : ''}
@@ -842,8 +713,8 @@ export default function Dashboard() {
                                   </div>
                                   <ul className="space-y-2">
                                     {win.steps.map((step, sidx) => (
-                                      <li key={sidx} className="flex items-start gap-2 text-sm text-slate-600">
-                                        <Circle className="h-4 w-4 text-slate-300 mt-0.5 flex-shrink-0" />
+                                      <li key={sidx} className="flex items-start gap-2.5 text-sm text-slate-600">
+                                        <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-primary/60 flex-shrink-0" />
                                         {step}
                                       </li>
                                     ))}
@@ -966,100 +837,6 @@ export default function Dashboard() {
         )}
       </main>
 
-      {/* Pricing Modal */}
-      <Dialog open={showPricingModal} onOpenChange={setShowPricingModal}>
-        <DialogContent className="sm:max-w-2xl">
-          <DialogHeader>
-            <DialogTitle className="text-2xl font-bold text-center">Upgrade to GTM Champion Pro</DialogTitle>
-            <DialogDescription className="text-center">
-              Get unlimited access to all 13 marketing channels and AI-powered recommendations
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="grid md:grid-cols-2 gap-4 mt-6">
-            {(() => {
-              const gtmProduct = stripeProducts?.data?.find(p => p.name === "GTM Champion Pro") || stripeProducts?.data?.[0];
-              return gtmProduct?.prices?.map((price) => {
-              const isAnnual = price.recurring?.interval === 'year';
-              const monthlyEquivalent = isAnnual 
-                ? Math.round(price.unit_amount / 12 / 100) 
-                : Math.round(price.unit_amount / 100);
-              
-              return (
-                <div 
-                  key={price.id}
-                  className={`relative rounded-xl border-2 p-6 ${
-                    isAnnual ? 'border-primary bg-primary/5' : 'border-slate-200'
-                  }`}
-                >
-                  {isAnnual && (
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                      <Badge className="bg-primary text-white">Save 17%</Badge>
-                    </div>
-                  )}
-                  
-                  <div className="text-center mb-4">
-                    <h3 className="font-semibold text-lg mb-1">
-                      {isAnnual ? 'Annual' : 'Monthly'}
-                    </h3>
-                    <div className="flex items-baseline justify-center gap-1">
-                      <span className="text-4xl font-bold">${monthlyEquivalent}</span>
-                      <span className="text-muted-foreground">/month</span>
-                    </div>
-                    {isAnnual && (
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Billed ${price.unit_amount / 100}/year
-                      </p>
-                    )}
-                  </div>
-                  
-                  <ul className="space-y-2 mb-6 text-sm">
-                    <li className="flex items-center gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-green-500" />
-                      All 13 marketing channels
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-green-500" />
-                      Unlimited AI recommendations
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-green-500" />
-                      Weekly strategy emails
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-green-500" />
-                      AI assistant chat
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-green-500" />
-                      Priority support
-                    </li>
-                  </ul>
-                  
-                  <Button 
-                    className="w-full" 
-                    variant={isAnnual ? "default" : "outline"}
-                    onClick={() => handleCheckout(price.id)}
-                    disabled={isCheckoutLoading === price.id}
-                    data-testid={`button-checkout-${isAnnual ? 'annual' : 'monthly'}`}
-                  >
-                    {isCheckoutLoading === price.id ? (
-                      <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing...</>
-                    ) : (
-                      `Get ${isAnnual ? 'Annual' : 'Monthly'}`
-                    )}
-                  </Button>
-                </div>
-              );
-            });
-            })()}
-          </div>
-          
-          <p className="text-center text-xs text-muted-foreground mt-4">
-            Secure checkout powered by Stripe. Cancel anytime.
-          </p>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
