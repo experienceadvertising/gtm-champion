@@ -122,8 +122,8 @@ export default function LandingPage() {
             <a href="#faq" className="hover:text-primary transition-colors">FAQ</a>
           </div>
           <div className="flex items-center gap-4">
-            <Button variant="ghost" onClick={() => setLocation("/auth?mode=login")} data-testid="button-login">Log in</Button>
-            <Button onClick={() => setLocation("/auth")} data-testid="button-get-started">Get Started</Button>
+            <Button variant="ghost" asChild data-testid="button-login"><a href="/auth?mode=login">Log in</a></Button>
+            <Button asChild data-testid="button-get-started"><a href="/auth">Get Started</a></Button>
           </div>
         </div>
       </nav>
@@ -153,13 +153,13 @@ export default function LandingPage() {
                 </motion.p>
                 
                 <motion.div variants={itemVariants} className="flex flex-col sm:flex-row gap-4">
-                  <Button 
-                    size="lg" 
-                    className="h-14 px-8 text-lg shadow-lg shadow-primary/25" 
-                    onClick={() => setLocation("/auth")}
+                  <Button
+                    size="lg"
+                    className="h-14 px-8 text-lg shadow-lg shadow-primary/25"
+                    asChild
                     data-testid="button-analyze-website"
                   >
-                    Analyze My Website Free <ArrowRight className="ml-2 h-5 w-5" aria-hidden="true" />
+                    <a href="/auth">Analyze My Website Free <ArrowRight className="ml-2 h-5 w-5" aria-hidden="true" /></a>
                   </Button>
                 </motion.div>
 
@@ -398,8 +398,8 @@ export default function LandingPage() {
                     </li>
                   ))}
                 </ul>
-                <Button size="lg" onClick={() => setLocation("/auth")} data-testid="button-try-ai-chat">
-                  Try AI Chat Free <ArrowRight className="ml-2 h-5 w-5" aria-hidden="true" />
+                <Button size="lg" asChild data-testid="button-try-ai-chat">
+                  <a href="/auth">Try AI Chat Free <ArrowRight className="ml-2 h-5 w-5" aria-hidden="true" /></a>
                 </Button>
               </div>
               <div className="bg-slate-100 dark:bg-slate-800 rounded-2xl p-6 shadow-xl">
@@ -470,8 +470,8 @@ export default function LandingPage() {
                   ))}
                 </CardContent>
                 <CardFooter>
-                  <Button className="w-full h-12 text-lg shadow-lg shadow-primary/20" onClick={() => setLocation("/auth")} data-testid="button-get-started-free">
-                    Get Started Free
+                  <Button className="w-full h-12 text-lg shadow-lg shadow-primary/20" asChild data-testid="button-get-started-free">
+                    <a href="/auth">Get Started Free</a>
                   </Button>
                 </CardFooter>
               </Card>
@@ -537,14 +537,14 @@ export default function LandingPage() {
             <p className="text-lg text-primary-foreground/80 max-w-2xl mx-auto mb-8">
               Join hundreds of B2B SaaS marketers using AI to build smarter Go-To-Market strategies. Get your personalized recommendations in 30 seconds.
             </p>
-            <Button 
-              size="lg" 
-              variant="secondary" 
+            <Button
+              size="lg"
+              variant="secondary"
               className="h-14 px-8 text-lg"
-              onClick={() => setLocation("/auth")}
+              asChild
               data-testid="button-final-cta"
             >
-              Get Started Free <ArrowRight className="ml-2 h-5 w-5" aria-hidden="true" />
+              <a href="/auth">Get Started Free <ArrowRight className="ml-2 h-5 w-5" aria-hidden="true" /></a>
             </Button>
           </div>
         </section>
