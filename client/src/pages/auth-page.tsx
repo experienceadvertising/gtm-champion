@@ -1,6 +1,5 @@
 import { useState } from "react";
-import { Helmet } from "react-helmet";
-import { useLocation } from "wouter";
+import { useLocation, useSearch } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -27,9 +26,13 @@ const loginSchema = z.object({
 
 export default function AuthPage() {
   const [, setLocation] = useLocation();
+  const searchString = useSearch();
+  const redirectTo = new URLSearchParams(searchString).get("redirect") || "/dashboard";
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
-  const [isLoginMode, setIsLoginMode] = useState(false);
+  const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+  const defaultToLogin = searchParams?.get('mode') === 'login';
+  const [isLoginMode, setIsLoginMode] = useState(defaultToLogin);
 
   const signUpForm = useForm<z.infer<typeof signUpSchema>>({
     resolver: zodResolver(signUpSchema),
@@ -74,7 +77,7 @@ export default function AuthPage() {
         description: `Analyzing ${values.companyUrl}... This may take a minute.`,
       });
       
-      setLocation(`/dashboard?userId=${result.userId}`);
+      setLocation(redirectTo);
     } catch (error: any) {
       toast({
         title: "Registration failed",
@@ -96,7 +99,7 @@ export default function AuthPage() {
         description: "Loading your dashboard...",
       });
       
-      setLocation(`/dashboard?userId=${session.userId}`);
+      setLocation(redirectTo);
     } catch (error: any) {
       toast({
         title: "Login failed",
@@ -109,11 +112,6 @@ export default function AuthPage() {
   }
 
   return (
-    <>
-    <Helmet>
-      <meta name="robots" content="noindex, nofollow" />
-      <title>Sign Up or Log In | GTM Champion</title>
-    </Helmet>
     <div className="min-h-screen flex items-center justify-center bg-slate-50/50 p-4">
       <div className="w-full max-w-md space-y-8">
         <div className="text-center space-y-2">
@@ -144,7 +142,7 @@ export default function AuthPage() {
               <CardDescription>
                 {isLoginMode 
                   ? "Enter your credentials to continue" 
-                  : "Start your 14-day free trial. No credit card required."
+                  : "Create your free account. No credit card required."
                 }
               </CardDescription>
             </CardHeader>
@@ -278,6 +276,5 @@ export default function AuthPage() {
         </motion.div>
       </div>
     </div>
-    </>
   );
 }

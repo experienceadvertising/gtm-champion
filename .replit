@@ -1,17 +1,25 @@
+modules = ["nodejs-20", "web", "postgresql-16"]
 run = "npm run dev"
-entrypoint = "server/index.ts"
-modules = ["nodejs-20"]
+hidden = [".config", ".git", "generated-icon.png", "node_modules", "dist"]
 
 [nix]
 channel = "stable-24_05"
 
 [deployment]
-run = ["sh", "-c", "npm run start"]
-build = ["sh", "-c", "npm run build"]
+deploymentTarget = "autoscale"
+build = ["npm", "run", "build"]
+run = ["npm", "run", "start"]
 
 [[ports]]
 localPort = 5000
 externalPort = 80
+
+[[ports]]
+localPort = 5904
+externalPort = 3000
+
+[env]
+PORT = "5000"
 
 [workflows]
 runButton = "Project"
@@ -34,5 +42,13 @@ task = "shell.exec"
 args = "npm run dev"
 waitForPort = 5000
 
-[workflows.workflow.metadata]
-outputType = "webview"
+[agent]
+mockupState = "FULLSTACK"
+integrations = ["javascript_openai_ai_integrations:1.0.0", "javascript_database:1.0.0", "stripe:2.0.0", "github:1.0.0"]
+
+[userenv]
+
+[userenv.shared]
+POSTMARK_FROM_EMAIL = "hello@gtmchampion.com"
+VAPID_PUBLIC_KEY = "BId7Uh4lL4kk6jz9g6Gx7217DCF8VGBFCQgJYw1t9w4aeMqe0L6456SlmqM6Bk9PNxoE8_8HP8tZbHc00ZR8KHM"
+VAPID_PRIVATE_KEY = "by1cF8MRWUYXBkdBDUleqBAgqdGevk8eF8cswgm8ok4"

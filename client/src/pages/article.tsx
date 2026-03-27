@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { getArticleBySlug, articles } from "@/data/articles";
 import { Helmet } from "react-helmet";
+import DOMPurify from "dompurify";
 
 export default function Article() {
   const [, params] = useRoute("/blog/:slug");
@@ -132,8 +133,8 @@ export default function Article() {
               <a href="/#pricing" className="hover:text-primary transition-colors">Pricing</a>
             </div>
             <div className="flex items-center gap-4">
-              <Button variant="ghost" asChild><a href="/auth">Log in</a></Button>
-              <Button asChild><a href="/auth">Get Started</a></Button>
+              <Button variant="ghost" onClick={() => setLocation("/auth?mode=login")}>Log in</Button>
+              <Button onClick={() => setLocation("/auth")}>Get Started</Button>
             </div>
           </div>
         </nav>
@@ -155,8 +156,9 @@ export default function Article() {
               <div className="max-w-4xl mx-auto">
                 {/* Header */}
                 <motion.header
-                  initial={{ opacity: 0, y: 20 }}
+                  initial={{ opacity: 0, y: 15 }}
                   animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.4, ease: "easeOut" }}
                   className="mb-8"
                 >
                   <Badge variant="secondary" className="mb-4">
@@ -192,9 +194,9 @@ export default function Article() {
 
                 {/* Featured Image */}
                 <motion.div
-                  initial={{ opacity: 0, y: 20 }}
+                  initial={{ opacity: 0, y: 15 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.1 }}
+                  transition={{ delay: 0.1, duration: 0.4, ease: "easeOut" }}
                   className="mb-10 rounded-xl overflow-hidden shadow-lg"
                 >
                   <img 
@@ -207,11 +209,11 @@ export default function Article() {
 
                 {/* Content */}
                 <motion.div
-                  initial={{ opacity: 0, y: 20 }}
+                  initial={{ opacity: 0, y: 15 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.2 }}
+                  transition={{ delay: 0.15, duration: 0.4, ease: "easeOut" }}
                   className="prose prose-lg max-w-none prose-headings:font-display prose-headings:font-bold prose-h2:text-2xl prose-h2:mt-10 prose-h2:mb-4 prose-h3:text-xl prose-h3:mt-8 prose-p:text-muted-foreground prose-p:leading-relaxed prose-li:text-muted-foreground prose-strong:text-foreground prose-a:text-primary prose-a:no-underline hover:prose-a:underline prose-code:bg-slate-100 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-pre:bg-slate-900 prose-pre:text-slate-50"
-                  dangerouslySetInnerHTML={{ __html: formatContent(article.content) }}
+                  dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(formatContent(article.content)) }}
                 />
 
                 {/* Tags */}
@@ -232,8 +234,8 @@ export default function Article() {
                   <p className="text-muted-foreground mb-4">
                     GTM Champion analyzes your website and provides AI-powered recommendations across 13 marketing channels.
                   </p>
-                  <Button asChild data-testid="button-article-cta">
-                    <a href="/auth">Analyze My Website Free <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" /></a>
+                  <Button onClick={() => setLocation("/auth")} data-testid="button-article-cta">
+                    Analyze My Website Free <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" />
                   </Button>
                 </div>
               </div>
@@ -279,7 +281,7 @@ export default function Article() {
               <span>GTM Champion</span>
             </div>
             <p className="text-sm text-slate-400">
-              © 2025–2026 GTM Champion. All rights reserved.
+              © 2025 GTM Champion. All rights reserved.
             </p>
           </div>
         </footer>

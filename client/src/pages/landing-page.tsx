@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { 
   ArrowRight, 
   CheckCircle2, 
@@ -61,7 +61,7 @@ const FAQ_ITEMS = [
   },
   {
     question: "Is GTM Champion free to use?",
-    answer: "Yes! GTM Champion is 100% free. You get full access to all 13 channel strategies, unlimited AI chat, content tools, weekly strategy emails, and integrations — no credit card required, no hidden fees."
+    answer: "Yes! GTM Champion is 100% free. You get full access to all 13 channel strategies, unlimited AI chat, content tools, and weekly strategy emails. No credit card required, no hidden fees."
   },
   {
     question: "What are the weekly AI content sprints?",
@@ -73,9 +73,209 @@ const FAQ_ITEMS = [
   }
 ];
 
+const CHANNEL_GROUPS = {
+  organic: {
+    label: "Organic Growth",
+    channels: ["SEO", "LLMs", "Organic Social", "Content", "Community"],
+  },
+  paid: {
+    label: "Paid Acquisition",
+    channels: ["Paid Search", "Paid Social", "Retargeting"],
+  },
+  growth: {
+    label: "Growth & Outreach",
+    channels: ["CRO", "Email", "ABM", "Partnerships", "Outbound"],
+  },
+};
+
+function FloatingIcon({ icon: Icon, className, delay }: { icon: React.ElementType; className: string; delay: number }) {
+  return (
+    <motion.div
+      className={`absolute hidden lg:flex items-center justify-center w-12 h-12 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 shadow-2xl ${className}`}
+      animate={{
+        y: [0, -14, 0],
+        rotate: [0, 6, -6, 0],
+        scale: [1, 1.05, 1],
+      }}
+      transition={{
+        duration: 5,
+        repeat: Infinity,
+        delay,
+        ease: "easeInOut",
+      }}
+    >
+      <Icon className="h-5 w-5 text-white/90" />
+    </motion.div>
+  );
+}
+
+function TypingText({ text }: { text: string }) {
+  const [displayed, setDisplayed] = useState("");
+  const [done, setDone] = useState(false);
+
+  useEffect(() => {
+    if (done) return;
+    let i = 0;
+    const interval = setInterval(() => {
+      i++;
+      setDisplayed(text.slice(0, i));
+      if (i >= text.length) {
+        clearInterval(interval);
+        setDone(true);
+      }
+    }, 15);
+    return () => clearInterval(interval);
+  }, [text, done]);
+
+  return (
+    <span>
+      {displayed}
+      {!done && <span className="inline-block w-0.5 h-4 bg-primary animate-pulse ml-0.5 align-middle" />}
+    </span>
+  );
+}
+
+function DashboardPreview() {
+  return (
+    <motion.div 
+      className="bg-slate-900 rounded-2xl p-1 shadow-2xl ring-1 ring-white/10"
+      whileHover={{ y: -4 }}
+      transition={{ duration: 0.3 }}
+    >
+      <div className="flex items-center gap-2 px-4 py-2.5">
+        <div className="flex gap-1.5">
+          <div className="w-3 h-3 rounded-full bg-red-400/80" />
+          <div className="w-3 h-3 rounded-full bg-yellow-400/80" />
+          <div className="w-3 h-3 rounded-full bg-green-400/80" />
+        </div>
+        <div className="flex-1 text-center">
+          <span className="text-xs text-slate-400 font-mono">gtmchampion.com/dashboard</span>
+        </div>
+      </div>
+      <div className="rounded-b-xl overflow-hidden bg-slate-800/80 p-4">
+        <div className="grid grid-cols-3 gap-3 mb-4">
+          {[
+            { label: "Channels", value: "13", color: "from-indigo-500 to-violet-500" },
+            { label: "Quick Wins", value: "47", color: "from-emerald-500 to-teal-500" },
+            { label: "Score", value: "92", color: "from-amber-500 to-orange-500" },
+          ].map((stat) => (
+            <div key={stat.label} className="rounded-lg bg-slate-700/50 p-3 border border-slate-600/30">
+              <p className="text-[10px] text-slate-400 mb-1">{stat.label}</p>
+              <p className={`text-lg font-bold bg-gradient-to-r ${stat.color} bg-clip-text text-transparent`}>{stat.value}</p>
+            </div>
+          ))}
+        </div>
+        <div className="space-y-2 mb-3">
+          {["SEO Strategy", "Content Marketing", "Paid Social"].map((ch, i) => (
+            <motion.div 
+              key={ch} 
+              className="flex items-center gap-3 rounded-lg bg-slate-700/30 p-2.5 border border-slate-600/20"
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.8 + i * 0.15, duration: 0.3 }}
+            >
+              <div className={`w-2 h-2 rounded-full ${i === 0 ? "bg-emerald-400" : i === 1 ? "bg-blue-400" : "bg-violet-400"}`} />
+              <span className="text-xs text-slate-300 flex-1">{ch}</span>
+              <div className="h-1.5 w-16 rounded-full bg-slate-600 overflow-hidden">
+                <motion.div 
+                  className={`h-full rounded-full ${i === 0 ? "bg-emerald-400" : i === 1 ? "bg-blue-400" : "bg-violet-400"}`}
+                  initial={{ width: 0 }}
+                  animate={{ width: i === 0 ? "80%" : i === 1 ? "60%" : "40%" }}
+                  transition={{ delay: 1 + i * 0.15, duration: 0.6, ease: "easeOut" }}
+                />
+              </div>
+            </motion.div>
+          ))}
+        </div>
+        <div className="relative overflow-hidden rounded-lg">
+          <img 
+            src={heroImage} 
+            alt="Marketing team collaborating on Go-To-Market strategy, analyzing growth charts and analytics dashboard in modern office" 
+            className="w-full h-32 object-cover opacity-60"
+            loading="eager"
+            width="800"
+            height="600"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-slate-900/40 to-transparent" />
+          <div className="absolute bottom-3 left-3 right-3 flex gap-2">
+            <div className="glass-panel rounded-md px-2.5 py-1.5 text-[10px] text-white flex items-center gap-1.5">
+              <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+              AI Active
+            </div>
+            <div className="glass-panel rounded-md px-2.5 py-1.5 text-[10px] text-white flex items-center gap-1.5">
+              <TrendingUp className="h-2.5 w-2.5" />
+              Strategy Ready
+            </div>
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+const HERO_ROTATING_WORDS = [
+  "in Minutes, Not Months",
+  "Across 13 Channels",
+  "Powered by GPT-5",
+  "100% Free, Forever",
+];
+
+function AnimatedCounter({ target, suffix = "", duration = 2000 }: { target: number; suffix?: string; duration?: number }) {
+  const [count, setCount] = useState(0);
+  const [hasAnimated, setHasAnimated] = useState(false);
+  const ref = useRef<HTMLSpanElement>(null);
+
+  useEffect(() => {
+    if (hasAnimated) return;
+
+    const startAnimation = () => {
+      setHasAnimated(true);
+      const steps = 40;
+      const stepTime = duration / steps;
+      let current = 0;
+      const interval = setInterval(() => {
+        current++;
+        setCount(Math.round((current / steps) * target));
+        if (current >= steps) clearInterval(interval);
+      }, stepTime);
+    };
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          startAnimation();
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.1, rootMargin: '50px' }
+    );
+
+    if (ref.current) observer.observe(ref.current);
+
+    const fallbackTimeout = setTimeout(() => {
+      if (!hasAnimated) startAnimation();
+    }, 1500);
+
+    return () => {
+      observer.disconnect();
+      clearTimeout(fallbackTimeout);
+    };
+  }, [target, duration, hasAnimated]);
+
+  return <span ref={ref}>{count.toLocaleString()}{suffix}</span>;
+}
+
 export default function LandingPage() {
   const [, setLocation] = useLocation();
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const [heroWordIndex, setHeroWordIndex] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setHeroWordIndex((prev) => (prev + 1) % HERO_ROTATING_WORDS.length);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, []);
 
   const containerVariants = {
     hidden: { opacity: 1 },
@@ -94,26 +294,24 @@ export default function LandingPage() {
       opacity: 1,
       transition: {
         duration: 0.4,
-        ease: "easeOut",
+        ease: "easeOut" as const,
       },
     },
   };
 
   return (
-    <div className="min-h-screen bg-background font-sans selection:bg-primary/20">
-      {/* Skip to main content for accessibility */}
+    <div className="min-h-screen bg-background font-sans selection:bg-primary/20 overflow-x-hidden">
       <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 bg-primary text-white px-4 py-2 rounded z-50">
         Skip to main content
       </a>
 
-      {/* Navigation */}
-      <nav className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-md" role="navigation" aria-label="Main navigation">
-        <div className="container mx-auto flex h-16 items-center justify-between px-4 md:px-8">
-          <a href="/" className="flex items-center gap-2 font-display font-bold text-xl tracking-tight text-primary" aria-label="GTM Champion Home">
-            <Zap className="h-6 w-6 fill-current" aria-hidden="true" />
+      <nav className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-xl" role="navigation" aria-label="Main navigation">
+        <div className="container mx-auto flex h-14 md:h-16 items-center justify-between px-4 md:px-8">
+          <a href="/" className="flex items-center gap-1.5 md:gap-2 font-display font-bold text-lg md:text-xl tracking-tight text-primary shrink-0" aria-label="GTM Champion Home">
+            <Zap className="h-5 w-5 md:h-6 md:w-6 fill-current" aria-hidden="true" />
             <span>GTM Champion</span>
           </a>
-          <div className="hidden md:flex items-center gap-8 text-sm font-medium text-muted-foreground">
+          <div className="hidden lg:flex items-center gap-8 text-sm font-medium text-muted-foreground">
             <a href="#features" className="hover:text-primary transition-colors">Features</a>
             <a href="#how-it-works" className="hover:text-primary transition-colors">How it works</a>
             <a href="#channels" className="hover:text-primary transition-colors">Channels</a>
@@ -121,192 +319,306 @@ export default function LandingPage() {
             <a href="/blog" className="hover:text-primary transition-colors">Blog</a>
             <a href="#faq" className="hover:text-primary transition-colors">FAQ</a>
           </div>
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" asChild data-testid="button-login"><a href="/auth?mode=login">Log in</a></Button>
-            <Button asChild data-testid="button-get-started"><a href="/auth">Get Started</a></Button>
+          <div className="flex items-center gap-1.5 md:gap-4 shrink-0">
+            <Button variant="ghost" size="sm" className="text-xs md:text-sm h-8 px-2 md:px-4" onClick={() => setLocation("/auth?mode=login")} data-testid="button-login">Log in</Button>
+            <Button size="sm" className="text-xs md:text-sm h-8 px-2.5 md:px-4" onClick={() => setLocation("/auth")} data-testid="button-get-started">Get Started</Button>
           </div>
         </div>
       </nav>
 
       <main id="main-content">
-        {/* Hero Section */}
-        <section className="relative pt-20 pb-32 overflow-hidden" aria-labelledby="hero-heading">
-          <div className="container mx-auto px-4 md:px-8">
+        <section className="relative pt-16 pb-16 md:pt-40 md:pb-48 overflow-hidden" aria-labelledby="hero-heading">
+          <div className="hero-gradient-bg absolute inset-0 pointer-events-none" aria-hidden="true" />
+          <div className="hero-grid-pattern absolute inset-0 pointer-events-none opacity-30" aria-hidden="true" />
+          <div className="absolute top-20 left-10 w-72 h-72 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none animate-float-slow" aria-hidden="true" />
+          <div className="absolute bottom-10 right-10 w-96 h-96 bg-violet-500/15 rounded-full blur-3xl pointer-events-none animate-float-slower" aria-hidden="true" />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-indigo-400/5 rounded-full blur-3xl pointer-events-none" aria-hidden="true" />
+          <div className="absolute top-40 right-1/3 w-48 h-48 bg-cyan-400/10 rounded-full blur-3xl pointer-events-none" aria-hidden="true" />
+          <div className="absolute bottom-20 left-1/3 w-64 h-64 bg-purple-400/8 rounded-full blur-3xl pointer-events-none" aria-hidden="true" />
+
+          <FloatingIcon icon={Search} className="top-28 right-[15%]" delay={0} />
+          <FloatingIcon icon={Brain} className="top-44 right-[8%]" delay={0.5} />
+          <FloatingIcon icon={Mail} className="bottom-32 right-[12%]" delay={1} />
+          <FloatingIcon icon={Target} className="top-36 left-[8%]" delay={1.5} />
+          <FloatingIcon icon={BarChart3} className="bottom-40 left-[10%]" delay={2} />
+          <FloatingIcon icon={Megaphone} className="bottom-24 left-[20%]" delay={0.8} />
+
+          <div className="container mx-auto px-4 md:px-8 relative z-10">
             <motion.div 
-              className="grid lg:grid-cols-2 gap-12 items-center"
+              className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center"
               variants={containerVariants}
               initial="hidden"
               animate="visible"
             >
-              <div className="space-y-8">
+              <div className="space-y-5 md:space-y-10">
                 <motion.div variants={itemVariants}>
-                  <span className="inline-block px-4 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-semibold tracking-wide mb-6">
+                  <span className="inline-flex items-center gap-2 px-3 py-1 md:px-4 md:py-1.5 rounded-full bg-primary/10 text-primary text-xs md:text-sm font-semibold tracking-wide mb-3 md:mb-5 border border-primary/20">
+                    <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
                     AI-Powered Go-To-Market Strategy
                   </span>
-                  <h1 id="hero-heading" className="text-5xl md:text-6xl lg:text-7xl font-display font-bold tracking-tight leading-[1.1] text-foreground">
-                    Your B2B SaaS Marketing Strategy, <span className="gradient-text">Solved by AI.</span>
+                  <h1 id="hero-heading" className="text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-display font-bold tracking-tight leading-[1.08] text-foreground">
+                    Your <span className="gradient-text">GTM Playbook</span>
+                    <br className="hidden sm:block" />
+                    <span className="block text-2xl sm:text-3xl md:text-5xl lg:text-6xl mt-1">
+                      <AnimatePresence mode="wait">
+                        <motion.span
+                          key={heroWordIndex}
+                          initial={{ y: 20, opacity: 0 }}
+                          animate={{ y: 0, opacity: 1 }}
+                          exit={{ y: -20, opacity: 0 }}
+                          transition={{ duration: 0.35, ease: "easeInOut" }}
+                          className="inline-block gradient-text"
+                        >
+                          {HERO_ROTATING_WORDS[heroWordIndex]}
+                        </motion.span>
+                      </AnimatePresence>
+                    </span>
                   </h1>
                 </motion.div>
                 
-                <motion.p variants={itemVariants} className="text-xl text-muted-foreground max-w-xl leading-relaxed">
-                  Stop guessing which channels to invest in. GTM Champion analyzes your website and generates personalized Go-To-Market recommendations across 13 marketing channels in seconds.
+                <motion.p variants={itemVariants} className="text-sm md:text-xl text-muted-foreground max-w-xl leading-relaxed">
+                  Paste your URL. Our AI scrapes your site, analyzes your business, and builds a <strong className="text-foreground">custom GTM strategy across 13 channels</strong> with weekly updates every Monday. The kind of strategy agencies charge $5,000+ to create. Yours in minutes, for free.
                 </motion.p>
                 
-                <motion.div variants={itemVariants} className="flex flex-col sm:flex-row gap-4">
-                  <Button
-                    size="lg"
-                    className="h-14 px-8 text-lg shadow-lg shadow-primary/25"
-                    asChild
+                <motion.div variants={itemVariants} className="flex flex-col sm:flex-row gap-3">
+                  <Button 
+                    size="lg" 
+                    className="h-12 md:h-14 px-6 md:px-8 text-base md:text-lg shadow-lg shadow-primary/25 relative overflow-hidden group hero-cta-btn" 
+                    onClick={() => setLocation("/auth")}
                     data-testid="button-analyze-website"
                   >
-                    <a href="/auth">Analyze My Website Free <ArrowRight className="ml-2 h-5 w-5" aria-hidden="true" /></a>
+                    <span className="relative z-10 flex items-center">
+                      Analyze My Website Free <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" aria-hidden="true" />
+                    </span>
                   </Button>
                 </motion.div>
 
-                <motion.div variants={itemVariants} className="flex flex-wrap items-center gap-6 text-sm text-muted-foreground pt-4">
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="h-5 w-5 text-green-500" aria-hidden="true" />
+                <motion.div variants={itemVariants} className="flex flex-wrap items-center gap-3 md:gap-6 text-xs md:text-sm text-muted-foreground pt-1 md:pt-2">
+                  <div className="flex items-center gap-1.5">
+                    <CheckCircle2 className="h-4 w-4 md:h-5 md:w-5 text-green-500" aria-hidden="true" />
                     <span>No credit card required</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Clock className="h-5 w-5 text-green-500" aria-hidden="true" />
-                    <span>Results in 30 seconds</span>
+                  <div className="flex items-center gap-1.5">
+                    <Clock className="h-4 w-4 md:h-5 md:w-5 text-green-500" aria-hidden="true" />
+                    <span>Results in ~2 minutes</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Shield className="h-5 w-5 text-green-500" aria-hidden="true" />
+                  <div className="flex items-center gap-1.5">
+                    <Shield className="h-4 w-4 md:h-5 md:w-5 text-green-500" aria-hidden="true" />
                     <span>13 channel strategies</span>
                   </div>
                 </motion.div>
               </div>
 
-              <motion.div variants={itemVariants} className="relative lg:h-[600px] w-full rounded-2xl overflow-hidden shadow-2xl ring-1 ring-slate-900/10 bg-slate-50">
-                <div className="absolute inset-0 bg-gradient-to-tr from-primary/20 to-transparent mix-blend-overlay z-10 pointer-events-none" aria-hidden="true" />
-                <img 
-                  src={heroImage} 
-                  alt="Marketing team collaborating on Go-To-Market strategy, analyzing growth charts and analytics dashboard in modern office" 
-                  className="w-full h-full object-cover transform hover:scale-105 transition-transform duration-700"
-                  loading="eager"
-                  width="800"
-                  height="600"
-                />
+              <motion.div variants={itemVariants} className="relative hidden md:block">
+                <div className="absolute -inset-4 bg-gradient-to-tr from-indigo-500/20 via-violet-500/10 to-cyan-500/10 rounded-3xl blur-2xl pointer-events-none" aria-hidden="true" />
+                <div className="relative">
+                  <DashboardPreview />
+                </div>
+                <div className="absolute -bottom-6 -right-6 w-32 h-32 bg-gradient-to-br from-indigo-500/30 to-violet-500/30 rounded-full blur-2xl pointer-events-none" aria-hidden="true" />
+                <div className="absolute -top-6 -left-6 w-24 h-24 bg-gradient-to-br from-blue-500/20 to-cyan-500/20 rounded-full blur-2xl pointer-events-none" aria-hidden="true" />
               </motion.div>
             </motion.div>
           </div>
         </section>
 
-        {/* How It Works */}
-        <section id="how-it-works" className="py-24 bg-slate-50 dark:bg-slate-900/50" aria-labelledby="how-it-works-heading">
+        <section className="relative py-5 md:py-10 border-y bg-gradient-to-r from-background via-primary/[0.03] to-background" aria-label="Key metrics">
           <div className="container mx-auto px-4 md:px-8">
-            <div className="text-center max-w-3xl mx-auto mb-16">
-              <h2 id="how-it-works-heading" className="text-3xl md:text-4xl font-display font-bold mb-6">
-                How GTM Champion Works
-              </h2>
-              <p className="text-lg text-muted-foreground">
-                Get a complete Go-To-Market strategy in three simple steps
-              </p>
-            </div>
-
-            <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+            <div className="grid grid-cols-2 md:flex md:flex-wrap md:justify-center items-center gap-4 md:gap-14 lg:gap-24">
               {[
-                {
-                  step: "1",
-                  title: "Enter Your Website URL",
-                  description: "Simply paste your company website URL. Our AI will scrape and analyze your content, product features, and target audience."
-                },
-                {
-                  step: "2",
-                  title: "AI Analyzes Your Business",
-                  description: "GPT-4o examines your business model, identifies your GTM motion, and evaluates which of the 13 marketing channels fit best."
-                },
-                {
-                  step: "3",
-                  title: "Get Personalized Strategy",
-                  description: "Receive detailed recommendations with quick wins, strategic pillars, KPIs to track, and weekly content ideas for each channel."
-                }
-              ].map((item, idx) => (
-                <motion.div
-                  key={idx}
-                  initial={{ opacity: 0, y: 15 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true, amount: 0.1 }}
-                  transition={{ delay: idx * 0.1, duration: 0.4 }}
-                  className="relative"
-                >
-                  <Card className="border-none shadow-lg bg-background h-full">
-                    <CardHeader>
-                      <div className="w-12 h-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xl font-bold mb-4">
-                        {item.step}
-                      </div>
-                      <CardTitle className="text-xl font-bold">{item.title}</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-muted-foreground leading-relaxed">{item.description}</p>
-                    </CardContent>
-                  </Card>
-                  {idx < 2 && (
-                    <div className="hidden md:block absolute top-1/2 -right-4 transform -translate-y-1/2 z-10" aria-hidden="true">
-                      <ArrowRight className="h-8 w-8 text-primary/30" />
+                { value: <AnimatedCounter target={13} />, label: "Marketing Channels", icon: BarChart3 },
+                { value: <AnimatedCounter target={500} suffix="+" />, label: "Companies Analyzed", icon: Users },
+                { value: "$0", label: "Free Forever", icon: Shield },
+                { value: "GPT-5", label: "AI Engine", icon: Brain },
+              ].map((metric, i) => {
+                const Icon = metric.icon;
+                return (
+                  <motion.div 
+                    key={metric.label} 
+                    className="flex items-center gap-3 py-3"
+                    initial={{ opacity: 0, y: 10 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.3, delay: i * 0.05 }}
+                  >
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary/15 to-primary/5 flex items-center justify-center border border-primary/10 shadow-sm">
+                      <Icon className="h-5 w-5 text-primary" aria-hidden="true" />
                     </div>
-                  )}
-                </motion.div>
-              ))}
+                    <div>
+                      <p className="text-xl md:text-2xl font-bold font-display gradient-text">{metric.value}</p>
+                      <p className="text-xs text-muted-foreground">{metric.label}</p>
+                    </div>
+                  </motion.div>
+                );
+              })}
             </div>
           </div>
         </section>
 
-        {/* Features Grid */}
-        <section id="features" className="py-24" aria-labelledby="features-heading">
+        <section id="how-it-works" className="py-16 md:py-36 relative overflow-hidden" aria-labelledby="how-it-works-heading">
+          <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-500/5 rounded-full blur-3xl pointer-events-none" aria-hidden="true" />
+          <div className="absolute bottom-0 left-1/4 w-64 h-64 bg-violet-500/5 rounded-full blur-3xl pointer-events-none" aria-hidden="true" />
           <div className="container mx-auto px-4 md:px-8">
-            <div className="text-center max-w-3xl mx-auto mb-16">
-              <h2 id="features-heading" className="text-3xl md:text-4xl font-display font-bold mb-6">
-                Everything You Need to Go to Market
+            <div className="text-center max-w-3xl mx-auto mb-12 md:mb-20">
+              <motion.span
+                initial={{ opacity: 0, y: 10 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-semibold mb-5 border border-primary/20"
+              >
+                Simple 3-Step Process
+              </motion.span>
+              <h2 id="how-it-works-heading" className="text-3xl md:text-5xl font-display font-bold mb-5">
+                From URL to Full Strategy <span className="gradient-text">in 3 Steps</span>
               </h2>
-              <p className="text-lg text-muted-foreground">
-                Powered by AI and the proven 2025 B2B SaaS marketing playbook
+              <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+                No forms, no meetings, no sales calls. Just paste your URL and let AI do the heavy lifting.
               </p>
             </div>
 
-            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="relative max-w-5xl mx-auto">
+              <div className="hidden md:block absolute top-[60px] left-[calc(16.67%+24px)] right-[calc(16.67%+24px)] h-[3px]" aria-hidden="true">
+                <div className="w-full h-full bg-gradient-to-r from-indigo-500/60 via-violet-500/40 to-indigo-500/60 rounded-full" />
+                <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/40 via-violet-500/30 to-indigo-500/40 rounded-full blur-md" />
+              </div>
+              <div className="grid md:grid-cols-3 gap-8 md:gap-10">
+                {[
+                  {
+                    step: "1",
+                    title: "Enter Your Website URL",
+                    description: "Paste your company URL. Our AI scrapes your site content, captures a screenshot, and runs a PageSpeed audit, all in parallel.",
+                    gradient: "from-indigo-500 to-blue-600",
+                    shadow: "shadow-indigo-500/30",
+                  },
+                  {
+                    step: "2",
+                    title: "AI Builds Your Strategy",
+                    description: "GPT-5 classifies your GTM motion, generates personalized recommendations across 13 channels, and identifies your highest-impact quick wins.",
+                    gradient: "from-violet-500 to-purple-600",
+                    shadow: "shadow-violet-500/30",
+                  },
+                  {
+                    step: "3",
+                    title: "Execute & Get Weekly Updates",
+                    description: "Track recommendations, generate content with built-in writing tools, and receive fresh strategy ideas in your inbox every Monday morning.",
+                    gradient: "from-indigo-500 to-violet-600",
+                    shadow: "shadow-indigo-500/30",
+                  }
+                ].map((item, idx) => (
+                  <motion.div
+                    key={idx}
+                    initial={{ opacity: 0, y: 15 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true, amount: 0.1 }}
+                    transition={{ delay: idx * 0.15, duration: 0.4 }}
+                    className="relative text-center group"
+                  >
+                    <div className="relative z-10 mx-auto mb-6">
+                      <div className={`w-[64px] h-[64px] rounded-2xl bg-gradient-to-br ${item.gradient} text-white flex items-center justify-center text-2xl font-bold mx-auto shadow-xl ${item.shadow} ring-4 ring-background`}>
+                        {item.step}
+                      </div>
+                    </div>
+                    <Card className="border-none shadow-lg bg-background/80 backdrop-blur-sm h-full hover:shadow-xl transition-all duration-300 group-hover:-translate-y-1">
+                      <CardHeader className="pt-5 pb-2">
+                        <CardTitle className="text-xl font-bold">{item.title}</CardTitle>
+                      </CardHeader>
+                      <CardContent className="pb-6">
+                        <p className="text-muted-foreground leading-relaxed">{item.description}</p>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="features" className="py-16 md:py-36 bg-slate-50 dark:bg-slate-900/50 relative overflow-hidden" aria-labelledby="features-heading">
+          <div className="dot-pattern absolute inset-0 pointer-events-none opacity-30" aria-hidden="true" />
+          <div className="absolute top-20 right-10 w-80 h-80 bg-violet-500/8 rounded-full blur-3xl pointer-events-none" aria-hidden="true" />
+          <div className="absolute bottom-20 left-10 w-60 h-60 bg-indigo-500/8 rounded-full blur-3xl pointer-events-none" aria-hidden="true" />
+          <div className="container mx-auto px-4 md:px-8 relative z-10">
+            <div className="text-center max-w-3xl mx-auto mb-16">
+              <motion.span
+                initial={{ opacity: 0, y: 10 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-semibold mb-5 border border-primary/20"
+              >
+                Full Feature Suite
+              </motion.span>
+              <h2 id="features-heading" className="text-3xl md:text-5xl font-display font-bold mb-5">
+                The <span className="gradient-text">$5,000 Strategy</span> You Get for Free
+              </h2>
+              <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+                Everything a marketing consultant would deliver, AI-generated in minutes, not weeks
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-6 lg:grid-cols-12 gap-5 max-w-6xl mx-auto">
               {[
                 {
-                  icon: <Brain className="h-8 w-8 text-primary" aria-hidden="true" />,
+                  icon: <Brain className="h-8 w-8 text-indigo-500" aria-hidden="true" />,
                   title: "AI-Powered Analysis",
-                  description: "GPT-4o analyzes your website content and generates personalized strategies based on your unique business model and target audience."
+                  description: "GPT-5 analyzes your website content and generates personalized strategies based on your unique business model and target audience.",
+                  span: "md:col-span-4 lg:col-span-7",
+                  gradient: "from-indigo-500/10 to-violet-500/10",
+                  borderGradient: "from-indigo-500/30 via-violet-500/20 to-transparent",
                 },
                 {
-                  icon: <BarChart3 className="h-8 w-8 text-primary" aria-hidden="true" />,
+                  icon: <BarChart3 className="h-8 w-8 text-emerald-500" aria-hidden="true" />,
                   title: "13 Channel Strategies",
-                  description: "Get tailored recommendations for SEO, paid ads, content, email, ABM, partnerships, outbound, and 6 more marketing channels."
+                  description: "Get tailored recommendations for SEO, paid ads, content, email, ABM, partnerships, outbound, and 6 more marketing channels.",
+                  span: "md:col-span-2 lg:col-span-5",
+                  gradient: "from-emerald-500/10 to-teal-500/10",
+                  borderGradient: "from-emerald-500/30 via-teal-500/20 to-transparent",
                 },
                 {
-                  icon: <MessageSquare className="h-8 w-8 text-primary" aria-hidden="true" />,
+                  icon: <MessageSquare className="h-8 w-8 text-blue-500" aria-hidden="true" />,
                   title: "AI Q&A Assistant",
-                  description: "Ask questions about your GTM strategy and get personalized answers based on your company's context and marketing goals."
+                  description: "Ask questions about your GTM strategy and get personalized answers based on your company's context and marketing goals.",
+                  span: "md:col-span-3 lg:col-span-4",
+                  gradient: "from-blue-500/10 to-cyan-500/10",
+                  borderGradient: "from-blue-500/30 via-cyan-500/20 to-transparent",
                 },
                 {
-                  icon: <Mail className="h-8 w-8 text-primary" aria-hidden="true" />,
+                  icon: <Mail className="h-8 w-8 text-amber-500" aria-hidden="true" />,
                   title: "Weekly Email Sprints",
-                  description: "Receive fresh, actionable content ideas every Monday morning tailored to your business and ready to execute."
+                  description: "Receive fresh, actionable content ideas every Monday morning tailored to your business and ready to execute.",
+                  span: "md:col-span-3 lg:col-span-4",
+                  gradient: "from-amber-500/10 to-orange-500/10",
+                  borderGradient: "from-amber-500/30 via-orange-500/20 to-transparent",
                 },
                 {
-                  icon: <Target className="h-8 w-8 text-primary" aria-hidden="true" />,
+                  icon: <Target className="h-8 w-8 text-rose-500" aria-hidden="true" />,
                   title: "Quick Wins",
-                  description: "Each channel includes low-effort, high-impact tactics you can implement this week to start seeing results fast."
+                  description: "Each channel includes low-effort, high-impact tactics you can implement this week to start seeing results fast.",
+                  span: "md:col-span-3 lg:col-span-4",
+                  gradient: "from-rose-500/10 to-pink-500/10",
+                  borderGradient: "from-rose-500/30 via-pink-500/20 to-transparent",
                 },
                 {
-                  icon: <TrendingUp className="h-8 w-8 text-primary" aria-hidden="true" />,
+                  icon: <TrendingUp className="h-8 w-8 text-cyan-500" aria-hidden="true" />,
                   title: "KPIs & Metrics",
-                  description: "Know exactly what to measure with channel-specific KPIs and benchmarks based on 2025 B2B SaaS industry standards."
+                  description: "Know exactly what to measure with channel-specific KPIs and benchmarks based on 2025 B2B SaaS industry standards.",
+                  span: "md:col-span-3 lg:col-span-4",
+                  gradient: "from-cyan-500/10 to-sky-500/10",
+                  borderGradient: "from-cyan-500/30 via-sky-500/20 to-transparent",
                 },
                 {
-                  icon: <Globe className="h-8 w-8 text-primary" aria-hidden="true" />,
-                  title: "Integrations",
-                  description: "Connect your analytics, CRM, and marketing tools to enrich recommendations with real performance data."
+                  icon: <Globe className="h-8 w-8 text-purple-500" aria-hidden="true" />,
+                  title: "PageSpeed Insights",
+                  description: "Automatic performance audits with Core Web Vitals, loading scores, and optimization recommendations for your site.",
+                  span: "md:col-span-3 lg:col-span-4",
+                  gradient: "from-purple-500/10 to-fuchsia-500/10",
+                  borderGradient: "from-purple-500/30 via-fuchsia-500/20 to-transparent",
                 },
                 {
                   icon: <Sparkles className="h-8 w-8 text-primary" aria-hidden="true" />,
                   title: "Strategic Pillars",
-                  description: "Get long-term strategic initiatives with specific tactics, objectives, and measurement criteria for each channel."
+                  description: "Get long-term strategic initiatives with specific tactics, objectives, and measurement criteria for each channel.",
+                  span: "md:col-span-3 lg:col-span-8",
+                  gradient: "from-indigo-500/10 to-purple-500/10",
+                  borderGradient: "from-indigo-500/30 via-purple-500/20 to-transparent",
                 }
               ].map((feature, idx) => (
                 <motion.div
@@ -315,55 +627,99 @@ export default function LandingPage() {
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true, amount: 0.1 }}
                   transition={{ delay: idx * 0.05, duration: 0.4 }}
+                  className={feature.span}
                 >
-                  <Card className="border-none shadow-lg hover:shadow-xl transition-shadow bg-background h-full">
-                    <CardHeader>
-                      <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
+                  <div className="bento-card group relative h-full rounded-2xl bg-white/80 dark:bg-slate-800/50 backdrop-blur-sm p-6 md:p-7 hover:shadow-xl transition-all duration-300 overflow-hidden border border-white/60 dark:border-white/10">
+                    <div className={`absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r ${feature.borderGradient} opacity-0 group-hover:opacity-100 transition-opacity duration-300`} />
+                    <div className={`absolute inset-0 bg-gradient-to-br ${feature.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-300`} />
+                    <div className="relative z-10">
+                      <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-white to-slate-100 dark:from-slate-700 dark:to-slate-800 flex items-center justify-center mb-4 shadow-sm border border-slate-200/50 dark:border-slate-600/50 group-hover:scale-110 transition-transform duration-300">
                         {feature.icon}
                       </div>
-                      <CardTitle className="text-lg font-bold">{feature.title}</CardTitle>
-                    </CardHeader>
-                    <CardContent>
+                      <h3 className="text-lg font-bold mb-2 font-display">{feature.title}</h3>
                       <p className="text-muted-foreground text-sm leading-relaxed">
                         {feature.description}
                       </p>
-                    </CardContent>
-                  </Card>
+                    </div>
+                  </div>
                 </motion.div>
               ))}
             </div>
           </div>
         </section>
 
-        {/* 13 Channels Section */}
-        <section id="channels" className="py-24 bg-slate-50 dark:bg-slate-900/50" aria-labelledby="channels-heading">
+        <section id="channels" className="py-16 md:py-36 relative overflow-hidden" aria-labelledby="channels-heading">
+          <div className="absolute bottom-0 left-0 w-80 h-80 bg-violet-500/5 rounded-full blur-3xl pointer-events-none" aria-hidden="true" />
+          <div className="absolute top-20 right-20 w-64 h-64 bg-indigo-500/5 rounded-full blur-3xl pointer-events-none" aria-hidden="true" />
           <div className="container mx-auto px-4 md:px-8">
             <div className="text-center max-w-3xl mx-auto mb-16">
-              <h2 id="channels-heading" className="text-3xl md:text-4xl font-display font-bold mb-6">
-                Strategies for 13 Marketing Channels
+              <motion.span
+                initial={{ opacity: 0, y: 10 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-semibold mb-5 border border-primary/20"
+              >
+                13 Marketing Channels
+              </motion.span>
+              <h2 id="channels-heading" className="text-3xl md:text-5xl font-display font-bold mb-5">
+                Strategies for Every Marketing Channel
               </h2>
-              <p className="text-lg text-muted-foreground">
+              <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
                 Each channel includes strategic pillars, quick wins, KPIs, and personalized recommendations based on your GTM motion
               </p>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 max-w-5xl mx-auto">
-              {CHANNELS.map((channel, idx) => {
-                const Icon = channel.icon;
+            <div className="max-w-5xl mx-auto space-y-14">
+              {Object.entries(CHANNEL_GROUPS).map(([key, group], groupIdx) => {
+                const groupColorClasses = {
+                  bar: groupIdx === 0 ? "bg-emerald-500" : groupIdx === 1 ? "bg-blue-500" : "bg-violet-500",
+                  badge: groupIdx === 0 ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-800" : groupIdx === 1 ? "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/30 dark:text-blue-400 dark:border-blue-800" : "bg-violet-50 text-violet-700 border-violet-200 dark:bg-violet-950/30 dark:text-violet-400 dark:border-violet-800",
+                  icon: groupIdx === 0 ? "text-emerald-500" : groupIdx === 1 ? "text-blue-500" : "text-violet-500",
+                  hover: groupIdx === 0 ? "group-hover:border-emerald-300 dark:group-hover:border-emerald-700 group-hover:shadow-emerald-500/10" : groupIdx === 1 ? "group-hover:border-blue-300 dark:group-hover:border-blue-700 group-hover:shadow-blue-500/10" : "group-hover:border-violet-300 dark:group-hover:border-violet-700 group-hover:shadow-violet-500/10",
+                  iconBg: groupIdx === 0 ? "group-hover:bg-emerald-50 dark:group-hover:bg-emerald-950/40" : groupIdx === 1 ? "group-hover:bg-blue-50 dark:group-hover:bg-blue-950/40" : "group-hover:bg-violet-50 dark:group-hover:bg-violet-950/40",
+                  glow: groupIdx === 0 ? "from-emerald-500/20 to-teal-500/10" : groupIdx === 1 ? "from-blue-500/20 to-indigo-500/10" : "from-violet-500/20 to-purple-500/10",
+                };
+                
                 return (
                   <motion.div
-                    key={channel.id}
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    whileInView={{ opacity: 1, scale: 1 }}
+                    key={key}
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true, amount: 0.1 }}
-                    transition={{ delay: idx * 0.03, duration: 0.3 }}
-                    className="bg-background rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow border border-slate-100 dark:border-slate-800 text-center"
+                    transition={{ delay: groupIdx * 0.1, duration: 0.4 }}
                   >
-                    <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center mx-auto mb-3">
-                      <Icon className="h-5 w-5 text-primary" aria-hidden="true" />
+                    <div className="flex items-center gap-3 mb-6">
+                      <div className={`w-1.5 h-8 rounded-full ${groupColorClasses.bar}`} />
+                      <h3 className="text-lg font-bold font-display text-foreground">{group.label}</h3>
+                      <span className={`text-xs font-medium px-2.5 py-0.5 rounded-full border ${groupColorClasses.badge}`}>
+                        {group.channels.length} channels
+                      </span>
                     </div>
-                    <h3 className="font-semibold text-sm mb-1">{channel.id}</h3>
-                    <p className="text-xs text-muted-foreground">{channel.description}</p>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+                      {group.channels.map((channelId, chIdx) => {
+                        const channel = CHANNELS.find(c => c.id === channelId)!;
+                        const Icon = channel.icon;
+                        return (
+                          <motion.div
+                            key={channel.id}
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            whileInView={{ opacity: 1, scale: 1 }}
+                            viewport={{ once: true }}
+                            transition={{ delay: chIdx * 0.04, duration: 0.3 }}
+                          >
+                            <div
+                              className={`group bg-background rounded-xl p-4 shadow-sm hover:shadow-lg transition-all duration-300 border border-slate-100 dark:border-slate-800 text-center cursor-default hover:-translate-y-1 ${groupColorClasses.hover}`}
+                            >
+                              <div className={`w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center mx-auto mb-3 transition-all duration-300 ${groupColorClasses.iconBg}`}>
+                                <Icon className={`h-5 w-5 ${groupColorClasses.icon} transition-colors`} aria-hidden="true" />
+                              </div>
+                              <h4 className="font-semibold text-sm mb-1">{channel.id}</h4>
+                              <p className="text-xs text-muted-foreground leading-relaxed">{channel.description}</p>
+                            </div>
+                          </motion.div>
+                        );
+                      })}
+                    </div>
                   </motion.div>
                 );
               })}
@@ -371,119 +727,207 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* AI Chat Feature Highlight */}
-        <section className="py-24" aria-labelledby="ai-chat-heading">
+        <section className="py-16 md:py-36 bg-slate-50 dark:bg-slate-900/50 relative overflow-hidden" aria-labelledby="ai-chat-heading">
+          <div className="absolute top-10 right-0 w-72 h-72 bg-primary/5 rounded-full blur-3xl pointer-events-none" aria-hidden="true" />
+          <div className="absolute bottom-10 left-0 w-60 h-60 bg-violet-500/5 rounded-full blur-3xl pointer-events-none" aria-hidden="true" />
           <div className="container mx-auto px-4 md:px-8">
-            <div className="grid lg:grid-cols-2 gap-12 items-center">
-              <div className="space-y-6">
-                <span className="inline-block px-4 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-semibold">
-                  New Feature
-                </span>
-                <h2 id="ai-chat-heading" className="text-3xl md:text-4xl font-display font-bold">
+            <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
+              <div className="space-y-7">
+                <motion.div
+                  initial={{ opacity: 0, y: 15 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.4 }}
+                >
+                  <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-semibold border border-primary/20">
+                    <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
+                    AI Assistant
+                  </span>
+                </motion.div>
+                <motion.h2
+                  initial={{ opacity: 0, y: 15 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: 0.1, duration: 0.4 }}
+                  id="ai-chat-heading" className="text-3xl md:text-5xl font-display font-bold"
+                >
                   Ask AI About Your GTM Strategy
-                </h2>
-                <p className="text-lg text-muted-foreground leading-relaxed">
+                </motion.h2>
+                <motion.p
+                  initial={{ opacity: 0, y: 15 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: 0.15, duration: 0.4 }}
+                  className="text-lg text-muted-foreground leading-relaxed"
+                >
                   Have questions about which channel to prioritize? Wondering how to improve your SEO? GTM Champion's AI assistant answers your marketing questions with personalized advice based on your company's context.
-                </p>
-                <ul className="space-y-3">
+                </motion.p>
+                <motion.ul 
+                  className="space-y-3"
+                  initial={{ opacity: 0, y: 15 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: 0.2, duration: 0.4 }}
+                >
                   {[
                     "Get personalized answers based on your business model",
                     "Ask about any of the 13 marketing channels",
                     "Receive specific, actionable recommendations",
-                    "Powered by GPT-4o with 2025 B2B marketing knowledge"
+                    "Powered by GPT-5 with 2025 B2B marketing knowledge"
                   ].map((item, idx) => (
                     <li key={idx} className="flex items-start gap-3">
                       <CheckCircle2 className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" aria-hidden="true" />
                       <span className="text-muted-foreground">{item}</span>
                     </li>
                   ))}
-                </ul>
-                <Button size="lg" asChild data-testid="button-try-ai-chat">
-                  <a href="/auth">Try AI Chat Free <ArrowRight className="ml-2 h-5 w-5" aria-hidden="true" /></a>
-                </Button>
+                </motion.ul>
+                <motion.div
+                  initial={{ opacity: 0, y: 15 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: 0.25, duration: 0.4 }}
+                >
+                  <Button size="lg" onClick={() => setLocation("/auth")} data-testid="button-try-ai-chat" className="group shadow-lg shadow-primary/20">
+                    Try AI Chat Free <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" aria-hidden="true" />
+                  </Button>
+                </motion.div>
               </div>
-              <div className="bg-slate-100 dark:bg-slate-800 rounded-2xl p-6 shadow-xl">
-                <div className="bg-background rounded-xl p-4 shadow-sm space-y-4">
-                  <div className="flex items-center gap-3 pb-3 border-b">
-                    <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
-                      <Sparkles className="h-5 w-5 text-primary" aria-hidden="true" />
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5 }}
+                className="relative"
+              >
+                <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/20 to-violet-500/20 rounded-2xl blur-xl -m-2" aria-hidden="true" />
+                <div className="relative bg-background rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+                  <div className="flex items-center gap-3 px-5 py-4 border-b bg-gradient-to-r from-slate-50 to-indigo-50/30 dark:from-slate-800/50 dark:to-indigo-950/20">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+                      <Sparkles className="h-5 w-5 text-white" aria-hidden="true" />
                     </div>
                     <div>
                       <p className="font-semibold text-sm">GTM Champion AI</p>
-                      <p className="text-xs text-muted-foreground">Ask me anything about your marketing</p>
+                      <p className="text-xs text-muted-foreground flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block animate-pulse" />
+                        Online · Ask me anything about your marketing
+                      </p>
                     </div>
                   </div>
-                  <div className="space-y-3">
-                    <div className="bg-slate-100 dark:bg-slate-700 rounded-lg p-3 text-sm">
-                      What marketing channel should I focus on first for my developer tools company?
+                  <div className="p-5 space-y-4">
+                    <div className="flex justify-end">
+                      <div className="bg-primary text-primary-foreground rounded-2xl rounded-tr-sm px-4 py-3 text-sm max-w-[85%] shadow-sm">
+                        What marketing channel should I focus on first for my developer tools company?
+                      </div>
                     </div>
-                    <div className="bg-primary/10 rounded-lg p-3 text-sm">
-                      For a developer tools company, I recommend prioritizing <strong>Content Marketing</strong> and <strong>SEO</strong>. Developers research solutions through technical blogs, documentation, and Stack Overflow. Create tutorial content, build SEO around programming terms, and consider a developer community strategy...
+                    <div className="flex gap-3">
+                      <div className="w-7 h-7 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center flex-shrink-0 mt-1 shadow-sm">
+                        <Sparkles className="h-3.5 w-3.5 text-white" />
+                      </div>
+                      <div className="bg-slate-100 dark:bg-slate-800 rounded-2xl rounded-tl-sm px-4 py-3 text-sm max-w-[85%]">
+                        <TypingText text="For a developer tools company, I recommend prioritizing Content Marketing and SEO. Developers research solutions through technical blogs, documentation, and Stack Overflow. Create tutorial content, build SEO around programming terms, and consider a developer community strategy..." />
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 pt-2 border-t">
+                      <div className="flex-1 rounded-xl bg-slate-100 dark:bg-slate-800 px-4 py-2.5 text-sm text-muted-foreground">
+                        Ask about your GTM strategy...
+                      </div>
+                      <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center shadow-sm">
+                        <ArrowRight className="h-4 w-4 text-primary-foreground" />
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
+              </motion.div>
             </div>
           </div>
         </section>
 
-        {/* Pricing */}
-        <section id="pricing" className="py-24 bg-slate-50 dark:bg-slate-900/50" aria-labelledby="pricing-heading">
-          <div className="container mx-auto px-4 md:px-8">
-            <div className="text-center max-w-3xl mx-auto mb-16">
-              <h2 id="pricing-heading" className="text-3xl md:text-4xl font-display font-bold mb-6">
+        <section id="pricing" className="py-16 md:py-36 relative overflow-hidden" aria-labelledby="pricing-heading">
+          <div className="absolute inset-0 bg-gradient-to-b from-background via-indigo-50/30 to-background dark:from-background dark:via-indigo-950/10 dark:to-background pointer-events-none" aria-hidden="true" />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/5 rounded-full blur-3xl pointer-events-none" aria-hidden="true" />
+          <div className="container mx-auto px-4 md:px-8 relative z-10">
+            <div className="text-center max-w-3xl mx-auto mb-14">
+              <motion.span
+                initial={{ opacity: 0, y: 10 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-semibold mb-5 border border-primary/20"
+              >
+                Pricing
+              </motion.span>
+              <h2 id="pricing-heading" className="text-3xl md:text-5xl font-display font-bold mb-5">
                 100% Free. No Catch.
               </h2>
-              <p className="text-lg text-muted-foreground">
-                Every feature, every channel, every tool — completely free. We're on a mission to help B2B SaaS companies grow.
+              <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+                Every feature, every channel, every tool. Completely free. We're on a mission to help B2B SaaS companies grow.
               </p>
             </div>
 
             <div className="max-w-lg mx-auto">
-              <Card className="relative border-primary/20 shadow-2xl shadow-primary/10 bg-background">
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-primary text-primary-foreground text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wide">
-                  All Features Included
-                </div>
-                <CardHeader className="text-center">
-                  <CardTitle className="text-2xl font-bold text-primary">GTM Champion</CardTitle>
-                  <CardDescription>Everything you need to build a winning Go-To-Market strategy</CardDescription>
-                  <div className="mt-4">
-                    <span className="text-5xl font-bold">Free</span>
-                    <p className="text-sm text-muted-foreground mt-1">No credit card required. Ever.</p>
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5 }}
+                className="relative"
+              >
+                <div className="pricing-glow absolute -inset-2 rounded-3xl opacity-60 blur-lg pointer-events-none" aria-hidden="true" />
+                <div className="pricing-shine-border absolute -inset-[1px] rounded-3xl pointer-events-none" aria-hidden="true" />
+                <Card className="relative border-primary/20 shadow-2xl shadow-primary/10 bg-background overflow-hidden">
+                  <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-indigo-500 via-violet-500 to-indigo-500" aria-hidden="true" />
+                  <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gradient-to-r from-indigo-500 to-violet-600 text-white text-xs font-bold px-4 py-1.5 rounded-full uppercase tracking-wide shadow-lg">
+                    All Features Included
                   </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {[
-                    "AI-powered GTM analysis",
-                    "All 13 channel strategies",
-                    "Unlimited AI chat questions",
-                    "Content tools (LinkedIn, Email, Blog)",
-                    "Weekly strategy emails",
-                    "CRM & analytics integrations",
-                    "Competitor insights",
-                    "Email support"
-                  ].map((item) => (
-                    <div key={item} className="flex items-center gap-3">
-                      <CheckCircle2 className="h-5 w-5 text-primary" aria-hidden="true" />
-                      <span className="text-slate-900 dark:text-slate-100 font-medium">{item}</span>
+                  <CardHeader className="text-center pt-10 pb-2">
+                    <CardTitle className="text-2xl font-bold text-primary">GTM Champion</CardTitle>
+                    <CardDescription className="text-base">Everything you need to build a winning Go-To-Market strategy</CardDescription>
+                    <div className="mt-5">
+                      <span className="text-5xl font-bold gradient-text">Free</span>
+                      <p className="text-sm text-muted-foreground mt-2">No credit card required. Ever.</p>
                     </div>
-                  ))}
-                </CardContent>
-                <CardFooter>
-                  <Button className="w-full h-12 text-lg shadow-lg shadow-primary/20" asChild data-testid="button-get-started-free">
-                    <a href="/auth">Get Started Free</a>
-                  </Button>
-                </CardFooter>
-              </Card>
+                  </CardHeader>
+                  <CardContent className="space-y-4 pt-4">
+                    {[
+                      "AI-powered GTM analysis",
+                      "All 13 channel strategies",
+                      "Unlimited AI chat questions",
+                      "Content tools (LinkedIn, Email, Blog)",
+                      "Weekly strategy emails",
+                      "PageSpeed & performance insights",
+                      "Competitor insights",
+                      "Email support"
+                    ].map((item) => (
+                      <div key={item} className="flex items-center gap-3">
+                        <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                          <CheckCircle2 className="h-4 w-4 text-primary" aria-hidden="true" />
+                        </div>
+                        <span className="text-gray-900 dark:text-gray-100 font-semibold">{item}</span>
+                      </div>
+                    ))}
+                  </CardContent>
+                  <CardFooter className="pt-4 pb-8">
+                    <Button className="w-full h-13 text-lg shadow-lg shadow-primary/20 group" onClick={() => setLocation("/auth")} data-testid="button-get-started-free">
+                      Get Started Free <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" aria-hidden="true" />
+                    </Button>
+                  </CardFooter>
+                </Card>
+              </motion.div>
             </div>
           </div>
         </section>
 
-        {/* FAQ Section */}
-        <section id="faq" className="py-24" aria-labelledby="faq-heading">
+        <section id="faq" className="py-16 md:py-36 bg-slate-50 dark:bg-slate-900/50" aria-labelledby="faq-heading">
           <div className="container mx-auto px-4 md:px-8">
-            <div className="text-center max-w-3xl mx-auto mb-16">
-              <h2 id="faq-heading" className="text-3xl md:text-4xl font-display font-bold mb-6">
+            <div className="text-center max-w-3xl mx-auto mb-14">
+              <motion.span
+                initial={{ opacity: 0, y: 10 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-semibold mb-5 border border-primary/20"
+              >
+                FAQ
+              </motion.span>
+              <h2 id="faq-heading" className="text-3xl md:text-5xl font-display font-bold mb-5">
                 Frequently Asked Questions
               </h2>
               <p className="text-lg text-muted-foreground">
@@ -491,7 +935,7 @@ export default function LandingPage() {
               </p>
             </div>
 
-            <div className="max-w-3xl mx-auto space-y-4">
+            <div className="max-w-3xl mx-auto space-y-3">
               {FAQ_ITEMS.map((item, idx) => (
                 <motion.div
                   key={idx}
@@ -499,25 +943,23 @@ export default function LandingPage() {
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true, amount: 0.1 }}
                   transition={{ delay: idx * 0.05, duration: 0.3 }}
-                  className="border rounded-lg overflow-hidden"
+                  className="border rounded-xl overflow-hidden bg-background shadow-sm hover:shadow-md transition-shadow"
                 >
                   <button
-                    className="w-full px-6 py-4 text-left flex items-center justify-between bg-background hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                    className="w-full px-6 py-5 text-left flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
                     onClick={() => setOpenFaq(openFaq === idx ? null : idx)}
                     aria-expanded={openFaq === idx}
                     aria-controls={`faq-answer-${idx}`}
                   >
                     <span className="font-semibold pr-4">{item.question}</span>
-                    {openFaq === idx ? (
-                      <ChevronUp className="h-5 w-5 text-muted-foreground flex-shrink-0" aria-hidden="true" />
-                    ) : (
-                      <ChevronDown className="h-5 w-5 text-muted-foreground flex-shrink-0" aria-hidden="true" />
-                    )}
+                    <div className={`w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 transition-transform duration-300 ${openFaq === idx ? "rotate-180" : ""}`}>
+                      <ChevronDown className="h-4 w-4 text-primary" aria-hidden="true" />
+                    </div>
                   </button>
                   {openFaq === idx && (
                     <div 
                       id={`faq-answer-${idx}`}
-                      className="px-6 py-4 bg-slate-50 dark:bg-slate-800/50 border-t"
+                      className="px-6 py-4 border-t bg-slate-50 dark:bg-slate-800/50"
                     >
                       <p className="text-muted-foreground leading-relaxed">{item.answer}</p>
                     </div>
@@ -528,29 +970,52 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* Final CTA */}
-        <section className="py-24 bg-primary" aria-labelledby="cta-heading">
-          <div className="container mx-auto px-4 md:px-8 text-center">
-            <h2 id="cta-heading" className="text-3xl md:text-4xl font-display font-bold mb-6 text-primary-foreground">
-              Ready to Supercharge Your GTM Strategy?
-            </h2>
-            <p className="text-lg text-primary-foreground/80 max-w-2xl mx-auto mb-8">
-              Join hundreds of B2B SaaS marketers using AI to build smarter Go-To-Market strategies. Get your personalized recommendations in 30 seconds.
-            </p>
-            <Button
-              size="lg"
-              variant="secondary"
-              className="h-14 px-8 text-lg"
-              asChild
-              data-testid="button-final-cta"
+        <section className="relative py-16 md:py-36 overflow-hidden" aria-labelledby="cta-heading">
+          <div className="cta-mesh-bg absolute inset-0 pointer-events-none" aria-hidden="true" />
+          <div className="absolute inset-0 bg-gradient-to-br from-indigo-600/90 via-violet-600/90 to-purple-700/90 pointer-events-none" aria-hidden="true" />
+          <div className="cta-particles absolute inset-0 pointer-events-none" aria-hidden="true" />
+          <div className="container mx-auto px-4 md:px-8 text-center relative z-10">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5 }}
+              className="max-w-3xl mx-auto"
             >
-              <a href="/auth">Get Started Free <ArrowRight className="ml-2 h-5 w-5" aria-hidden="true" /></a>
-            </Button>
+              <h2 id="cta-heading" className="text-3xl md:text-5xl font-display font-bold mb-6 text-white">
+                Ready to Supercharge Your GTM Strategy?
+              </h2>
+              <p className="text-base md:text-lg text-white/80 max-w-2xl mx-auto mb-10">
+                Join hundreds of B2B SaaS marketers using AI to build smarter Go-To-Market strategies. Get your personalized recommendations in 30 seconds.
+              </p>
+              <Button 
+                size="lg" 
+                variant="secondary" 
+                className="h-14 px-8 text-lg shadow-xl group"
+                onClick={() => setLocation("/auth")}
+                data-testid="button-final-cta"
+              >
+                Get Started Free <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" aria-hidden="true" />
+              </Button>
+              <div className="flex flex-wrap justify-center items-center gap-6 mt-10 text-sm text-white/70">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4" />
+                  <span>Free forever</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4" />
+                  <span>No credit card</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4" />
+                  <span>2-minute setup</span>
+                </div>
+              </div>
+            </motion.div>
           </div>
         </section>
       </main>
 
-      {/* Footer */}
       <footer className="bg-slate-900 text-slate-300 py-12" role="contentinfo">
         <div className="container mx-auto px-4 md:px-8">
           <div className="grid md:grid-cols-4 gap-8 mb-8">
@@ -582,6 +1047,8 @@ export default function LandingPage() {
             <div>
               <h3 className="font-semibold text-white mb-4">Company</h3>
               <ul className="space-y-2 text-sm">
+                <li><a href="/about" className="hover:text-white transition-colors">About</a></li>
+                <li><a href="/contact" className="hover:text-white transition-colors">Contact</a></li>
                 <li><a href="/auth" className="hover:text-white transition-colors">Sign Up</a></li>
                 <li><a href="/auth" className="hover:text-white transition-colors">Log In</a></li>
               </ul>
@@ -591,9 +1058,10 @@ export default function LandingPage() {
             <p className="text-sm text-slate-400">
               © {new Date().getFullYear()} GTM Champion. All rights reserved.
             </p>
-            <p className="text-xs text-slate-500">
-              Built with AI to help B2B SaaS companies grow faster.
-            </p>
+            <div className="flex gap-6 text-sm text-slate-400">
+              <a href="/privacy" className="hover:text-white transition-colors">Privacy Policy</a>
+              <a href="/terms" className="hover:text-white transition-colors">Terms of Service</a>
+            </div>
           </div>
         </div>
       </footer>

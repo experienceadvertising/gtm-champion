@@ -101,8 +101,8 @@ export default function Blog() {
             <a href="/#pricing" className="hover:text-primary transition-colors">Pricing</a>
           </div>
           <div className="flex items-center gap-4">
-            <Button variant="ghost" asChild><a href="/auth">Log in</a></Button>
-            <Button asChild><a href="/auth">Get Started</a></Button>
+            <Button variant="ghost" onClick={() => setLocation("/auth?mode=login")}>Log in</Button>
+            <Button onClick={() => setLocation("/auth")}>Get Started</Button>
           </div>
         </div>
       </nav>
@@ -131,44 +131,42 @@ export default function Blog() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: idx * 0.05 }}
                 >
-                  <a
-                    href={`/blog/${article.slug}`}
-                    className="block h-full"
+                  <Card 
+                    className="h-full hover:shadow-lg transition-shadow cursor-pointer overflow-hidden group"
+                    onClick={() => setLocation(`/blog/${article.slug}`)}
                     data-testid={`article-card-${article.slug}`}
                   >
-                    <Card className="h-full hover:shadow-lg transition-shadow cursor-pointer overflow-hidden group">
-                      <div className="aspect-video overflow-hidden">
-                        <img
-                          src={article.image}
-                          alt={article.imageAlt}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                          loading="lazy"
-                        />
+                    <div className="aspect-video overflow-hidden">
+                      <img 
+                        src={article.image} 
+                        alt={article.imageAlt}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        loading="lazy"
+                      />
+                    </div>
+                    <CardHeader className="pb-2">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+                        <Badge variant="secondary" className="text-xs">
+                          {article.category}
+                        </Badge>
+                        <span className="flex items-center gap-1">
+                          <Clock className="h-3 w-3" aria-hidden="true" />
+                          {article.readTime}
+                        </span>
                       </div>
-                      <CardHeader className="pb-2">
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-                          <Badge variant="secondary" className="text-xs">
-                            {article.category}
-                          </Badge>
-                          <span className="flex items-center gap-1">
-                            <Clock className="h-3 w-3" aria-hidden="true" />
-                            {article.readTime}
-                          </span>
-                        </div>
-                        <h2 className="text-lg font-bold leading-tight group-hover:text-primary transition-colors">
-                          {article.title}
-                        </h2>
-                      </CardHeader>
-                      <CardContent>
-                        <p className="text-sm text-muted-foreground line-clamp-2">
-                          {article.excerpt}
-                        </p>
-                        <div className="mt-4 flex items-center text-primary text-sm font-medium">
-                          Read article <ArrowRight className="h-4 w-4 ml-1" aria-hidden="true" />
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </a>
+                      <h2 className="text-lg font-bold leading-tight group-hover:text-primary transition-colors">
+                        {article.title}
+                      </h2>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-muted-foreground line-clamp-2">
+                        {article.excerpt}
+                      </p>
+                      <div className="mt-4 flex items-center text-primary text-sm font-medium">
+                        Read article <ArrowRight className="h-4 w-4 ml-1" aria-hidden="true" />
+                      </div>
+                    </CardContent>
+                  </Card>
                 </motion.article>
               ))}
             </div>
@@ -184,13 +182,13 @@ export default function Blog() {
             <p className="text-primary-foreground/80 mb-6 max-w-xl mx-auto">
               Stop reading about strategy and start executing. GTM Champion analyzes your business and provides tailored recommendations.
             </p>
-            <Button
-              variant="secondary"
+            <Button 
+              variant="secondary" 
               size="lg"
-              asChild
+              onClick={() => setLocation("/auth")}
               data-testid="button-blog-cta"
             >
-              <a href="/auth">Analyze My Website Free <ArrowRight className="ml-2 h-5 w-5" aria-hidden="true" /></a>
+              Analyze My Website Free <ArrowRight className="ml-2 h-5 w-5" aria-hidden="true" />
             </Button>
           </div>
         </section>
@@ -204,7 +202,7 @@ export default function Blog() {
             <span>GTM Champion</span>
           </div>
           <p className="text-sm text-slate-400">
-            © 2025–2026 GTM Champion. All rights reserved.
+            © 2025 GTM Champion. All rights reserved.
           </p>
         </div>
       </footer>

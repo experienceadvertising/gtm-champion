@@ -15,9 +15,70 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { askAI } from "@/lib/api";
+import DOMPurify from "dompurify";
+
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function formatMarkdown(text: string): string {
+  const escaped = escapeHtml(text);
+  
+  const lines = escaped.split('\n');
+  const html: string[] = [];
+  let inList = false;
+  let listType: 'ul' | 'ol' | null = null;
+
+  for (let i = 0; i < lines.length; i++) {
+    let line = lines[i].trim();
+    
+    if (!line) {
+      if (inList) { html.push(`</${listType}>`); inList = false; listType = null; }
+      continue;
+    }
+
+    line = line
+      .replace(/\*\*(.+?)\*\*/g, '<strong class="font-semibold text-slate-900">$1</strong>')
+      .replace(/\*(.+?)\*/g, '<em>$1</em>');
+
+    if (line.match(/^#{1,2} /)) {
+      if (inList) { html.push(`</${listType}>`); inList = false; listType = null; }
+      const heading = line.replace(/^## (.+)/, '<h3 class="font-bold text-slate-900 mt-3 mb-1.5 text-sm">$1</h3>')
+        .replace(/^# (.+)/, '<h3 class="font-bold text-slate-900 mt-3 mb-1.5 text-sm">$1</h3>');
+      html.push(heading);
+    } else if (line.match(/^### /)) {
+      if (inList) { html.push(`</${listType}>`); inList = false; listType = null; }
+      html.push(line.replace(/^### (.+)/, '<h4 class="font-semibold text-slate-900 mt-2.5 mb-1 text-sm">$1</h4>'));
+    } else if (line.match(/^[-*] /)) {
+      if (!inList || listType !== 'ul') {
+        if (inList) html.push(`</${listType}>`);
+        html.push('<ul class="list-disc pl-4 my-1.5 space-y-0.5">');
+        inList = true; listType = 'ul';
+      }
+      html.push(`<li class="text-sm leading-relaxed">${line.replace(/^[-*] /, '')}</li>`);
+    } else if (line.match(/^\d+\. /)) {
+      if (!inList || listType !== 'ol') {
+        if (inList) html.push(`</${listType}>`);
+        html.push('<ol class="list-decimal pl-4 my-1.5 space-y-0.5">');
+        inList = true; listType = 'ol';
+      }
+      html.push(`<li class="text-sm leading-relaxed">${line.replace(/^\d+\. /, '')}</li>`);
+    } else {
+      if (inList) { html.push(`</${listType}>`); inList = false; listType = null; }
+      html.push(`<p class="text-sm leading-relaxed mb-2">${line}</p>`);
+    }
+  }
+  if (inList) html.push(`</${listType}>`);
+  
+  return html.join('\n');
+}
 
 interface AIChatProps {
-  userId: string;
   companyName: string;
   channelId?: string;
   variant?: "default" | "compact";
@@ -120,7 +181,7 @@ const getChannelExamples = (channelId: string, companyName: string): string[] =>
   ];
 };
 
-export function AIChat({ userId, companyName, channelId, variant = "default" }: AIChatProps) {
+export function AIChat({ companyName, channelId, variant = "default" }: AIChatProps) {
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState<string | null>(null);
   const [isExpanded, setIsExpanded] = useState(true);
@@ -138,7 +199,7 @@ export function AIChat({ userId, companyName, channelId, variant = "default" }: 
 
   const chatMutation = useMutation({
     mutationFn: async (q: string) => {
-      const response = await askAI(userId, q, channelId);
+      const response = await askAI(q, channelId);
       return response.answer;
     },
     onSuccess: (data) => {
@@ -282,25 +343,25 @@ function ChatContent({
   channelId,
 }: ChatContentProps) {
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {showExamples && !answer && (
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">
             {channelId ? `${channelId} Questions` : "Popular Questions"}
           </p>
-          <div className="grid gap-2">
+          <div className="grid grid-cols-2 gap-1.5">
             {examples.map((example, i) => (
               <Button
                 key={i}
                 variant="outline"
                 size="sm"
-                className="justify-start text-left h-auto py-2 px-3 whitespace-normal"
+                className="justify-start text-left h-auto py-1.5 px-2.5 whitespace-normal text-xs leading-snug"
                 onClick={() => onExampleClick(example)}
                 disabled={isPending}
                 data-testid={`button-example-${i}`}
               >
-                <MessageSquare className="h-3 w-3 mr-2 flex-shrink-0" />
-                <span className="text-sm">{example}</span>
+                <MessageSquare className="h-3 w-3 mr-1.5 flex-shrink-0 opacity-50" />
+                <span>{example}</span>
               </Button>
             ))}
           </div>
@@ -317,16 +378,12 @@ function ChatContent({
             <p className="text-xs text-muted-foreground mb-1">Your question:</p>
             <p className="text-sm font-medium">{question}</p>
           </div>
-          <div className="bg-primary/5 rounded-lg p-4 border border-primary/10">
-            <div className="flex items-start gap-2 mb-2">
-              <Bot className="h-4 w-4 text-primary mt-0.5" />
+          <div className="bg-primary/5 rounded-lg p-3 border border-primary/10">
+            <div className="flex items-center gap-1.5 mb-2">
+              <Bot className="h-3.5 w-3.5 text-primary" />
               <p className="text-xs text-primary font-medium">AI Response for {companyName}</p>
             </div>
-            <div className="prose prose-sm max-w-none text-slate-700">
-              {answer.split('\n').map((paragraph, i) => (
-                paragraph.trim() && <p key={i} className="mb-2 last:mb-0">{paragraph}</p>
-              ))}
-            </div>
+            <div className="max-w-none text-slate-700 [&>p:last-child]:mb-0" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(formatMarkdown(answer)) }} />
           </div>
           <Button
             variant="outline"
@@ -347,9 +404,10 @@ function ChatContent({
               placeholder={`Ask anything about ${channelId ? channelId + ' strategy' : 'your GTM strategy'}...`}
               value={question}
               onChange={(e) => setQuestion(e.target.value)}
-              className="min-h-[80px] pr-12 resize-none"
+              className="min-h-[60px] pr-12 resize-none text-sm"
               disabled={isPending}
               data-testid="input-ai-question"
+              aria-label="Ask AI advisor a question"
             />
             <Button
               type="submit"
@@ -357,6 +415,7 @@ function ChatContent({
               className="absolute bottom-2 right-2"
               disabled={!question.trim() || isPending}
               data-testid="button-send-question"
+              aria-label="Send question"
             >
               {isPending ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -374,7 +433,7 @@ function ChatContent({
       )}
 
       {isPending && (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground" role="status" aria-live="polite">
           <Loader2 className="h-4 w-4 animate-spin" />
           <span>Thinking about your question...</span>
         </div>

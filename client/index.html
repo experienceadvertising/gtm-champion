@@ -3,11 +3,11 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5" />
-    
+
     <!-- Primary Meta Tags -->
     <title>GTM Champion - AI-Powered Go-To-Market Strategy for B2B SaaS</title>
     <meta name="title" content="GTM Champion - AI-Powered Go-To-Market Strategy for B2B SaaS" />
-    <meta name="description" content="Get personalized Go-To-Market recommendations in seconds. Our AI analyzes your website and generates strategies across 13 marketing channels including SEO, paid ads, content, ABM, and partnerships." />
+    <meta name="description" content="AI-powered Go-To-Market strategy for B2B SaaS. Analyze your website and get personalized recommendations across 13 marketing channels in seconds." />
     <meta name="keywords" content="go-to-market strategy, GTM strategy, B2B SaaS marketing, AI marketing tool, marketing automation, SEO strategy, content marketing, ABM, account-based marketing, growth marketing" />
     <meta name="author" content="GTM Champion" />
     <meta name="robots" content="index, follow" />
@@ -22,25 +22,29 @@
     <meta property="og:url" content="https://gtmchampion.com/" />
     <meta property="og:title" content="GTM Champion - AI-Powered Go-To-Market Strategy for B2B SaaS" />
     <meta property="og:description" content="Stop guessing your marketing strategy. Our AI scrapes your website, analyzes your product, and generates personalized GTM recommendations across 13 channels in seconds." />
-    <meta property="og:image" content="https://gtmchampion.com/opengraph.jpg" />
-    <meta property="og:image:width" content="1200" />
-    <meta property="og:image:height" content="630" />
+    <meta property="og:image" content="https://gtmchampion.com/og-image.png" />
     <meta property="og:site_name" content="GTM Champion" />
     <meta property="og:locale" content="en_US" />
-
+    
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:site" content="@gtmchampion" />
+    <meta name="twitter:site" content="@replit" />
     <meta name="twitter:creator" content="@gtmchampion" />
     <meta name="twitter:title" content="GTM Champion - AI-Powered Go-To-Market Strategy" />
     <meta name="twitter:description" content="Get personalized Go-To-Market recommendations for your B2B SaaS in seconds. AI-powered strategies across SEO, paid ads, content, ABM, and 9 more channels." />
-    <meta name="twitter:image" content="https://gtmchampion.com/opengraph.jpg" />
+    <meta name="twitter:image" content="https://gtmchampion.com/og-image.png" />
     
     <!-- Favicon and App Icons -->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/site.webmanifest" />
     <meta name="theme-color" content="#6366f1" />
     <meta name="msapplication-TileColor" content="#6366f1" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="GTM Champion" />
+    <meta name="mobile-web-app-capable" content="yes" />
     
     <!-- Google Analytics 4 -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-C0E3SYJ85T"></script>
@@ -66,10 +70,7 @@
       "logo": "https://gtmchampion.com/favicon.svg",
       "description": "AI-powered Go-To-Market strategy platform for B2B SaaS companies",
       "foundingDate": "2025",
-      "sameAs": [
-        "https://twitter.com/gtmchampion",
-        "https://www.linkedin.com/company/gtmchampion"
-      ]
+      "sameAs": []
     }
     </script>
     
@@ -82,20 +83,23 @@
       "applicationCategory": "BusinessApplication",
       "operatingSystem": "Web",
       "description": "AI-powered Go-To-Market strategy generator that analyzes your website and provides personalized marketing recommendations across 13 channels including SEO, paid search, content marketing, ABM, and partnerships.",
-      "offers": {
-        "@type": "Offer",
-        "name": "Free",
-        "price": "0",
-        "priceCurrency": "USD",
-        "description": "100% free access to all 13 channel strategies, unlimited AI chat, content tools, weekly strategy emails, and integrations"
-      },
+      "offers": [
+        {
+          "@type": "Offer",
+          "name": "Free",
+          "price": "0",
+          "priceCurrency": "USD",
+          "description": "100% free GTM analysis with all 13 channel strategies, AI chat, content tools, and weekly strategy emails"
+        }
+      ],
       "featureList": [
         "AI-powered website analysis",
         "13 marketing channel strategies",
         "Personalized GTM recommendations",
         "Weekly content ideas via email",
         "AI Q&A assistant",
-        "CRM and analytics integrations"
+        "Content generation tools",
+        "PageSpeed performance insights"
       ]
     }
     </script>
@@ -135,7 +139,7 @@
           "name": "Is GTM Champion free to use?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Yes! GTM Champion is 100% free. You get full access to all 13 channel strategies, unlimited AI chat, content tools, weekly strategy emails, and integrations — no credit card required, no hidden fees."
+            "text": "Yes! GTM Champion is 100% free. You get full access to all 13 channel strategies, unlimited AI chat, content tools, and weekly strategy emails. No credit card required, no hidden fees."
           }
         },
         {
@@ -174,7 +178,19 @@
     </script>
   </head>
   <body>
+    <style>
+      .skip-link { position: absolute; left: -9999px; top: auto; width: 1px; height: 1px; overflow: hidden; z-index: 9999; }
+      .skip-link:focus { position: fixed; left: 16px; top: 16px; width: auto; height: auto; overflow: visible; padding: 8px 16px; background: #6366f1; color: white; border-radius: 6px; text-decoration: none; font-weight: 500; }
+    </style>
+    <a href="#main-content" class="skip-link">Skip to main content</a>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js').catch(() => {});
+        });
+      }
+    </script>
   </body>
 </html>

@@ -1,7 +1,15 @@
+import Stripe from 'stripe';
 import { getStripeSync, getUncachableStripeClient } from './stripeClient';
 import { storage } from '../storage';
 import { db } from '../../db/index';
 import { sql } from 'drizzle-orm';
+
+interface StripeEvent {
+  type: string;
+  data: {
+    object: Record<string, unknown>;
+  };
+}
 
 export class WebhookHandlers {
   static async processWebhook(payload: Buffer, signature: string, uuid: string): Promise<void> {
@@ -19,26 +27,26 @@ export class WebhookHandlers {
     const result = await sync.processWebhook(payload, signature, uuid);
     
     if (result && result.event) {
-      await WebhookHandlers.handleStripeEvent(result.event);
+      await WebhookHandlers.handleStripeEvent(result.event as StripeEvent);
     }
   }
 
-  static async handleStripeEvent(event: any): Promise<void> {
+  static async handleStripeEvent(event: StripeEvent): Promise<void> {
     console.log(`Processing Stripe event: ${event.type}`);
 
     switch (event.type) {
       case 'checkout.session.completed': {
-        const session = event.data.object;
+        const session = event.data.object as { mode?: string; customer?: string };
         if (session.mode === 'subscription' && session.customer) {
-          await WebhookHandlers.activatePremiumByCustomerId(session.customer as string);
+          await WebhookHandlers.activatePremiumByCustomerId(session.customer);
         }
         break;
       }
 
       case 'customer.subscription.created':
       case 'customer.subscription.updated': {
-        const subscription = event.data.object;
-        const customerId = subscription.customer as string;
+        const subscription = event.data.object as { customer: string; id: string; status: string };
+        const customerId = subscription.customer;
         
         if (subscription.status === 'active' || subscription.status === 'trialing') {
           await WebhookHandlers.activatePremiumByCustomerId(customerId, subscription.id);
@@ -49,8 +57,8 @@ export class WebhookHandlers {
       }
 
       case 'customer.subscription.deleted': {
-        const subscription = event.data.object;
-        await WebhookHandlers.deactivatePremiumByCustomerId(subscription.customer as string);
+        const subscription = event.data.object as { customer: string };
+        await WebhookHandlers.deactivatePremiumByCustomerId(subscription.customer);
         break;
       }
 
@@ -70,10 +78,13 @@ export class WebhookHandlers {
       if (!userId) {
         const stripe = await getUncachableStripeClient();
         const customer = await stripe.customers.retrieve(customerId);
-        if (!customer.deleted && (customer as any).metadata?.userId) {
-          userId = (customer as any).metadata.userId;
-          await storage.updateUserStripeInfo(userId!, { stripeCustomerId: customerId });
-          console.log(`Linked customer ${customerId} to user ${userId} via metadata`);
+        if (!customer.deleted) {
+          const fullCustomer = customer as Stripe.Customer;
+          if (fullCustomer.metadata?.userId) {
+            userId = fullCustomer.metadata.userId;
+            await storage.updateUserStripeInfo(userId!, { stripeCustomerId: customerId });
+            console.log(`Linked customer ${customerId} to user ${userId} via metadata`);
+          }
         }
       }
       

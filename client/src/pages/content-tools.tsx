@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
-import { Helmet } from "react-helmet";
-import { useLocation, useSearch, Link } from "wouter";
+import { useLocation, Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -20,8 +19,7 @@ import {
   Copy, 
   Check,
   Sparkles,
-  Crown,
-  Lock
+  Download
 } from "lucide-react";
 import { 
   getSession, 
@@ -38,13 +36,9 @@ import { useToast } from "@/hooks/use-toast";
 
 export default function ContentTools() {
   const [, setLocation] = useLocation();
-  const searchString = useSearch();
   const { toast } = useToast();
   
-  const urlParams = new URLSearchParams(searchString);
-  const urlUserId = urlParams.get("userId");
   const session = getSession();
-  const userId = urlUserId || session?.userId;
 
   const [activeTab, setActiveTab] = useState("linkedin");
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -71,19 +65,17 @@ export default function ContentTools() {
   const [blogLoading, setBlogLoading] = useState(false);
 
   useEffect(() => {
-    if (!userId) {
+    if (!session) {
       setLocation("/auth");
     }
-  }, [userId, setLocation]);
+  }, [session, setLocation]);
 
   const { data: dashboardData, isLoading, isError, error } = useQuery({
-    queryKey: ["dashboard", userId],
-    queryFn: () => fetchDashboard(userId!),
-    enabled: !!userId,
+    queryKey: ["dashboard"],
+    queryFn: () => fetchDashboard(),
+    enabled: !!session,
     retry: false,
   });
-
-  const isPremium = dashboardData?.user?.isPremium;
 
   // Handle authentication/authorization errors
   useEffect(() => {
@@ -102,11 +94,24 @@ export default function ContentTools() {
     toast({ title: "Copied to clipboard!" });
   };
 
+  const downloadAsTextFile = (content: string, filename: string) => {
+    const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    toast({ title: `Downloaded ${filename}` });
+  };
+
   const handleGenerateLinkedin = async () => {
-    if (!userId || !linkedinTopic) return;
+    if (!linkedinTopic) return;
     setLinkedinLoading(true);
     try {
-      const result = await generateLinkedInPosts(userId, {
+      const result = await generateLinkedInPosts({
         topic: linkedinTopic,
         tone: linkedinTone,
         authorRole: linkedinRole
@@ -121,10 +126,10 @@ export default function ContentTools() {
   };
 
   const handleGenerateEmail = async () => {
-    if (!userId || !emailGoal) return;
+    if (!emailGoal) return;
     setEmailLoading(true);
     try {
-      const result = await generateEmailCampaign(userId, {
+      const result = await generateEmailCampaign({
         campaignType: emailCampaignType,
         emailCount,
         goal: emailGoal
@@ -139,10 +144,10 @@ export default function ContentTools() {
   };
 
   const handleGenerateBlog = async () => {
-    if (!userId || !blogTopic || !blogKeyword) return;
+    if (!blogTopic || !blogKeyword) return;
     setBlogLoading(true);
     try {
-      const result = await generateBlogArticle(userId, {
+      const result = await generateBlogArticle({
         topic: blogTopic,
         targetKeyword: blogKeyword,
         articleType: blogType
@@ -164,50 +169,19 @@ export default function ContentTools() {
     );
   }
 
-  if (false) {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white flex items-center justify-center p-4">
-        <Card className="max-w-lg w-full text-center">
-          <CardContent className="pt-8 pb-6">
-            <div className="h-16 w-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-6">
-              <Lock className="h-8 w-8 text-slate-400" />
-            </div>
-            <h2 className="text-2xl font-bold mb-2">Premium Feature</h2>
-            <p className="text-muted-foreground mb-6">
-              Content Tools are available exclusively for Pro subscribers. 
-              Upgrade to generate LinkedIn posts, email campaigns, and blog articles.
-            </p>
-            <div className="space-y-3">
-              <Button onClick={() => setLocation(`/upgrade?userId=${userId}`)} className="w-full">
-                <Crown className="mr-2 h-4 w-4" /> Upgrade to Pro
-              </Button>
-              <Button variant="outline" onClick={() => setLocation(`/dashboard?userId=${userId}`)} className="w-full">
-                <ArrowLeft className="mr-2 h-4 w-4" /> Back to Dashboard
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
   return (
-    <>
-    <Helmet>
-      <meta name="robots" content="noindex, nofollow" />
-    </Helmet>
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
       <div className="max-w-6xl mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <Link href={`/dashboard?userId=${userId}`}>
+            <Link href="/dashboard">
               <Button variant="ghost" size="sm" data-testid="button-back-dashboard">
                 <ArrowLeft className="mr-2 h-4 w-4" /> Dashboard
               </Button>
             </Link>
           </div>
-          <Badge variant="secondary" className="bg-gradient-to-r from-amber-100 to-orange-100 text-amber-700 border-amber-200">
-            <Crown className="mr-1 h-3 w-3" /> Pro Feature
+          <Badge variant="secondary" className="bg-gradient-to-r from-blue-100 to-indigo-100 text-blue-700 border-blue-200">
+            <Sparkles className="mr-1 h-3 w-3" /> Free Tool
           </Badge>
         </div>
 
@@ -300,11 +274,34 @@ export default function ContentTools() {
 
             {linkedinPosts.length > 0 && (
               <div className="space-y-4">
-                <h3 className="font-semibold text-lg">Generated Posts</h3>
+                <div className="flex items-center justify-between">
+                  <h3 className="font-semibold text-lg">Generated Posts</h3>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      const allContent = linkedinPosts.map((post, idx) =>
+                        `--- Post ${idx + 1} ---\n\nHook: ${post.hook}\n\n${post.content}\n\nCTA: ${post.cta}`
+                      ).join("\n\n\n");
+                      downloadAsTextFile(allContent, "linkedin-posts.txt");
+                    }}
+                    data-testid="button-download-all-linkedin"
+                  >
+                    <Download className="mr-2 h-4 w-4" /> Download All
+                  </Button>
+                </div>
                 {linkedinPosts.map((post, idx) => (
                   <Card key={idx} className="relative">
                     <CardContent className="pt-6">
-                      <div className="absolute top-4 right-4">
+                      <div className="absolute top-4 right-4 flex gap-1">
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => downloadAsTextFile(`Hook: ${post.hook}\n\n${post.content}\n\nCTA: ${post.cta}`, `linkedin-post-${idx + 1}.txt`)}
+                          data-testid={`button-download-linkedin-${idx}`}
+                        >
+                          <Download className="h-4 w-4" />
+                        </Button>
                         <Button
                           size="icon"
                           variant="ghost"
@@ -399,7 +396,22 @@ export default function ContentTools() {
 
             {emails.length > 0 && (
               <div className="space-y-4">
-                <h3 className="font-semibold text-lg">Generated Email Campaign</h3>
+                <div className="flex items-center justify-between">
+                  <h3 className="font-semibold text-lg">Generated Email Campaign</h3>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      const allContent = emails.map((email, idx) =>
+                        `--- Email ${idx + 1} (${email.sendTiming}) ---\n\nSubject: ${email.subject}\nPreview: ${email.preheader}\n\n${email.body}`
+                      ).join("\n\n\n");
+                      downloadAsTextFile(allContent, "email-campaign.txt");
+                    }}
+                    data-testid="button-download-all-email"
+                  >
+                    <Download className="mr-2 h-4 w-4" /> Download All
+                  </Button>
+                </div>
                 {emails.map((email, idx) => (
                   <Card key={idx}>
                     <CardContent className="pt-6">
@@ -408,18 +420,28 @@ export default function ContentTools() {
                           <Badge>{email.sendTiming}</Badge>
                           <span className="font-semibold">Email {idx + 1}</span>
                         </div>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={() => copyToClipboard(`Subject: ${email.subject}\n\n${email.body}`, `email-${idx}`)}
-                          data-testid={`button-copy-email-${idx}`}
-                        >
-                          {copiedId === `email-${idx}` ? (
-                            <Check className="h-4 w-4 text-green-500" />
-                          ) : (
-                            <Copy className="h-4 w-4" />
-                          )}
-                        </Button>
+                        <div className="flex gap-1">
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => downloadAsTextFile(`Subject: ${email.subject}\nPreview: ${email.preheader}\n\n${email.body}`, `email-${idx + 1}.txt`)}
+                            data-testid={`button-download-email-${idx}`}
+                          >
+                            <Download className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => copyToClipboard(`Subject: ${email.subject}\n\n${email.body}`, `email-${idx}`)}
+                            data-testid={`button-copy-email-${idx}`}
+                          >
+                            {copiedId === `email-${idx}` ? (
+                              <Check className="h-4 w-4 text-green-500" />
+                            ) : (
+                              <Copy className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
                       </div>
                       <div className="space-y-3">
                         <div>
@@ -513,18 +535,28 @@ export default function ContentTools() {
                 <CardContent className="pt-6">
                   <div className="flex items-center justify-between mb-4">
                     <Badge variant="secondary">{article.wordCount} words</Badge>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => copyToClipboard(article.fullContent, 'blog')}
-                      data-testid="button-copy-blog"
-                    >
-                      {copiedId === 'blog' ? (
-                        <><Check className="mr-2 h-4 w-4 text-green-500" /> Copied</>
-                      ) : (
-                        <><Copy className="mr-2 h-4 w-4" /> Copy Article</>
-                      )}
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => downloadAsTextFile(`${article.title}\n\n${article.metaDescription}\n\n${article.fullContent}`, "blog-article.txt")}
+                        data-testid="button-download-blog"
+                      >
+                        <Download className="mr-2 h-4 w-4" /> Download
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => copyToClipboard(article.fullContent, 'blog')}
+                        data-testid="button-copy-blog"
+                      >
+                        {copiedId === 'blog' ? (
+                          <><Check className="mr-2 h-4 w-4 text-green-500" /> Copied</>
+                        ) : (
+                          <><Copy className="mr-2 h-4 w-4" /> Copy Article</>
+                        )}
+                      </Button>
+                    </div>
                   </div>
                   
                   <h2 className="text-2xl font-bold mb-2">{article.title}</h2>
@@ -555,6 +587,5 @@ export default function ContentTools() {
         </Tabs>
       </div>
     </div>
-    </>
   );
 }

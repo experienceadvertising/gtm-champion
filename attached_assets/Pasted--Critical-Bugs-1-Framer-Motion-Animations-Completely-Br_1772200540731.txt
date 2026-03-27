@@ -1,0 +1,38 @@
+🔴 Critical Bugs
+1. Framer-Motion Animations Completely Broken (37 invisible elements)
+This is the single biggest problem with the app. Your framer-motion entrance animations aren't firing, leaving 37 elements stuck at opacity: 0. This affects the entire landing page hero section — the subtitle paragraph, the "Analyze My Website Free" CTA button, trust badges, and parts of every other section are completely or nearly invisible. I confirmed this via the DOM: the subtitle <p> has opacity: 0.038, the CTA button div has opacity: 0, etc. The animations likely depend on an intersection observer or viewport trigger that isn't resolving. This is the #1 thing to fix — your homepage looks broken because of it.
+2. Email Previews Show Wrong Company Data
+The "View Emails" page shows email templates for "TechFlow Solutions" / "techflow.io" instead of the registered company (Notion). Both the Welcome Email and Weekly Strategy email reference the wrong company. This is either hardcoded sample data or a data-fetching bug where email templates aren't being populated with the user's actual company profile.
+3. Blog Article Pages Load with Faded/Invisible Headers
+Blog article detail pages (e.g., the GTM Strategy guide) render the title, subtitle, author, and date in extremely faded text above the fold. The article body content exists below the fold but the header area makes it look like the page is broken on first load. Same framer-motion issue at play.
+🟠 Significant UX Issues
+4. "Log in" Button Goes to the Sign-Up Form
+Clicking "Log in" in the nav takes you to /auth which defaults to the Sign Up view, not Sign In. Returning users have to find the small "Already have an account? Sign in" link at the bottom. The Log in button should either navigate directly to the sign-in view or the /auth page should default to sign-in when reached via that button.
+5. "Get Started" Nav Button Scrolls to Pricing (Not Registration)
+The primary CTA "Get Started" button in the nav simply scrolls to the pricing section. Most SaaS users expect this to go directly to a registration page. Consider making it go to /auth directly, or at minimum, adding a prominent "Sign Up" button in the pricing cards that's above the fold.
+6. Non-Functional Quick Win Checkboxes
+The circular checkboxes next to Quick Win tasks (e.g., "Create 3-step 'Build your first agent' series") don't respond to clicks — no visual feedback, no state change, no persistence. They look interactive but do nothing. Either make them functional task trackers or remove the checkbox UI to avoid confusion.
+7. HubSpot Shows as "Connected" for New Accounts
+On the Integrations page, I spotted HubSpot briefly showing a "Connected" status with a "Disconnect" button for a brand new account. A toast notification also appeared saying "Google Analytics has been disconnected" without me doing anything. The integration state seems unreliable.
+8. AI Chat Response Contrast
+The AI chat responses in the "Ask AI" section on the SEO channel page render in very faded text — nearly unreadable. The markdown formatting (headers, bold, bullets) also doesn't render properly; raw **bold** and ### markers appear in the output.
+🟡 Minor Bugs & Polish Items
+9. "1 minutes ago" Grammar Error
+"Last Scrape" shows "1 minutes ago" instead of "1 minute ago." Needs singular/plural handling.
+10. LLMs Page Title Inconsistency
+The sidebar says "LLMs / AEO" but the channel detail page header says just "LLMs." These should match.
+11. 404 Page Shows Developer Message
+The custom 404 page says "Did you forget to add the page to the router?" — that's a developer-facing message that end users should never see. Replace it with a user-friendly error.
+12. Footer Copyright Says 2025
+The footer says "© 2025 GTM Champion" but it's now 2026. Consider making this dynamic.
+13. No Hero Image Above the Fold
+The hero image (business team photo) only appears after scrolling down. Above the fold, the right side of the hero section is completely empty, making the layout feel unbalanced.
+14. "Last Scrape" Labeling
+The label "Last Scrape" feels technical/internal. Consider something like "Last Analyzed" or "Last Updated" for user-facing language.
+💡 UX Suggestions for the Dashboard
+15. Add a loading skeleton or progress indicator during analysis. The "Processing" / "Analyzing..." state with 0 strategies across all 13 channels felt confusing for ~2 minutes. A progress bar, skeleton loaders, or estimated time ("Usually takes 1-2 minutes") would set expectations.
+16. Make channel cards clickable with hover states. The channel strategy cards on the dashboard overview don't have obvious hover effects or cursor changes. Adding a subtle hover scale/shadow would signal they're interactive.
+17. Add a "Re-analyze" or "Change Website" option. There's no obvious way for a user to change their website URL or re-run the analysis with a different site without creating a new account.
+18. Weekly Focus widget needs more context. The purple "Weekly Focus" card shows "10 high-impact tasks identified for this week" but doesn't list what they are or link to a detail view. It's a dead end.
+19. Consider adding breadcrumb navigation in the dashboard. When navigating from Dashboard → SEO → back, the navigation path isn't always clear. A breadcrumb trail would help orientation.
+20. The Recommended Resources & Tools section should have links. Tools like "Ahrefs," "Google Search Console," "Clearscope/Surfer" are listed as plain text tags. Linking to the actual tools would add real value.

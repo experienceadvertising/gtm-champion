@@ -1,0 +1,14 @@
+Fix the following bugs and issues found during a full app audit. Address them in priority order:
+1. Landing Page Stat Counter Animation Bug (HIGH)
+The metrics bar below the hero shows "0 Marketing Channels" and "0+ Companies Analyzed" instead of their target values (13 and 500+). The animated counter relies on an intersection observer that doesn't reliably trigger. Fix the counter so it always reaches its target value — either make the intersection observer more robust (e.g. use triggerOnce: true with a fallback timeout), or just start the animation on mount. The "$0" and "GPT-5" stats display correctly since they aren't animated numbers. File: client/src/pages/landing-page.tsx
+2. Content Tools "No response from AI" (HIGH)
+The LinkedIn post generator, email campaign writer, and blog article generator all fail because the OpenAI call uses max_completion_tokens: 2000, which isn't enough for generating multiple formatted outputs. GPT-5 returns empty/null response.choices[0]?.message?.content. Fix by: (a) increasing max_completion_tokens to at least 4000 for content generation endpoints, and (b) adding a null check on the response with a user-friendly error message if the AI returns empty. Files: server/services/openai.ts (the generateLinkedInPost, generateEmailCampaign, and generateBlogArticle functions)
+3. Missing Routes for Existing Pages (MEDIUM)
+integrations.tsx and upgrade.tsx exist as page components in client/src/pages/ but have no routes defined in App.tsx. Either add routes for them (/integrations and /upgrade) or remove the unused page files. File: client/src/App.tsx
+4. www Subdomain Domain Failure (MEDIUM)
+The www.gtmchampion.com custom domain shows "(failed)" in the Replit deployment panel. Investigate and fix the domain configuration so www resolves properly, or set up a redirect from www to the non-www domain.
+5. User Enumeration on Registration (LOW)
+The /api/register endpoint returns "Email already registered" when a duplicate email is found (line ~138 of routes.ts). This allows attackers to probe which emails exist. Change the error message to something generic like "Registration failed. Please try again or sign in." to match the same pattern used on the login endpoint. File: server/routes.ts
+6. Error Message Leakage in Registration Catch Block (LOW)
+In the registration catch block (~line 176 of routes.ts), the code returns error.message || "Registration failed" which could expose internal error details (like database constraint errors) to the client. Change this to always return a generic message: "Registration failed. Please try again." File: server/routes.ts
+Do NOT change any other functionality, styling, or routing beyond what's listed above. Do NOT restructure files or refactor code beyond what's needed for these fixes.

@@ -1,0 +1,28 @@
+Fix the following bugs and security issues in the codebase. Work through them one at a time and make sure each change is tested before moving on.
+Bug Fixes:
+
+Session Secret Regeneration (server/index.ts ~line 135): The session secret falls back to require("crypto").randomBytes(32).toString("hex") when SESSION_SECRET is not set, which generates a new secret on every restart and invalidates all sessions. Fix: Add a check on startup that logs a warning if SESSION_SECRET is missing, and in production (NODE_ENV === "production") throw an error requiring it to be set. Keep the random fallback only for development.
+User Enumeration via Registration (server/routes.ts ~lines 138–143): The registration endpoint reveals whether an email exists by returning a different message when the email is already taken vs. a new registration. Fix: Return a generic success-like message regardless of whether the account already exists (e.g., "Check your email to continue") so attackers can't enumerate valid emails. If the user already exists with matching credentials, log them in silently.
+Race Condition in processCompanyAnalysis (server/routes.ts ~line 1212): The activeAnalysisRuns Map is in-memory only. If the server restarts mid-analysis, stale entries block retries. Fix: Add a timeout/TTL (e.g., 10 minutes) to activeAnalysisRuns entries so they auto-expire, and clean up expired entries before checking for active runs.
+Security Hardening:
+Add CSRF Protection: Install and configure csurf or a similar CSRF middleware for all state-changing (POST/PATCH/DELETE) API routes. Exclude the Stripe webhook endpoint (/api/stripe/webhook/:uuid) from CSRF since it uses its own signature verification.
+Timing-Safe Cron Secret Comparison (server/routes.ts ~line 987): Replace the cronSecret !== expectedSecret comparison with crypto.timingSafeEqual(Buffer.from(cronSecret), Buffer.from(expectedSecret)) to prevent timing attacks on the cron secret.
+Suppress Internal Error Details (server/index.ts error handler): In the global error handler (app.use((err, _req, res, _next) => ...)), don't return err.message to the client in production. Instead return a generic "Internal Server Error" message and only log the real error server-side.
+Add Input Length Validation to Registration: In the registration route, add validation that fullName is max 200 characters, email is max 254 characters, and password is between 8 and 128 characters before processing. You can add .max() and .min() constraints using Zod by extending the insertUserSchema.
+Add Rate Limiter Store for Autoscale: Since this app uses autoscale (up to 3 instances), the in-memory rate limiter store doesn't work across instances. Install rate-limit-redis or rate-limit-postgresql and configure all rate limiters (loginLimiter, registerLimiter, aiLimiter, contentGenLimiter) to use the shared database/Redis store so rate limits are enforced globally.
+Code Quality / Refactoring:
+Split routes.ts into modules: Break server/routes.ts (1400+ lines) into separate files:
+
+server/routes/auth.ts — registration, login, logout, session
+server/routes/company.ts — company CRUD, ICP updates, retry analysis
+server/routes/content.ts — AI chat, LinkedIn post, email campaign, blog article generation
+server/routes/stripe.ts — Stripe config, products, checkout, portal, subscription
+server/routes/admin.ts — admin users, analytics, delete user
+server/routes/export.ts — CSV and PDF export
+server/routes/email.ts — invite friend, share strategy, weekly emails
+Keep server/routes.ts as the main file that imports and registers all sub-routers.
+
+
+Add database-level cascade deletes: Update the schema in shared/schema.ts to add { onDelete: 'cascade' } to all foreign key references (companies → users, recommendations → companies, weeklyIdeas → companies, channelInsights → companies, userIntegrations → users). Then generate and run a Drizzle migration. After confirming cascades work, simplify deleteUser in server/storage.ts to only delete the user row and let the database handle the rest.
+Add Zod validation to all POST/PATCH endpoints: Create Zod schemas for the request bodies of /api/chat, /api/generate/linkedin, /api/generate/email, /api/generate/blog, /api/company/:id/icp, /api/invite-friend, /api/share-strategy, and all other POST/PATCH routes. Validate req.body with .parse() at the top of each handler, similar to how registration already uses insertUserSchema.parse().
+Replace as any type assertions: Search the codebase for all as any usages and replace them with proper TypeScript types. Focus especially on server/services/webhookHandlers.ts and the route handlers in server/routes.ts.

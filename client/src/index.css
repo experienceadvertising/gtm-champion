@@ -175,3 +175,100 @@
     @apply bg-clip-text text-transparent bg-linear-to-r from-indigo-600 to-violet-600 dark:from-indigo-400 dark:to-violet-400;
   }
 }
+
+.hero-gradient-bg {
+  background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(99, 102, 241, 0.12) 0%, transparent 70%),
+              radial-gradient(ellipse 60% 40% at 80% 20%, rgba(139, 92, 246, 0.08) 0%, transparent 60%),
+              radial-gradient(ellipse 50% 50% at 20% 80%, rgba(99, 102, 241, 0.06) 0%, transparent 50%);
+}
+
+.hero-grid-pattern {
+  background-image: linear-gradient(rgba(99, 102, 241, 0.05) 1px, transparent 1px),
+                     linear-gradient(90deg, rgba(99, 102, 241, 0.05) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+.dot-pattern {
+  background-image: radial-gradient(circle, rgba(99, 102, 241, 0.15) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+.pricing-glow {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.3), rgba(139, 92, 246, 0.2), rgba(99, 102, 241, 0.3));
+  animation: pricing-shine 3s ease-in-out infinite;
+}
+
+@keyframes pricing-shine {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.7; }
+}
+
+.cta-mesh-bg {
+  background-color: #4f46e5;
+  background-image: radial-gradient(at 20% 30%, rgba(139, 92, 246, 0.5) 0px, transparent 50%),
+                     radial-gradient(at 80% 70%, rgba(168, 85, 247, 0.4) 0px, transparent 50%),
+                     radial-gradient(at 50% 50%, rgba(79, 70, 229, 0.3) 0px, transparent 60%),
+                     radial-gradient(at 90% 20%, rgba(124, 58, 237, 0.3) 0px, transparent 40%);
+}
+
+.bento-card {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.bento-card:hover {
+  transform: translateY(-4px);
+}
+
+.hero-cta-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.2) 0%, transparent 50%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.hero-cta-btn:hover::before {
+  opacity: 1;
+}
+
+.pricing-shine-border {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.4), rgba(139, 92, 246, 0.2), rgba(99, 102, 241, 0.1), rgba(139, 92, 246, 0.4));
+  background-size: 300% 300%;
+  animation: pricing-border-shine 4s ease-in-out infinite;
+  border-radius: inherit;
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  padding: 1px;
+}
+
+@keyframes pricing-border-shine {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+.cta-particles {
+  background-image: radial-gradient(circle at 20% 80%, rgba(255,255,255,0.05) 1px, transparent 1px),
+                     radial-gradient(circle at 80% 20%, rgba(255,255,255,0.05) 1px, transparent 1px),
+                     radial-gradient(circle at 40% 40%, rgba(255,255,255,0.03) 1px, transparent 1px),
+                     radial-gradient(circle at 60% 60%, rgba(255,255,255,0.04) 1px, transparent 1px);
+  background-size: 60px 60px, 80px 80px, 100px 100px, 50px 50px;
+}
+
+@keyframes float-slow {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-20px); }
+}
+
+@keyframes float-slower {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-15px); }
+}
+
+.animate-float-slow {
+  animation: float-slow 8s ease-in-out infinite;
+}
+
+.animate-float-slower {
+  animation: float-slower 12s ease-in-out infinite;
+}

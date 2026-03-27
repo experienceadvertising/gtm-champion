@@ -2,6 +2,15 @@ import { queryClient } from "./queryClient";
 
 const API_BASE = "/api";
 
+function getCsrfToken(): string {
+  const match = document.cookie.match(/(?:^|;\s*)csrf-token=([^;]+)/);
+  return match ? match[1] : "";
+}
+
+function csrfHeaders(): Record<string, string> {
+  return { "Content-Type": "application/json", "X-CSRF-Token": getCsrfToken() };
+}
+
 export interface RegisterData {
   fullName: string;
   email: string;
@@ -21,6 +30,41 @@ export interface UserSession {
   isPremium: boolean;
 }
 
+export interface PageSpeedData {
+  performanceScore: number;
+  coreWebVitals: {
+    lcp: { value: number; rating: string };
+    fid: { value: number; rating: string };
+    cls: { value: number; rating: string };
+    inp: { value: number; rating: string };
+    fcp: { value: number; rating: string };
+    ttfb: { value: number; rating: string };
+  };
+  opportunities: Array<{
+    title: string;
+    description: string;
+    savings: string;
+  }>;
+}
+
+export interface SiteProfile {
+  productNames: string[];
+  features: string[];
+  pricingTiers: Array<{ name: string; price: string; details: string }>;
+  testimonials: Array<{ quote: string; author: string; role?: string; company?: string }>;
+  competitors: string[];
+  brandVoice: string;
+  existingChannels: Array<{ channel: string; url?: string; status: string }>;
+  icpDetails: {
+    persona: string;
+    companySize: string;
+    industry: string;
+    painPoints: string[];
+  } | null;
+  contentGaps: string[];
+  keyDifferentiators: string[];
+}
+
 export interface Company {
   id: number;
   name: string | null;
@@ -28,7 +72,11 @@ export interface Company {
   summary: string | null;
   gtmMotion: string | null;
   icpScore: number | null;
+  screenshotUrl: string | null;
+  visualAnalysis: string | null;
+  pageSpeedData: PageSpeedData | null;
   lastScraped: string;
+  siteProfile: SiteProfile | null;
 }
 
 export interface Recommendation {
@@ -40,6 +88,7 @@ export interface Recommendation {
   impact: string;
   effort: string;
   status: string;
+  gtmFunnel: string | null;
   createdAt: string;
 }
 
@@ -90,7 +139,6 @@ export interface DashboardData {
   channelInsights: ChannelInsight[];
 }
 
-// Session management
 const SESSION_KEY = "gtm_session";
 
 export function saveSession(session: UserSession): void {
@@ -112,12 +160,12 @@ export function clearSession(): void {
   queryClient.clear();
 }
 
-// API calls
 export async function register(data: RegisterData): Promise<{ userId: string; email: string }> {
   const response = await fetch(`${API_BASE}/register`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: csrfHeaders(),
     body: JSON.stringify(data),
+    credentials: "include",
   });
 
   if (!response.ok) {
@@ -131,8 +179,9 @@ export async function register(data: RegisterData): Promise<{ userId: string; em
 export async function login(data: LoginData): Promise<UserSession> {
   const response = await fetch(`${API_BASE}/login`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: csrfHeaders(),
     body: JSON.stringify(data),
+    credentials: "include",
   });
 
   if (!response.ok) {
@@ -145,10 +194,35 @@ export async function login(data: LoginData): Promise<UserSession> {
   return session;
 }
 
-export async function fetchDashboard(userId: string): Promise<DashboardData> {
-  const response = await fetch(`${API_BASE}/dashboard/${userId}`);
+export async function logout(): Promise<void> {
+  await fetch(`${API_BASE}/logout`, {
+    method: "POST",
+    headers: { "X-CSRF-Token": getCsrfToken() },
+    credentials: "include",
+  });
+  clearSession();
+}
+
+export async function checkSession(): Promise<{ authenticated: boolean; userId?: string; email?: string; fullName?: string }> {
+  const response = await fetch(`${API_BASE}/session`, {
+    credentials: "include",
+  });
+  return response.json();
+}
+
+export async function fetchDashboard(): Promise<DashboardData> {
+  const response = await fetch(`${API_BASE}/dashboard`, {
+    credentials: "include",
+  });
 
   if (!response.ok) {
+    if (response.status === 401) {
+      clearSession();
+      const channel = new URLSearchParams(window.location.search).get("channel");
+      const authPath = channel ? `/auth?redirect=/dashboard?channel=${encodeURIComponent(channel)}` : "/auth";
+      window.location.href = authPath;
+      throw new Error("SESSION_EXPIRED");
+    }
     const error = await response.json();
     throw new Error(error.error || "Failed to load dashboard");
   }
@@ -159,8 +233,9 @@ export async function fetchDashboard(userId: string): Promise<DashboardData> {
 export async function updateRecommendationStatus(id: number, status: string): Promise<void> {
   const response = await fetch(`${API_BASE}/recommendations/${id}/status`, {
     method: "PATCH",
-    headers: { "Content-Type": "application/json" },
+    headers: csrfHeaders(),
     body: JSON.stringify({ status }),
+    credentials: "include",
   });
 
   if (!response.ok) {
@@ -169,22 +244,12 @@ export async function updateRecommendationStatus(id: number, status: string): Pr
   }
 }
 
-export async function upgradeToPremium(userId: string): Promise<void> {
-  const response = await fetch(`${API_BASE}/upgrade/${userId}`, {
-    method: "POST",
-  });
-
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || "Failed to upgrade");
-  }
-}
-
 export async function retryAnalysis(companyId: number, fullName: string, email: string, companyUrl: string): Promise<void> {
   const response = await fetch(`${API_BASE}/retry-analysis/${companyId}`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: csrfHeaders(),
     body: JSON.stringify({ fullName, email, companyUrl }),
+    credentials: "include",
   });
 
   if (!response.ok) {
@@ -193,7 +258,6 @@ export async function retryAnalysis(companyId: number, fullName: string, email: 
   }
 }
 
-// Integrations
 export interface UserIntegration {
   id: number;
   userId: string;
@@ -201,12 +265,14 @@ export interface UserIntegration {
   integrationName: string;
   isConnected: boolean;
   connectedAt: string | null;
-  metadata: Record<string, any> | null;
+  metadata: Record<string, unknown> | null;
   createdAt: string;
 }
 
-export async function fetchUserIntegrations(userId: string): Promise<UserIntegration[]> {
-  const response = await fetch(`${API_BASE}/integrations/${userId}`);
+export async function fetchUserIntegrations(): Promise<UserIntegration[]> {
+  const response = await fetch(`${API_BASE}/integrations`, {
+    credentials: "include",
+  });
 
   if (!response.ok) {
     const error = await response.json();
@@ -217,15 +283,15 @@ export async function fetchUserIntegrations(userId: string): Promise<UserIntegra
 }
 
 export async function updateIntegration(
-  userId: string, 
   integrationId: string, 
   integrationName: string, 
   isConnected: boolean
 ): Promise<void> {
-  const response = await fetch(`${API_BASE}/integrations/${userId}/${integrationId}`, {
+  const response = await fetch(`${API_BASE}/integrations/${integrationId}`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: csrfHeaders(),
     body: JSON.stringify({ integrationName, isConnected }),
+    credentials: "include",
   });
 
   if (!response.ok) {
@@ -234,20 +300,19 @@ export async function updateIntegration(
   }
 }
 
-// AI Chat
 export interface ChatResponse {
   answer: string;
 }
 
 export async function askAI(
-  userId: string,
   question: string,
   channelId?: string
 ): Promise<ChatResponse> {
-  const response = await fetch(`${API_BASE}/chat/${userId}`, {
+  const response = await fetch(`${API_BASE}/chat`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: csrfHeaders(),
     body: JSON.stringify({ question, channelId }),
+    credentials: "include",
   });
 
   if (!response.ok) {
@@ -258,7 +323,6 @@ export async function askAI(
   return response.json();
 }
 
-// Stripe Integration
 export interface StripePrice {
   id: string;
   unit_amount: number;
@@ -278,7 +342,7 @@ export interface StripeProduct {
 }
 
 export async function getStripeConfig(): Promise<{ publishableKey: string }> {
-  const response = await fetch(`${API_BASE}/stripe/config`);
+  const response = await fetch(`${API_BASE}/stripe/config`, { credentials: "include" });
   if (!response.ok) {
     const error = await response.json();
     throw new Error(error.error || "Failed to get Stripe config");
@@ -287,7 +351,7 @@ export async function getStripeConfig(): Promise<{ publishableKey: string }> {
 }
 
 export async function getStripeProducts(): Promise<{ data: StripeProduct[] }> {
-  const response = await fetch(`${API_BASE}/stripe/products`);
+  const response = await fetch(`${API_BASE}/stripe/products`, { credentials: "include" });
   if (!response.ok) {
     const error = await response.json();
     throw new Error(error.error || "Failed to get products");
@@ -295,11 +359,12 @@ export async function getStripeProducts(): Promise<{ data: StripeProduct[] }> {
   return response.json();
 }
 
-export async function createCheckoutSession(userId: string, priceId: string): Promise<{ url: string }> {
+export async function createCheckoutSession(priceId: string): Promise<{ url: string }> {
   const response = await fetch(`${API_BASE}/stripe/checkout`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ userId, priceId }),
+    headers: csrfHeaders(),
+    body: JSON.stringify({ priceId }),
+    credentials: "include",
   });
   if (!response.ok) {
     const error = await response.json();
@@ -308,11 +373,11 @@ export async function createCheckoutSession(userId: string, priceId: string): Pr
   return response.json();
 }
 
-export async function createPortalSession(userId: string): Promise<{ url: string }> {
+export async function createPortalSession(): Promise<{ url: string }> {
   const response = await fetch(`${API_BASE}/stripe/portal`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ userId }),
+    headers: csrfHeaders(),
+    credentials: "include",
   });
   if (!response.ok) {
     const error = await response.json();
@@ -321,8 +386,8 @@ export async function createPortalSession(userId: string): Promise<{ url: string
   return response.json();
 }
 
-export async function getSubscriptionStatus(userId: string): Promise<{ subscription: any; isPremium: boolean }> {
-  const response = await fetch(`${API_BASE}/stripe/subscription/${userId}`);
+export async function getSubscriptionStatus(): Promise<{ subscription: unknown; isPremium: boolean }> {
+  const response = await fetch(`${API_BASE}/stripe/subscription`, { credentials: "include" });
   if (!response.ok) {
     const error = await response.json();
     throw new Error(error.error || "Failed to get subscription status");
@@ -330,7 +395,6 @@ export async function getSubscriptionStatus(userId: string): Promise<{ subscript
   return response.json();
 }
 
-// Content Generators (Premium)
 export interface LinkedInPostRequest {
   topic: string;
   tone: 'thought-leader' | 'educational' | 'storytelling' | 'promotional';
@@ -371,13 +435,13 @@ export interface GeneratedArticle {
 }
 
 export async function generateLinkedInPosts(
-  userId: string,
   request: LinkedInPostRequest
 ): Promise<{ posts: LinkedInPost[] }> {
-  const response = await fetch(`${API_BASE}/generate/linkedin/${userId}`, {
+  const response = await fetch(`${API_BASE}/generate/linkedin`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: csrfHeaders(),
     body: JSON.stringify(request),
+    credentials: "include",
   });
   if (!response.ok) {
     const error = await response.json();
@@ -387,13 +451,13 @@ export async function generateLinkedInPosts(
 }
 
 export async function generateEmailCampaign(
-  userId: string,
   request: EmailCampaignRequest
 ): Promise<{ emails: GeneratedEmail[] }> {
-  const response = await fetch(`${API_BASE}/generate/email/${userId}`, {
+  const response = await fetch(`${API_BASE}/generate/email`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: csrfHeaders(),
     body: JSON.stringify(request),
+    credentials: "include",
   });
   if (!response.ok) {
     const error = await response.json();
@@ -403,13 +467,13 @@ export async function generateEmailCampaign(
 }
 
 export async function generateBlogArticle(
-  userId: string,
   request: BlogArticleRequest
 ): Promise<{ article: GeneratedArticle }> {
-  const response = await fetch(`${API_BASE}/generate/blog/${userId}`, {
+  const response = await fetch(`${API_BASE}/generate/blog`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: csrfHeaders(),
     body: JSON.stringify(request),
+    credentials: "include",
   });
   if (!response.ok) {
     const error = await response.json();

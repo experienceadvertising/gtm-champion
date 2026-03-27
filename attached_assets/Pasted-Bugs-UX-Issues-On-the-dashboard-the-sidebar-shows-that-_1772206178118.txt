@@ -1,0 +1,31 @@
+Bugs & UX Issues
+
+On the dashboard, the sidebar shows that Community has 1 recommendation, but the Community page itself displays 0 recommendations; the Content page suffers a similar mismatch
+gtmchampion.com
+. This inconsistency is confusing.
+
+Scroll behavior sometimes feels stuck. On certain pages (e.g., SEO), the scroll bar doesn’t move even though more content is available—users might think the page is frozen.
+
+The left navigation has duplicate icons for some channels (e.g., Email Marketing and Content look very similar), making it harder to quickly differentiate them.
+
+The “Weekly Focus” card on the dashboard indicates 7 high‑impact tasks but doesn’t link anywhere. It should either scroll the user down to the tasks or show a modal with the tasks.
+
+Suggestions for Improvement (B2B/SaaS context)
+
+Deeper ICP personalisation: Let users define or adjust their ideal customer profile (industry, company size, pain points) and tailor recommendations accordingly. Currently the tool infers ICP solely from the website, which may not capture multiple target segments.
+
+Roadmap & prioritisation: Add a Kanban‑style “Task Board” where the high‑impact recommendations can be converted into tasks with due dates, owners, and statuses. This would make the tool actionable rather than just advisory.
+
+Integration with Ad & Marketing Platforms: B2B marketers rely on LinkedIn, Google Ads, Facebook Ads, Salesforce, Marketo, and Slack. Native integrations for these platforms would enable better reporting, easier campaign launches, and automatic feedback loops.
+
+Enhanced content automation: The “Weekly Content Sprints” idea is promising, but it needs to actually generate outlines or briefs. Allow users to select content formats (blog, LinkedIn carousel, case study) and download briefs or push them to Google Docs/Notion.
+
+Competitor benchmarking: Since the tool crawls sites, adding competitor intel (keyword overlaps, content gaps, share-of-voice metrics) would make it invaluable for positioning and messaging decisions.
+
+Data refresh cadence: Provide a button to re‑crawl the site and update the GTM analysis. Right now there’s a Refresh button, but its function isn’t obvious. Ideally, users should be able to run a new crawl after updating their site or product.
+
+Clearer progress tracking: The high‑impact “Weekly Focus” tasks should be visible on the dashboard, with checkboxes and ability to mark tasks done. Email digests could then report on progress and completion status.
+
+Bug fixes: Resolve the mismatch between side‑navigation counts and actual recommendation counts, and ensure scroll bars work reliably across all pages.
+
+Documentation / help: Add tooltips or a help center explaining what each channel covers, how AI generates recommendations, and definitions (e.g., difference between “Email Marketing” and “Content”).

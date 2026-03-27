@@ -1,13 +1,26 @@
 import { useLocation } from "wouter";
-import { Helmet } from "react-helmet";
 import { ArrowLeft, Mail, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { mockCompany } from "@/lib/mock-data";
+import { useQuery } from "@tanstack/react-query";
+import { getSession, fetchDashboard } from "@/lib/api";
 
 export default function EmailPreview() {
   const [, setLocation] = useLocation();
+  const session = getSession();
+
+  const { data } = useQuery({
+    queryKey: ["dashboard"],
+    queryFn: () => fetchDashboard(),
+    enabled: !!session,
+  });
+
+  const companyName = data?.company?.name || "Your Company";
+  const companyUrl = data?.company?.url || "yourcompany.com";
+  const gtmMotion = data?.company?.gtmMotion || "Product-Led Growth";
+  const companySummary = data?.company?.summary || "Your company's AI-generated summary will appear here.";
+  const userName = data?.user?.fullName?.split(" ")[0] || "there";
 
   const EmailFrame = ({ subject, children }: { subject: string, children: React.ReactNode }) => (
     <div className="border rounded-lg overflow-hidden bg-white shadow-sm max-w-2xl mx-auto my-8">
@@ -26,10 +39,6 @@ export default function EmailPreview() {
   );
 
   return (
-    <>
-    <Helmet>
-      <meta name="robots" content="noindex, nofollow" />
-    </Helmet>
     <div className="min-h-screen bg-slate-50">
        <header className="h-16 border-b bg-white flex items-center px-8 sticky top-0 z-10">
           <Button variant="ghost" size="sm" className="mr-4" onClick={() => setLocation("/dashboard")}>
@@ -42,32 +51,32 @@ export default function EmailPreview() {
           <div className="max-w-4xl mx-auto text-center mb-12">
             <h2 className="text-3xl font-bold font-display mb-4">Automated Weekly Digests</h2>
             <p className="text-muted-foreground">
-              This is a preview of the automated emails your users will receive via Postmark.
+              Preview of the automated emails sent to you via Postmark.
             </p>
           </div>
 
           <Tabs defaultValue="welcome" className="max-w-3xl mx-auto">
             <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="welcome">Welcome Email</TabsTrigger>
-              <TabsTrigger value="weekly">Weekly Strategy</TabsTrigger>
+              <TabsTrigger value="welcome" data-testid="tab-welcome-email">Welcome Email</TabsTrigger>
+              <TabsTrigger value="weekly" data-testid="tab-weekly-email">Weekly Strategy</TabsTrigger>
             </TabsList>
             
             <TabsContent value="welcome">
                <EmailFrame subject="Welcome to GTM Champion - Your Analysis is Ready">
                  <div className="space-y-6">
                    <h2 className="text-2xl font-bold text-slate-900">Welcome to GTM Champion! 🚀</h2>
-                   <p>Hi there,</p>
-                   <p>Thanks for signing up! We've successfully crawled <strong>{mockCompany.url}</strong> and our AI has generated your initial Go-To-Market profile.</p>
+                   <p>Hi {userName},</p>
+                   <p>Thanks for signing up! We've successfully crawled <strong>{companyUrl}</strong> and our AI has generated your initial Go-To-Market profile.</p>
                    
                    <div className="bg-indigo-50 p-6 rounded-lg border border-indigo-100 my-6">
-                     <h3 className="font-bold text-indigo-900 mb-2">Your GTM Motion: {mockCompany.motion}</h3>
-                     <p className="text-sm text-indigo-800">{mockCompany.summary}</p>
+                     <h3 className="font-bold text-indigo-900 mb-2">Your GTM Motion: {gtmMotion}</h3>
+                     <p className="text-sm text-indigo-800">{companySummary}</p>
                    </div>
 
-                   <p>We've identified 3 high-impact channels for you to focus on this week. Log in to your dashboard to see the full breakdown.</p>
+                   <p>We've identified high-impact channels for you to focus on this week. Log in to your dashboard to see the full breakdown.</p>
                    
                    <div className="text-center py-4">
-                     <Button className="px-8">View My Dashboard</Button>
+                     <Button className="px-8" data-testid="button-view-dashboard">View My Dashboard</Button>
                    </div>
                    
                    <p className="text-sm text-slate-500 mt-8 border-t pt-4">
@@ -78,28 +87,34 @@ export default function EmailPreview() {
             </TabsContent>
 
             <TabsContent value="weekly">
-              <EmailFrame subject="Your Weekly GTM Ideas: LinkedIn Carousel & SEO Quick Win">
+              <EmailFrame subject={`Your Weekly GTM Ideas for ${companyName}`}>
                 <div className="space-y-6">
-                   <h2 className="text-2xl font-bold text-slate-900">Here are your ideas for the week 💡</h2>
-                   <p>Hi Team,</p>
-                   <p>Based on recent trends in your industry, here are 3 actionable GTM ideas for <strong>{mockCompany.name}</strong>:</p>
+                   <h2 className="text-2xl font-bold text-slate-900">Your ideas for this week 💡</h2>
+                   <p>Hi {userName},</p>
+                   <p>Based on recent trends in your industry, here are 3 actionable GTM ideas for <strong>{companyName}</strong>:</p>
                    
                    <div className="space-y-4 my-6">
                      <div className="p-4 border rounded-lg bg-white">
                        <span className="text-xs font-bold text-blue-600 uppercase tracking-wide">LinkedIn</span>
-                       <h4 className="font-bold text-lg mt-1">Case Study: How Client X saved 20% on fuel</h4>
-                       <p className="text-sm text-slate-600 mt-1">Draft a carousel breaking down a recent customer win. Focus on ROI.</p>
+                       <h4 className="font-bold text-lg mt-1">Case Study: How Client X Grew Revenue 20%</h4>
+                       <p className="text-sm text-slate-600 mt-1">Draft a carousel breaking down a recent customer win. Focus on ROI metrics and actionable takeaways.</p>
                      </div>
 
                      <div className="p-4 border rounded-lg bg-white">
                        <span className="text-xs font-bold text-green-600 uppercase tracking-wide">SEO</span>
-                       <h4 className="font-bold text-lg mt-1">Optimize for "Predictive Logistics"</h4>
-                       <p className="text-sm text-slate-600 mt-1">Update your H1 and meta description on the features page.</p>
+                       <h4 className="font-bold text-lg mt-1">Optimize Your Primary Keyword</h4>
+                       <p className="text-sm text-slate-600 mt-1">Update your H1 and meta description on the features page to improve organic search visibility.</p>
+                     </div>
+
+                     <div className="p-4 border rounded-lg bg-white">
+                       <span className="text-xs font-bold text-purple-600 uppercase tracking-wide">Content</span>
+                       <h4 className="font-bold text-lg mt-1">Write a Comparison Guide</h4>
+                       <p className="text-sm text-slate-600 mt-1">Create a detailed comparison with your top 3 competitors. Focus on unique differentiators.</p>
                      </div>
                    </div>
 
                    <div className="text-center py-4">
-                     <Button className="px-8">Execute These Ideas</Button>
+                     <Button className="px-8" data-testid="button-execute-ideas">Execute These Ideas</Button>
                    </div>
                  </div>
               </EmailFrame>
@@ -107,6 +122,5 @@ export default function EmailPreview() {
           </Tabs>
        </div>
     </div>
-    </>
   );
 }

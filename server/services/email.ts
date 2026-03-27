@@ -1,12 +1,18 @@
 import { ServerClient } from "postmark";
 
-// Initialize Postmark client
-// Note: User needs to provide POSTMARK_SERVER_TOKEN in environment variables
+function escapeHtml(str: string): string {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
 let postmarkClient: ServerClient | null = null;
 
 if (process.env.POSTMARK_SERVER_TOKEN) {
   postmarkClient = new ServerClient(process.env.POSTMARK_SERVER_TOKEN);
 }
+
+const FROM_ADDRESS = process.env.POSTMARK_FROM_EMAIL
+  ? `GTM Champion <${process.env.POSTMARK_FROM_EMAIL}>`
+  : "GTM Champion <hello@gtmchampion.com>";
 
 export interface WelcomeEmailData {
   toEmail: string;
@@ -15,6 +21,11 @@ export interface WelcomeEmailData {
   summary: string;
   gtmMotion: string;
   dashboardUrl: string;
+  recommendations?: Array<{
+    category: string;
+    title: string;
+    impact: string;
+  }>;
 }
 
 export interface WeeklyEmailData {
@@ -28,85 +39,138 @@ export interface WeeklyEmailData {
   }>;
 }
 
+function getImpactColor(impact: string): { bg: string; text: string; dot: string } {
+  const normalized = impact.toLowerCase();
+  if (normalized === "high") return { bg: "#dcfce7", text: "#166534", dot: "#22c55e" };
+  if (normalized === "medium") return { bg: "#fef9c3", text: "#854d0e", dot: "#eab308" };
+  return { bg: "#f1f5f9", text: "#475569", dot: "#94a3b8" };
+}
+
 export async function sendWelcomeEmail(data: WelcomeEmailData): Promise<void> {
   if (!postmarkClient) {
     console.warn("Postmark not configured - email would be sent:", data);
     return;
   }
 
+  const highImpactRecs = (data.recommendations || [])
+    .filter(r => r.impact?.toLowerCase() === "high")
+    .slice(0, 5);
+
+  const channelSet = new Set(highImpactRecs.map(r => r.category));
+  const uniqueChannels = Array.from(channelSet);
+
+  const recsHtml = highImpactRecs.length > 0 ? `
+        <div style="margin: 28px 0;">
+          <h3 style="margin: 0 0 16px 0; color: #0f172a; font-size: 16px; font-weight: 700; letter-spacing: -0.01em;">Your Top High-Impact Actions</h3>
+          ${highImpactRecs.map(rec => {
+            const colors = getImpactColor(rec.impact);
+            return `
+          <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px 20px; margin-bottom: 10px; border-left: 4px solid ${colors.dot};">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+              <span style="background: ${colors.bg}; color: ${colors.text}; font-size: 11px; font-weight: 600; text-transform: uppercase; padding: 2px 8px; border-radius: 4px; letter-spacing: 0.05em;">${rec.impact} Impact</span>
+              <span style="color: #94a3b8; font-size: 11px;">·</span>
+              <span style="color: #6366f1; font-size: 12px; font-weight: 500;">${rec.category}</span>
+            </div>
+            <p style="margin: 0; color: #1e293b; font-size: 14px; line-height: 1.5; font-weight: 500;">${rec.title}</p>
+          </div>`;
+          }).join('')}
+        </div>` : '';
+
+  const channelLinksHtml = uniqueChannels.length > 0 ? `
+        <div style="margin: 24px 0;">
+          <p style="color: #64748b; font-size: 13px; margin: 0 0 12px 0; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">Jump to Channel Strategy</p>
+          <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+            ${uniqueChannels.map(ch => {
+              const channelParam = encodeURIComponent(ch);
+              return `<a href="${data.dashboardUrl}?channel=${channelParam}" style="display: inline-block; background: #eef2ff; color: #4338ca; font-size: 13px; font-weight: 500; padding: 6px 14px; border-radius: 6px; text-decoration: none; border: 1px solid #c7d2fe;">${ch}</a>`;
+            }).join('')}
+          </div>
+        </div>` : '';
+
   const htmlBody = `
 <!DOCTYPE html>
 <html>
 <head>
-  <style>
-    body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; line-height: 1.6; color: #1e293b; }
-    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-    .header { text-align: center; padding: 30px 0; }
-    .logo { font-size: 24px; font-weight: bold; color: #6366f1; }
-    .content { background: #f8fafc; border-radius: 12px; padding: 30px; margin: 20px 0; }
-    .highlight { background: #eef2ff; border-left: 4px solid #6366f1; padding: 20px; margin: 20px 0; border-radius: 8px; }
-    .button { display: inline-block; background: #6366f1; color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; margin: 20px 0; }
-    .footer { text-align: center; color: #64748b; font-size: 14px; margin-top: 40px; }
-  </style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
-<body>
-  <div class="container">
-    <div class="header">
-      <div class="logo">⚡ GTM Champion</div>
-    </div>
-    
-    <h2 style="color: #0f172a;">Welcome to GTM Champion! 🚀</h2>
-    
-    <p>Hi ${data.userName},</p>
-    
-    <p>Thanks for signing up! We've successfully analyzed <strong>${data.companyName}</strong> and our AI has generated your initial Go-To-Market profile.</p>
-    
-    <div class="highlight">
-      <h3 style="margin-top: 0; color: #4338ca;">Your GTM Motion: ${data.gtmMotion}</h3>
-      <p style="color: #475569;">${data.summary}</p>
-    </div>
-    
-    <p>We've identified several high-impact channels for you to focus on this week. Log in to your dashboard to see the full breakdown of recommendations tailored specifically for your business.</p>
-    
-    <div style="text-align: center;">
-      <a href="${data.dashboardUrl}" class="button">View My Dashboard</a>
-    </div>
-    
-    <div class="footer">
-      <p>You'll receive weekly GTM ideas every Monday to keep your strategy fresh.</p>
-      <p style="margin-top: 20px;">P.S. You can reply directly to this email if you have any questions about your strategy.</p>
-      <p style="margin-top: 20px;">© 2025 GTM Champion. All rights reserved.</p>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1e293b; margin: 0; padding: 0; background-color: #f1f5f9;">
+  <div style="background-color: #f1f5f9; padding: 40px 20px;">
+    <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,0.08);">
+
+      <div style="background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #a855f7 100%); padding: 40px 32px; text-align: center;">
+        <div style="font-size: 28px; font-weight: 800; color: white; letter-spacing: -0.02em;">⚡ GTM Champion</div>
+        <p style="color: rgba(255,255,255,0.85); margin: 8px 0 0 0; font-size: 15px; font-weight: 400;">Your Go-To-Market Strategy Is Ready</p>
+      </div>
+
+      <div style="padding: 36px 32px 20px 32px;">
+        <p style="color: #475569; margin: 0 0 4px 0; font-size: 15px;">Hi ${data.userName},</p>
+        <h1 style="color: #0f172a; font-size: 22px; margin: 16px 0 8px 0; font-weight: 700; letter-spacing: -0.02em;">We've analyzed <span style="color: #6366f1;">${data.companyName}</span></h1>
+        <p style="color: #64748b; margin: 0 0 24px 0; font-size: 15px; line-height: 1.6;">Our AI reviewed your website and built a personalized GTM playbook across 13 marketing channels. Here's what we found:</p>
+
+        <div style="background: linear-gradient(135deg, #eef2ff 0%, #faf5ff 100%); border: 1px solid #c7d2fe; border-radius: 12px; padding: 24px; margin: 0 0 24px 0;">
+          <p style="color: #6366f1; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; margin: 0 0 8px 0;">Your GTM Motion</p>
+          <h2 style="margin: 0 0 12px 0; color: #1e1b4b; font-size: 20px; font-weight: 700;">${data.gtmMotion}</h2>
+          <p style="color: #475569; font-size: 14px; line-height: 1.7; margin: 0;">${data.summary}</p>
+        </div>
+
+        ${recsHtml}
+
+        ${channelLinksHtml}
+
+        <div style="text-align: center; margin: 32px 0 8px 0;">
+          <a href="${data.dashboardUrl}" style="display: inline-block; background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); color: white; padding: 16px 48px; text-decoration: none; border-radius: 10px; font-weight: 700; font-size: 16px; letter-spacing: -0.01em; box-shadow: 0 4px 14px rgba(99,102,241,0.4);">View My Dashboard →</a>
+        </div>
+        <p style="text-align: center; color: #94a3b8; font-size: 12px; margin: 8px 0 0 0;">See all 13 channel strategies, actionable tasks, and weekly ideas</p>
+      </div>
+
+      <div style="background: #f8fafc; padding: 24px 32px; border-top: 1px solid #e2e8f0;">
+        <div style="text-align: center;">
+          <p style="color: #64748b; font-size: 13px; margin: 0 0 4px 0;">📬 You'll receive weekly GTM ideas every Monday to keep your strategy fresh.</p>
+          <p style="color: #94a3b8; font-size: 12px; margin: 12px 0 0 0;">Questions? Just reply to this email — a real human will get back to you.</p>
+          <p style="color: #cbd5e1; font-size: 11px; margin: 16px 0 0 0;">&copy; 2026 GTM Champion. All rights reserved.</p>
+          <p style="margin: 12px 0 0 0;"><a href="{{{pm:unsubscribe}}}" style="color: #94a3b8; font-size: 11px; text-decoration: underline;">Unsubscribe from emails</a></p>
+        </div>
+      </div>
+
     </div>
   </div>
 </body>
 </html>`;
 
+  const recsText = highImpactRecs.length > 0
+    ? `\nYour Top High-Impact Actions:\n${highImpactRecs.map((r, i) => `${i + 1}. [${r.category}] ${r.title}`).join('\n')}\n`
+    : '';
+
   const textBody = `Welcome to GTM Champion!
 
 Hi ${data.userName},
 
-Thanks for signing up! We've successfully analyzed ${data.companyName} and our AI has generated your initial Go-To-Market profile.
+We've analyzed ${data.companyName} and built your personalized GTM playbook across 13 marketing channels.
 
 Your GTM Motion: ${data.gtmMotion}
 
 ${data.summary}
+${recsText}
+View your full dashboard: ${data.dashboardUrl}
 
-We've identified several high-impact channels for you to focus on this week. Log in to your dashboard to see the full breakdown: ${data.dashboardUrl}
+You'll receive weekly GTM ideas every Monday to keep your strategy fresh.
+Questions? Just reply to this email.
 
-P.S. You can reply directly to this email if you have any questions about your strategy.
+Unsubscribe: {{{pm:unsubscribe}}}
 
-© 2025 GTM Champion`;
+© 2026 GTM Champion`;
 
   try {
     await postmarkClient.sendEmail({
-      From: process.env.POSTMARK_FROM_EMAIL || "noreply@gtmchampion.com",
+      From: FROM_ADDRESS,
       To: data.toEmail,
-      Subject: "Welcome to GTM Champion - Your Analysis is Ready",
+      Subject: `Your GTM Strategy for ${data.companyName} Is Ready`,
       HtmlBody: htmlBody,
       TextBody: textBody,
       MessageStream: "outbound",
     });
-    
+
     console.log(`Welcome email sent to ${data.toEmail}`);
   } catch (error) {
     console.error("Failed to send welcome email:", error);
@@ -120,33 +184,56 @@ export async function sendWeeklyEmail(data: WeeklyEmailData): Promise<void> {
     return;
   }
 
-  const ideasHtml = data.ideas.map((idea, idx) => {
-    // Format description with better structure - convert numbered lists to HTML
+  const dashboardUrl = "https://gtmchampion.com/dashboard";
+
+  const ideasHtml = data.ideas.map((idea) => {
     let formattedDesc = idea.description;
-    
-    // Truncate if too long (keep first 300 chars for email readability)
-    const maxLength = 400;
+
+    const maxLength = 500;
     if (formattedDesc.length > maxLength) {
-      // Try to cut at a sentence boundary
       const truncated = formattedDesc.substring(0, maxLength);
       const lastPeriod = truncated.lastIndexOf('.');
       formattedDesc = lastPeriod > 200 ? truncated.substring(0, lastPeriod + 1) : truncated + '...';
     }
-    
-    // Convert numbered patterns like "1)" or "1." to cleaner format
-    formattedDesc = formattedDesc
-      .replace(/(\d+)\)\s*/g, '<br>• ')
-      .replace(/;\s*(\d+)\)/g, '<br>• ')
-      .replace(/^• /, '');
-    
+
+    const steps = formattedDesc.split(/(?:Step\s*\d+[:.]\s*|\b\d+[.)]\s+)/i).filter(s => s.trim().length > 10);
+    let descHtml: string;
+    if (steps.length >= 2) {
+      descHtml = `<table cellpadding="0" cellspacing="0" border="0" style="width: 100%;">
+        ${steps.map((step, i) => `
+        <tr>
+          <td style="vertical-align: top; padding: 4px 10px 4px 0; width: 24px;">
+            <span style="display: inline-block; width: 22px; height: 22px; background: #eef2ff; color: #6366f1; font-size: 12px; font-weight: 700; text-align: center; line-height: 22px; border-radius: 50%;">${i + 1}</span>
+          </td>
+          <td style="vertical-align: top; padding: 4px 0 8px 0; color: #475569; font-size: 14px; line-height: 1.6;">${step.trim()}</td>
+        </tr>`).join('')}
+      </table>`;
+    } else {
+      descHtml = `<p style="color: #475569; font-size: 14px; line-height: 1.7; margin: 0;">${formattedDesc.replace(/\n+/g, '<br>')}</p>`;
+    }
+
+    const normalizedType = (idea.type || '').toLowerCase().trim();
+    const channel = 
+      normalizedType.includes('linkedin') ? 'Organic Social' :
+      normalizedType.includes('email') ? 'Email Marketing' :
+      normalizedType.includes('webinar') ? 'Community' :
+      normalizedType.includes('partner') ? 'Partnerships' :
+      normalizedType.includes('social') ? 'Organic Social' :
+      normalizedType.includes('seo') ? 'SEO' :
+      normalizedType.includes('paid') ? 'Paid Search' :
+      'Content';
+    const strategyUrl = `${dashboardUrl}?channel=${encodeURIComponent(channel)}`;
+
     return `
     <div style="background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 24px; margin: 20px 0; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
-      <div style="display: flex; align-items: center; margin-bottom: 12px;">
-        <span style="background: #eef2ff; color: #6366f1; font-weight: 600; font-size: 11px; text-transform: uppercase; padding: 4px 10px; border-radius: 4px;">${idea.type}</span>
+      <div style="margin-bottom: 14px;">
+        <span style="background: #eef2ff; color: #6366f1; font-weight: 600; font-size: 11px; text-transform: uppercase; padding: 4px 10px; border-radius: 4px; display: inline-block;">${idea.type}</span>
       </div>
-      <h3 style="margin: 0 0 12px 0; color: #0f172a; font-size: 18px; line-height: 1.4;">${idea.title}</h3>
-      <p style="color: #475569; font-size: 14px; line-height: 1.7; margin: 0;">${formattedDesc}</p>
-      <a href="https://gtmchampion.com/dashboard" style="display: inline-block; margin-top: 16px; color: #6366f1; font-size: 14px; font-weight: 600; text-decoration: none;">Read full strategy →</a>
+      <h3 style="margin: 0 0 14px 0; color: #0f172a; font-size: 18px; line-height: 1.4;">${idea.title}</h3>
+      ${descHtml}
+      <div style="margin-top: 16px; padding-top: 14px; border-top: 1px solid #f1f5f9;">
+        <a href="${strategyUrl}" style="color: #6366f1; font-size: 14px; font-weight: 600; text-decoration: none;">Read full strategy &rarr;</a>
+      </div>
     </div>
   `;
   }).join('');
@@ -157,50 +244,41 @@ export async function sendWeeklyEmail(data: WeeklyEmailData): Promise<void> {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1e293b; margin: 0; padding: 0; background-color: #f8fafc; }
-    .wrapper { background-color: #f8fafc; padding: 40px 20px; }
-    .container { max-width: 600px; margin: 0 auto; background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-    .header { background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); padding: 32px; text-align: center; }
-    .logo { font-size: 24px; font-weight: bold; color: white; }
-    .content { padding: 32px; }
-    .button { display: inline-block; background: #6366f1; color: white !important; padding: 16px 40px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; }
-    .footer { background: #f8fafc; padding: 24px 32px; text-align: center; border-top: 1px solid #e2e8f0; }
-  </style>
 </head>
-<body>
-  <div class="wrapper">
-    <div class="container">
-      <div class="header">
-        <div class="logo">⚡ GTM Champion</div>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1e293b; margin: 0; padding: 0; background-color: #f8fafc;">
+  <div style="background-color: #f8fafc; padding: 40px 20px;">
+    <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+      <div style="background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #a855f7 100%); padding: 32px; text-align: center;">
+        <div style="font-size: 24px; font-weight: bold; color: white;">⚡ GTM Champion</div>
         <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0 0; font-size: 14px;">Your Weekly Strategy Digest</p>
       </div>
-      
-      <div class="content">
+
+      <div style="padding: 32px;">
         <h1 style="color: #0f172a; font-size: 24px; margin: 0 0 16px 0;">Your ideas for this week 💡</h1>
-        
+
         <p style="color: #475569; margin: 0 0 8px 0;">Hi ${data.userName},</p>
-        
+
         <p style="color: #475569; margin: 0 0 24px 0;">Here are <strong>${data.ideas.length} actionable GTM ideas</strong> tailored for <strong>${data.companyName}</strong>:</p>
-        
+
         ${ideasHtml}
-        
+
         <div style="text-align: center; margin-top: 32px; padding-top: 24px; border-top: 1px solid #e2e8f0;">
           <p style="color: #64748b; font-size: 14px; margin: 0 0 16px 0;">Ready to put these ideas into action?</p>
-          <a href="https://gtmchampion.com/dashboard" class="button">View Full Strategies</a>
+          <a href="${dashboardUrl}" style="display: inline-block; background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); color: white !important; padding: 16px 40px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 14px rgba(99,102,241,0.3);">View Full Strategies</a>
         </div>
       </div>
-      
-      <div class="footer">
+
+      <div style="background: #f8fafc; padding: 24px 32px; text-align: center; border-top: 1px solid #e2e8f0;">
         <p style="color: #64748b; font-size: 14px; margin: 0 0 8px 0;">Keep shipping! We'll be back next Monday with fresh ideas.</p>
-        <p style="color: #94a3b8; font-size: 12px; margin: 0;">© 2025 GTM Champion. All rights reserved.</p>
+        <p style="color: #94a3b8; font-size: 12px; margin: 0;">&copy; 2026 GTM Champion. All rights reserved.</p>
+        <p style="margin: 12px 0 0 0;"><a href="{{{pm:unsubscribe}}}" style="color: #94a3b8; font-size: 11px; text-decoration: underline;">Unsubscribe from emails</a></p>
       </div>
     </div>
   </div>
 </body>
 </html>`;
 
-  const ideasText = data.ideas.map((idea, idx) => 
+  const ideasText = data.ideas.map((idea, idx) =>
     `${idx + 1}. [${idea.type}] ${idea.title}\n   ${idea.description}`
   ).join('\n\n');
 
@@ -212,23 +290,340 @@ Based on recent trends in your industry, here are ${data.ideas.length} actionabl
 
 ${ideasText}
 
+View your dashboard: ${dashboardUrl}
+
 Keep shipping! We'll be back next Monday with fresh ideas.
 
-© 2025 GTM Champion`;
+Unsubscribe: {{{pm:unsubscribe}}}
+
+© 2026 GTM Champion`;
 
   try {
     await postmarkClient.sendEmail({
-      From: process.env.POSTMARK_FROM_EMAIL || "noreply@gtmchampion.com",
+      From: FROM_ADDRESS,
       To: data.toEmail,
       Subject: `Your Weekly GTM Ideas for ${data.companyName}`,
       HtmlBody: htmlBody,
       TextBody: textBody,
       MessageStream: "outbound",
     });
-    
+
     console.log(`Weekly email sent to ${data.toEmail}`);
   } catch (error) {
     console.error("Failed to send weekly email:", error);
+    throw error;
+  }
+}
+
+const ADMIN_EMAIL = "evan@experienceadvertising.com";
+
+export async function sendNewUserNotification(data: {
+  userName: string;
+  email: string;
+  companyUrl: string;
+}): Promise<void> {
+  if (!postmarkClient) {
+    console.log("Postmark not configured, skipping admin notification");
+    return;
+  }
+
+  const htmlBody = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 0; background: #f8fafc;">
+  <div style="max-width: 520px; margin: 40px auto; background: #fff; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden;">
+    <div style="background: linear-gradient(135deg, #4f46e5, #7c3aed); padding: 24px 28px;">
+      <h1 style="color: #fff; font-size: 20px; margin: 0;">New User Signed Up</h1>
+    </div>
+    <div style="padding: 28px;">
+      <table style="width: 100%; border-collapse: collapse;">
+        <tr>
+          <td style="padding: 8px 0; color: #64748b; font-size: 14px; width: 100px;">Name</td>
+          <td style="padding: 8px 0; font-size: 14px; font-weight: 600;">${data.userName}</td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; color: #64748b; font-size: 14px;">Email</td>
+          <td style="padding: 8px 0; font-size: 14px;"><a href="mailto:${data.email}" style="color: #4f46e5;">${data.email}</a></td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; color: #64748b; font-size: 14px;">Website</td>
+          <td style="padding: 8px 0; font-size: 14px;"><a href="${data.companyUrl}" style="color: #4f46e5;">${data.companyUrl}</a></td>
+        </tr>
+        <tr>
+          <td style="padding: 8px 0; color: #64748b; font-size: 14px;">Time</td>
+          <td style="padding: 8px 0; font-size: 14px;">${new Date().toLocaleString("en-US", { timeZone: "America/New_York" })} ET</td>
+        </tr>
+      </table>
+    </div>
+  </div>
+</body>
+</html>`;
+
+  try {
+    await postmarkClient.sendEmail({
+      From: FROM_ADDRESS,
+      To: ADMIN_EMAIL,
+      Subject: `New signup: ${data.userName} (${data.companyUrl})`,
+      HtmlBody: htmlBody,
+      TextBody: `New user signed up:\n\nName: ${data.userName}\nEmail: ${data.email}\nWebsite: ${data.companyUrl}\nTime: ${new Date().toLocaleString("en-US", { timeZone: "America/New_York" })} ET`,
+      MessageStream: "outbound",
+    });
+    console.log(`Admin notification sent for new user: ${data.email}`);
+  } catch (error) {
+    console.error("Failed to send admin notification:", error);
+  }
+}
+
+export interface InviteFriendData {
+  toEmail: string;
+  toName: string;
+  fromName: string;
+}
+
+export async function sendInviteFriendEmail(data: InviteFriendData): Promise<void> {
+  const safeTo = escapeHtml(data.toName || "");
+  const safeFrom = escapeHtml(data.fromName || "");
+  const htmlBody = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background-color:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f8fafc;padding:40px 20px;">
+<tr><td align="center">
+<table width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+
+<tr><td style="background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);padding:40px 40px 30px;">
+  <h1 style="color:#ffffff;font-size:24px;margin:0 0 8px;">You've Been Invited!</h1>
+  <p style="color:#c7d2fe;font-size:15px;margin:0;">Your friend ${safeFrom} thinks you'd love GTM Champion</p>
+</td></tr>
+
+<tr><td style="padding:32px 40px;">
+  <p style="color:#334155;font-size:15px;line-height:1.6;margin:0 0 20px;">
+    Hi${safeTo ? ` ${safeTo}` : ''},
+  </p>
+  <p style="color:#334155;font-size:15px;line-height:1.6;margin:0 0 20px;">
+    <strong>${safeFrom}</strong> has invited you to check out <strong>GTM Champion</strong> — a free AI-powered platform that builds personalized go-to-market strategies for B2B/SaaS companies.
+  </p>
+
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;border-radius:8px;padding:20px;margin:0 0 24px;">
+  <tr><td>
+    <p style="color:#4F46E5;font-size:13px;font-weight:600;margin:0 0 10px;text-transform:uppercase;letter-spacing:0.5px;">What you get (100% free):</p>
+    <p style="color:#334155;font-size:14px;margin:0 0 6px;">&#10003; AI analysis of your website and market position</p>
+    <p style="color:#334155;font-size:14px;margin:0 0 6px;">&#10003; Personalized strategies across 13 marketing channels</p>
+    <p style="color:#334155;font-size:14px;margin:0 0 6px;">&#10003; Content tools: LinkedIn posts, email campaigns, blog articles</p>
+    <p style="color:#334155;font-size:14px;margin:0;">&#10003; Weekly strategy updates delivered to your inbox</p>
+  </td></tr>
+  </table>
+
+  <table cellpadding="0" cellspacing="0" style="margin:0 auto;">
+  <tr><td align="center" style="background:#4F46E5;border-radius:8px;">
+    <a href="https://gtmchampion.com" style="display:inline-block;padding:14px 32px;color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;">Get Your Free GTM Strategy</a>
+  </td></tr>
+  </table>
+
+  <p style="color:#94a3b8;font-size:13px;text-align:center;margin:24px 0 0;">
+    Takes less than 60 seconds to get started. No credit card required.
+  </p>
+</td></tr>
+
+<tr><td style="padding:20px 40px;background:#f8fafc;border-top:1px solid #e2e8f0;">
+  <p style="color:#94a3b8;font-size:12px;text-align:center;margin:0;">
+    Sent via <a href="https://gtmchampion.com" style="color:#4F46E5;text-decoration:none;">GTM Champion</a> — Free AI-Powered GTM Strategies
+  </p>
+</td></tr>
+
+</table>
+</td></tr>
+</table>
+</body>
+</html>`;
+
+  if (!postmarkClient) {
+    console.log("Postmark not configured — invite email:", JSON.stringify(data));
+    return;
+  }
+
+  try {
+    await postmarkClient.sendEmail({
+      From: FROM_ADDRESS,
+      To: data.toEmail,
+      Subject: `${data.fromName} invited you to GTM Champion`,
+      HtmlBody: htmlBody,
+      TextBody: `Hi${data.toName ? ` ${data.toName}` : ''},\n\n${data.fromName} has invited you to check out GTM Champion — a free AI-powered platform that builds personalized go-to-market strategies for B2B/SaaS companies.\n\nGet your free strategy: https://gtmchampion.com\n\nTakes less than 60 seconds. No credit card required.`,
+      MessageStream: "outbound",
+    });
+    console.log(`Invite email sent to ${data.toEmail} from ${data.fromName}`);
+  } catch (error) {
+    console.error("Failed to send invite email:", error);
+    throw error;
+  }
+}
+
+export interface ShareStrategyData {
+  toEmail: string;
+  toName: string;
+  fromName: string;
+  companyName: string;
+  channelName: string;
+  channelStrategy: {
+    whyItMatters: string;
+    companyFitSummary: string;
+    heroStat: { value: string; label: string };
+    strategicPillars: Array<{ title: string; objective: string; tactics: string[] }>;
+    quickWins: Array<{ title: string; steps: string[]; effort: string }>;
+  };
+  recommendations: Array<{ title: string; impact: string; description: string }>;
+  pdfAttachment?: Buffer;
+}
+
+export async function sendShareStrategyEmail(data: ShareStrategyData): Promise<void> {
+  const safeTo = escapeHtml(data.toName || "");
+  const safeFrom = escapeHtml(data.fromName || "");
+  const safeCompany = escapeHtml(data.companyName || "");
+  const safeChannel = escapeHtml(data.channelName || "");
+
+  const pillarsHtml = (data.channelStrategy.strategicPillars || []).map(p => `
+    <div style="margin:0 0 16px;padding:12px 16px;background:#f8fafc;border-radius:6px;border-left:3px solid #4F46E5;">
+      <p style="color:#1e293b;font-size:14px;font-weight:600;margin:0 0 4px;">${escapeHtml(p.title)}</p>
+      <p style="color:#64748b;font-size:13px;margin:0 0 8px;">${escapeHtml(p.objective)}</p>
+      ${(p.tactics || []).map(t => `<p style="color:#334155;font-size:13px;margin:0 0 3px;">• ${escapeHtml(t)}</p>`).join('')}
+    </div>
+  `).join('');
+
+  const quickWinsHtml = (data.channelStrategy.quickWins || []).slice(0, 3).map(w => `
+    <div style="margin:0 0 12px;padding:10px 14px;background:#f0fdf4;border-radius:6px;">
+      <p style="color:#166534;font-size:13px;font-weight:600;margin:0 0 4px;">⚡ ${escapeHtml(w.title)} <span style="color:#94a3b8;font-weight:400;font-size:11px;">(${escapeHtml(w.effort)})</span></p>
+      ${(w.steps || []).slice(0, 3).map(s => `<p style="color:#334155;font-size:12px;margin:0 0 2px;">• ${escapeHtml(s)}</p>`).join('')}
+    </div>
+  `).join('');
+
+  const recsHtml = (data.recommendations || []).slice(0, 5).map(r => `
+    <tr>
+      <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;">
+        <p style="color:#1e293b;font-size:13px;font-weight:500;margin:0;">${escapeHtml(r.title)}</p>
+        <p style="color:#64748b;font-size:12px;margin:2px 0 0;">${escapeHtml(r.description.slice(0, 120))}${r.description.length > 120 ? '...' : ''}</p>
+      </td>
+      <td style="padding:8px 12px;border-bottom:1px solid #f1f5f9;text-align:center;">
+        <span style="display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;${r.impact === 'High' ? 'background:#dcfce7;color:#166534;' : 'background:#fef3c7;color:#92400e;'}">${escapeHtml(r.impact)}</span>
+      </td>
+    </tr>
+  `).join('');
+
+  const htmlBody = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background-color:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+<table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f8fafc;padding:40px 20px;">
+<tr><td align="center">
+<table width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+
+<tr><td style="background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);padding:32px 40px 24px;">
+  <p style="color:#c7d2fe;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:1px;margin:0 0 6px;">SHARED STRATEGY</p>
+  <h1 style="color:#ffffff;font-size:22px;margin:0 0 6px;">${safeChannel} Strategy for ${safeCompany}</h1>
+  <p style="color:#c7d2fe;font-size:14px;margin:0;">Shared by ${safeFrom}</p>
+</td></tr>
+
+<tr><td style="padding:28px 40px;">
+  <p style="color:#334155;font-size:15px;line-height:1.6;margin:0 0 16px;">
+    Hi${safeTo ? ` ${safeTo}` : ''},
+  </p>
+  <p style="color:#334155;font-size:15px;line-height:1.6;margin:0 0 24px;">
+    <strong>${safeFrom}</strong> shared ${safeCompany}'s <strong>${safeChannel}</strong> channel strategy with you from GTM Champion.
+  </p>
+
+  ${data.channelStrategy.heroStat?.value ? `
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#eef2ff;border-radius:8px;padding:16px 20px;margin:0 0 24px;">
+  <tr><td align="center">
+    <p style="color:#4F46E5;font-size:28px;font-weight:700;margin:0;">${escapeHtml(data.channelStrategy.heroStat.value)}</p>
+    <p style="color:#64748b;font-size:12px;margin:4px 0 0;">${escapeHtml(data.channelStrategy.heroStat.label)}</p>
+  </td></tr>
+  </table>` : ''}
+
+  ${data.channelStrategy.whyItMatters ? `
+  <h3 style="color:#1e293b;font-size:15px;margin:0 0 8px;">Why It Matters</h3>
+  <p style="color:#334155;font-size:14px;line-height:1.6;margin:0 0 24px;">${escapeHtml(data.channelStrategy.whyItMatters)}</p>` : ''}
+
+  ${pillarsHtml ? `
+  <h3 style="color:#1e293b;font-size:15px;margin:0 0 12px;">Strategic Pillars</h3>
+  ${pillarsHtml}` : ''}
+
+  ${quickWinsHtml ? `
+  <h3 style="color:#1e293b;font-size:15px;margin:0 0 12px;">Quick Wins</h3>
+  ${quickWinsHtml}` : ''}
+
+  ${recsHtml ? `
+  <h3 style="color:#1e293b;font-size:15px;margin:0 0 12px;">Action Items</h3>
+  <table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;">
+  <tr style="background:#f8fafc;">
+    <th style="padding:8px 12px;text-align:left;font-size:12px;color:#64748b;font-weight:600;">Strategy</th>
+    <th style="padding:8px 12px;text-align:center;font-size:12px;color:#64748b;font-weight:600;">Impact</th>
+  </tr>
+  ${recsHtml}
+  </table>` : ''}
+
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#eef2ff;border-radius:8px;padding:14px 20px;margin:24px 0 0;">
+  <tr><td>
+    <p style="color:#4F46E5;font-size:13px;font-weight:600;margin:0 0 4px;">&#128206; PDF Strategy Report Attached</p>
+    <p style="color:#64748b;font-size:12px;margin:0;">The complete ${safeChannel} strategy is attached as a professionally formatted PDF you can save, print, or share with your team.</p>
+  </td></tr>
+  </table>
+
+  <table cellpadding="0" cellspacing="0" style="margin:28px auto 0;">
+  <tr><td align="center" style="background:#4F46E5;border-radius:8px;">
+    <a href="https://gtmchampion.com" style="display:inline-block;padding:14px 32px;color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;">Get Your Own Free GTM Strategy</a>
+  </td></tr>
+  </table>
+</td></tr>
+
+<tr><td style="padding:20px 40px;background:#f8fafc;border-top:1px solid #e2e8f0;">
+  <p style="color:#94a3b8;font-size:12px;text-align:center;margin:0;">
+    Powered by <a href="https://gtmchampion.com" style="color:#4F46E5;text-decoration:none;">GTM Champion</a> — Free AI-Powered GTM Strategies for B2B/SaaS
+  </p>
+</td></tr>
+
+</table>
+</td></tr>
+</table>
+</body>
+</html>`;
+
+  const textPillars = (data.channelStrategy.strategicPillars || []).map(p =>
+    `${p.title}\n${p.objective}\n${(p.tactics || []).map(t => `  • ${t}`).join('\n')}`
+  ).join('\n\n');
+
+  if (!postmarkClient) {
+    console.log("Postmark not configured — share strategy email:", JSON.stringify({ to: data.toEmail, channel: data.channelName }));
+    return;
+  }
+
+  try {
+    const sanitizedChannel = (data.channelName || "channel").replace(/[^a-zA-Z0-9]/g, "_").toLowerCase();
+    const sanitizedCompany = (data.companyName || "company").replace(/[^a-zA-Z0-9]/g, "_").toLowerCase();
+    const pdfFilename = `${sanitizedCompany}_${sanitizedChannel}_strategy.pdf`;
+
+    const emailPayload: any = {
+      From: FROM_ADDRESS,
+      To: data.toEmail,
+      Subject: `${data.fromName} shared ${data.companyName}'s ${data.channelName} strategy with you`,
+      HtmlBody: htmlBody,
+      TextBody: `Hi${data.toName ? ` ${data.toName}` : ''},\n\n${data.fromName} shared ${data.companyName}'s ${data.channelName} channel strategy with you.\n\n${data.channelStrategy.whyItMatters || ''}\n\n${textPillars}\n\nGet your own free GTM strategy: https://gtmchampion.com`,
+      MessageStream: "outbound",
+    };
+
+    if (data.pdfAttachment) {
+      emailPayload.Attachments = [{
+        Name: pdfFilename,
+        Content: data.pdfAttachment.toString("base64"),
+        ContentType: "application/pdf",
+      }];
+    }
+
+    await postmarkClient.sendEmail(emailPayload);
+    console.log(`Strategy share email sent to ${data.toEmail} (${data.channelName})${data.pdfAttachment ? ' with PDF attachment' : ''}`);
+  } catch (error) {
+    console.error("Failed to send strategy share email:", error);
     throw error;
   }
 }
