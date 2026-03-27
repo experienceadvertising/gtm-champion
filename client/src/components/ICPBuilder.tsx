@@ -29,6 +29,11 @@ interface BuyerPersona {
   preferredChannels: string[];
   objections: string[];
   dayInTheLife: string;
+  messagingAngle?: string;
+  contentPreferences?: string[];
+  buyerJourneyStage?: { awareness?: string; consideration?: string; decision?: string };
+  internalChampionTips?: string;
+  socialProofNeeded?: string;
   createdAt: string;
 }
 
@@ -303,6 +308,91 @@ function PersonaCard({
                 multiline
               />
             </div>
+
+            {/* Messaging Angle */}
+            {persona.messagingAngle && (
+              <div className="bg-indigo-50/50 dark:bg-indigo-950/20 rounded-lg p-3 border border-indigo-100 dark:border-indigo-900/50">
+                <div className="flex items-center gap-2 mb-2">
+                  <MessageSquare className="h-4 w-4 text-indigo-500" />
+                  <span className="text-sm font-medium">Key Messaging Angle</span>
+                </div>
+                <EditableText
+                  value={persona.messagingAngle}
+                  onSave={text => updateMutation.mutate({ messagingAngle: text })}
+                  multiline
+                />
+              </div>
+            )}
+
+            {/* Content Preferences */}
+            {persona.contentPreferences && persona.contentPreferences.length > 0 && (
+              <EditableListSection
+                icon={<BookOpen className="h-4 w-4 text-cyan-500" />}
+                title="Content Preferences"
+                items={persona.contentPreferences}
+                onSave={items => updateMutation.mutate({ contentPreferences: items })}
+              />
+            )}
+
+            {/* Buyer Journey */}
+            {persona.buyerJourneyStage && (persona.buyerJourneyStage.awareness || persona.buyerJourneyStage.consideration || persona.buyerJourneyStage.decision) && (
+              <div className="bg-white/60 dark:bg-gray-900/40 rounded-lg p-3">
+                <div className="flex items-center gap-2 mb-3">
+                  <ShoppingCart className="h-4 w-4 text-violet-500" />
+                  <span className="text-sm font-medium">Buyer Journey</span>
+                </div>
+                <div className="space-y-2.5">
+                  {persona.buyerJourneyStage.awareness && (
+                    <div className="flex gap-2">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-blue-500 bg-blue-50 dark:bg-blue-950/30 px-1.5 py-0.5 rounded shrink-0 h-fit mt-0.5">Awareness</span>
+                      <p className="text-xs text-muted-foreground">{persona.buyerJourneyStage.awareness}</p>
+                    </div>
+                  )}
+                  {persona.buyerJourneyStage.consideration && (
+                    <div className="flex gap-2">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-amber-500 bg-amber-50 dark:bg-amber-950/30 px-1.5 py-0.5 rounded shrink-0 h-fit mt-0.5">Evaluation</span>
+                      <p className="text-xs text-muted-foreground">{persona.buyerJourneyStage.consideration}</p>
+                    </div>
+                  )}
+                  {persona.buyerJourneyStage.decision && (
+                    <div className="flex gap-2">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-green-500 bg-green-50 dark:bg-green-950/30 px-1.5 py-0.5 rounded shrink-0 h-fit mt-0.5">Decision</span>
+                      <p className="text-xs text-muted-foreground">{persona.buyerJourneyStage.decision}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Internal Champion Tips */}
+            {persona.internalChampionTips && (
+              <div className="bg-green-50/50 dark:bg-green-950/20 rounded-lg p-3 border border-green-100 dark:border-green-900/50">
+                <div className="flex items-center gap-2 mb-2">
+                  <Users className="h-4 w-4 text-green-500" />
+                  <span className="text-sm font-medium">How to Build an Internal Champion</span>
+                </div>
+                <EditableText
+                  value={persona.internalChampionTips}
+                  onSave={text => updateMutation.mutate({ internalChampionTips: text })}
+                  multiline
+                />
+              </div>
+            )}
+
+            {/* Social Proof Needed */}
+            {persona.socialProofNeeded && (
+              <div className="bg-amber-50/50 dark:bg-amber-950/20 rounded-lg p-3 border border-amber-100 dark:border-amber-900/50">
+                <div className="flex items-center gap-2 mb-2">
+                  <Target className="h-4 w-4 text-amber-500" />
+                  <span className="text-sm font-medium">Social Proof That Converts</span>
+                </div>
+                <EditableText
+                  value={persona.socialProofNeeded}
+                  onSave={text => updateMutation.mutate({ socialProofNeeded: text })}
+                  multiline
+                />
+              </div>
+            )}
           </CardContent>
         </CollapsibleContent>
       </Collapsible>

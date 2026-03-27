@@ -20,6 +20,11 @@ interface Allocation {
   amount: number;
   percentage: number;
   rationale: string;
+  expectedROI?: string;
+  timeToImpact?: string;
+  benchmarkCPL?: string;
+  keyMetrics?: string[];
+  firstMonthActions?: string[];
 }
 
 interface BudgetAllocationData {
@@ -292,10 +297,43 @@ export function BudgetAllocator() {
                         {alloc.rationale}
                       </p>
                     </TooltipTrigger>
-                    <TooltipContent side="bottom" className="max-w-sm">
-                      <p className="text-xs">{alloc.rationale}</p>
+                    <TooltipContent side="bottom" className="max-w-md">
+                      <div className="space-y-2 text-xs">
+                        <p>{alloc.rationale}</p>
+                        {(alloc.expectedROI || alloc.timeToImpact || alloc.benchmarkCPL) && (
+                          <div className="flex flex-wrap gap-2 pt-1 border-t border-border/50">
+                            {alloc.expectedROI && (
+                              <span className="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 px-1.5 py-0.5 rounded text-[11px] font-medium">ROI: {alloc.expectedROI}</span>
+                            )}
+                            {alloc.timeToImpact && (
+                              <span className="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 px-1.5 py-0.5 rounded text-[11px] font-medium">Impact: {alloc.timeToImpact}</span>
+                            )}
+                            {alloc.benchmarkCPL && (
+                              <span className="bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 px-1.5 py-0.5 rounded text-[11px] font-medium">CPL: {alloc.benchmarkCPL}</span>
+                            )}
+                          </div>
+                        )}
+                        {alloc.firstMonthActions && alloc.firstMonthActions.length > 0 && (
+                          <div className="pt-1 border-t border-border/50">
+                            <p className="font-semibold mb-1">Month 1 Actions:</p>
+                            <ul className="list-disc pl-3 space-y-0.5">
+                              {alloc.firstMonthActions.map((a, i) => <li key={i}>{a}</li>)}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
                     </TooltipContent>
                   </Tooltip>
+                  {alloc.amount > 0 && (alloc.expectedROI || alloc.timeToImpact) && (
+                    <div className="flex gap-2 mt-0.5">
+                      {alloc.expectedROI && (
+                        <span className="text-[10px] text-green-600 dark:text-green-400 font-medium">↗ {alloc.expectedROI} ROI</span>
+                      )}
+                      {alloc.timeToImpact && (
+                        <span className="text-[10px] text-blue-600 dark:text-blue-400 font-medium">⏱ {alloc.timeToImpact}</span>
+                      )}
+                    </div>
+                  )}
                 </div>
               ))}
             </CardContent>

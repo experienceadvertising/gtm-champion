@@ -826,3 +826,117 @@ Unsubscribe: {{{pm:unsubscribe}}}
     throw error;
   }
 }
+
+// Feature Announcement Email
+export interface FeatureAnnouncementEmailData {
+  toEmail: string;
+  userName: string;
+  featureName: string;
+  featureTagline: string;
+  featureDescription: string;
+  benefits: Array<{ icon: string; title: string; description: string }>;
+  ctaText: string;
+  ctaUrl: string;
+}
+
+export async function sendFeatureAnnouncementEmail(data: FeatureAnnouncementEmailData): Promise<void> {
+  if (!postmarkClient) {
+    console.warn("Postmark not configured - feature announcement email would be sent:", data);
+    return;
+  }
+
+  const firstName = data.userName.split(' ')[0];
+
+  const benefitsHtml = data.benefits.map(benefit => `
+            <div style="background: #f8fafc; border-radius: 10px; padding: 20px; margin-bottom: 12px;">
+              <div style="font-size: 28px; margin-bottom: 8px;">${escapeHtml(benefit.icon)}</div>
+              <h3 style="margin: 0 0 6px 0; color: #1e293b; font-size: 15px; font-weight: 700;">${escapeHtml(benefit.title)}</h3>
+              <p style="margin: 0; color: #64748b; font-size: 13px; line-height: 1.5;">${escapeHtml(benefit.description)}</p>
+            </div>`).join('');
+
+  const htmlBody = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #1e293b; margin: 0; padding: 0; background-color: #f1f5f9;">
+  <div style="background-color: #f1f5f9; padding: 40px 20px;">
+    <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 24px rgba(0,0,0,0.08);">
+
+      <div style="background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #a855f7 100%); padding: 40px 32px; text-align: center;">
+        <div style="margin-bottom: 16px;">
+          <span style="display: inline-block; background: rgba(255,255,255,0.2); color: #ffffff; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; padding: 5px 14px; border-radius: 20px;">✨ New Feature</span>
+        </div>
+        <div style="font-size: 28px; font-weight: 800; color: white; letter-spacing: -0.02em;">⚡ GTM Champion</div>
+        <h1 style="color: #ffffff; font-size: 24px; font-weight: 700; margin: 16px 0 8px 0; letter-spacing: -0.01em;">${escapeHtml(data.featureName)}</h1>
+        <p style="color: rgba(255,255,255,0.9); margin: 0; font-size: 15px; font-weight: 400;">${escapeHtml(data.featureTagline)}</p>
+      </div>
+
+      <div style="padding: 36px 32px 20px 32px;">
+        <p style="color: #475569; margin: 0 0 20px 0; font-size: 15px;">Hi ${escapeHtml(firstName)},</p>
+
+        <p style="color: #475569; font-size: 15px; line-height: 1.7; margin: 0 0 28px 0;">${escapeHtml(data.featureDescription)}</p>
+
+        <h2 style="margin: 0 0 16px 0; color: #0f172a; font-size: 18px; font-weight: 700; letter-spacing: -0.01em;">What you'll get</h2>
+
+        <div style="margin: 0 0 28px 0;">
+          ${benefitsHtml}
+        </div>
+
+        <div style="text-align: center; margin: 32px 0 8px 0;">
+          <a href="${escapeHtml(data.ctaUrl)}" style="display: inline-block; background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); color: white; padding: 16px 48px; text-decoration: none; border-radius: 10px; font-weight: 700; font-size: 16px; letter-spacing: -0.01em; box-shadow: 0 4px 14px rgba(99,102,241,0.4);">${escapeHtml(data.ctaText)}</a>
+        </div>
+      </div>
+
+      <div style="background: #f8fafc; padding: 24px 32px; border-top: 1px solid #e2e8f0;">
+        <div style="text-align: center;">
+          <p style="color: #94a3b8; font-size: 12px; margin: 0 0 4px 0;">Questions? Just reply to this email — a real human will get back to you.</p>
+          <p style="color: #cbd5e1; font-size: 11px; margin: 12px 0 0 0;">&copy; 2026 GTM Champion. All rights reserved.</p>
+          <p style="margin: 12px 0 0 0;"><a href="{{{pm:unsubscribe}}}" style="color: #94a3b8; font-size: 11px; text-decoration: underline;">Unsubscribe from emails</a></p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</body>
+</html>`;
+
+  const benefitsText = data.benefits.map(b => `${b.icon} ${b.title}\n   ${b.description}`).join('\n\n');
+
+  const textBody = `New in GTM Champion: ${data.featureName}
+
+Hi ${firstName},
+
+${data.featureTagline}
+
+${data.featureDescription}
+
+WHAT YOU'LL GET
+${benefitsText}
+
+${data.ctaText}: ${data.ctaUrl}
+
+Questions? Just reply to this email.
+
+Unsubscribe: {{{pm:unsubscribe}}}
+
+© 2026 GTM Champion`;
+
+  try {
+    await postmarkClient.sendEmail({
+      From: FROM_ADDRESS,
+      To: data.toEmail,
+      Subject: `New in GTM Champion: ${data.featureName}`,
+      HtmlBody: htmlBody,
+      TextBody: textBody,
+      MessageStream: "outbound",
+    });
+
+    console.log(`Feature announcement email (${data.featureName}) sent to ${data.toEmail}`);
+  } catch (error) {
+    console.error(`Failed to send feature announcement email (${data.featureName}):`, error);
+    throw error;
+  }
+}
