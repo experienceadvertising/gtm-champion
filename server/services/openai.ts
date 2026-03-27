@@ -1524,7 +1524,7 @@ export async function generateBudgetAllocation(
   context: ContentContext,
   channelInsights: Array<{ channelId: string; priority: string }>,
   recommendations: Array<{ category: string; impact: string }>
-): Promise<{ allocations: Array<{ channelId: string; channelName: string; amount: number; percentage: number; rationale: string }> }> {
+): Promise<{ allocations: Array<{ channelId: string; channelName: string; amount: number; percentage: number; rationale: string; expectedROI: string; timeToImpact: string; benchmarkCPL: string; keyMetrics: string[]; firstMonthActions: string[] }> }> {
   await initPromise;
 
   const openai = new OpenAI({
@@ -1553,6 +1553,11 @@ ALLOCATION RULES:
 - High-priority channels should receive proportionally more budget
 - Some channels may receive $0 if they're low priority for this company
 - Each allocation must include a specific rationale tied to the company's situation
+- Each allocation must include an expectedROI range (e.g., "3-5x", "2-3x") estimating the return on investment for that channel
+- Each allocation must include timeToImpact (e.g., "1-2 months", "3-6 months") indicating when results start showing
+- Each allocation must include benchmarkCPL with an industry benchmark cost per lead for that channel (e.g., "$50-100")
+- Each allocation must include keyMetrics: an array of 2-3 specific metrics to track for this channel allocation
+- Each allocation must include firstMonthActions: an array of 2-3 specific actions to take in month 1 for this channel
 - Amounts must sum to exactly ${totalBudget}
 - Be practical: for small budgets (<$5K), focus on 3-5 channels max
 
@@ -1564,7 +1569,12 @@ Return JSON:
       "channelName": "SEO",
       "amount": 2500,
       "percentage": 25,
-      "rationale": "Specific reason why this amount for this channel"
+      "rationale": "Specific reason why this amount for this channel",
+      "expectedROI": "3-5x",
+      "timeToImpact": "3-6 months",
+      "benchmarkCPL": "$50-100",
+      "keyMetrics": ["Organic traffic growth", "Keyword rankings for target terms"],
+      "firstMonthActions": ["Run technical SEO audit", "Identify top 20 target keywords"]
     }
   ]
 }`;
@@ -1602,6 +1612,15 @@ export async function generateBuyerPersonas(
   preferredChannels: string[];
   objections: string[];
   dayInTheLife: string;
+  messagingAngle: string;
+  contentPreferences: string[];
+  buyerJourneyStage: {
+    awareness: string;
+    consideration: string;
+    decision: string;
+  };
+  internalChampionTips: string;
+  socialProofNeeded: string;
 }>> {
   await initPromise;
 
@@ -1630,6 +1649,11 @@ PERSONA REQUIREMENTS:
 - Tailor everything to this company's actual product, industry, and GTM motion
 - Include both decision-makers and influencers in the buying process
 - Pain points and goals should be specific to what this company solves
+- messagingAngle: the single most compelling message (1-2 sentences) that would resonate with this persona
+- contentPreferences: specific types of content this persona engages with (e.g., "Case studies", "ROI calculators", "Peer reviews on G2")
+- buyerJourneyStage: describe how this persona moves through each stage — awareness (how they discover solutions), consideration (how they evaluate options), decision (what makes them pull the trigger) — each in 1 sentence
+- internalChampionTips: practical advice (1-2 sentences) on how to turn this persona into an internal champion for your product
+- socialProofNeeded: the specific type of proof or evidence that convinces this persona (e.g., "Enterprise customer logos and compliance certifications")
 
 Return JSON:
 {
@@ -1647,7 +1671,16 @@ Return JSON:
       "buyingTriggers": ["Trigger 1", "Trigger 2"],
       "preferredChannels": ["LinkedIn", "Email", "Webinars"],
       "objections": ["Common objection 1", "Common objection 2"],
-      "dayInTheLife": "A 2-3 sentence narrative of their typical day and challenges..."
+      "dayInTheLife": "A 2-3 sentence narrative of their typical day and challenges...",
+      "messagingAngle": "The #1 message that would resonate with this persona...",
+      "contentPreferences": ["Case studies", "ROI calculators", "Peer reviews on G2"],
+      "buyerJourneyStage": {
+        "awareness": "How they first discover solutions like yours...",
+        "consideration": "How they evaluate and compare options...",
+        "decision": "What ultimately makes them pull the trigger..."
+      },
+      "internalChampionTips": "How to empower this persona to sell your product internally...",
+      "socialProofNeeded": "Enterprise customer logos and compliance certifications"
     }
   ]
 }`;

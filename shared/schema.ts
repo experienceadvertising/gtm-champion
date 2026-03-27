@@ -191,6 +191,11 @@ export const buyerPersonas = pgTable("buyer_personas", {
   preferredChannels: text("preferred_channels").array().notNull(),
   objections: text("objections").array().notNull(),
   dayInTheLife: text("day_in_the_life").notNull(),
+  messagingAngle: text("messaging_angle").notNull().default(""),
+  contentPreferences: text("content_preferences").array().notNull().default([]),
+  buyerJourneyStage: jsonb("buyer_journey_stage").notNull().default({}),
+  internalChampionTips: text("internal_champion_tips").notNull().default(""),
+  socialProofNeeded: text("social_proof_needed").notNull().default(""),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
