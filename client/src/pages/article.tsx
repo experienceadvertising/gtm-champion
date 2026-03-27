@@ -132,8 +132,8 @@ export default function Article() {
               <a href="/#pricing" className="hover:text-primary transition-colors">Pricing</a>
             </div>
             <div className="flex items-center gap-4">
-              <Button variant="ghost" onClick={() => setLocation("/auth")}>Log in</Button>
-              <Button onClick={() => setLocation("/auth")}>Get Started</Button>
+              <Button variant="ghost" asChild><a href="/auth">Log in</a></Button>
+              <Button asChild><a href="/auth">Get Started</a></Button>
             </div>
           </div>
         </nav>
@@ -232,8 +232,8 @@ export default function Article() {
                   <p className="text-muted-foreground mb-4">
                     GTM Champion analyzes your website and provides AI-powered recommendations across 13 marketing channels.
                   </p>
-                  <Button onClick={() => setLocation("/auth")} data-testid="button-article-cta">
-                    Analyze My Website Free <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" />
+                  <Button asChild data-testid="button-article-cta">
+                    <a href="/auth">Analyze My Website Free <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" /></a>
                   </Button>
                 </div>
               </div>
@@ -279,7 +279,7 @@ export default function Article() {
               <span>GTM Champion</span>
             </div>
             <p className="text-sm text-slate-400">
-              © 2025 GTM Champion. All rights reserved.
+              © 2025–2026 GTM Champion. All rights reserved.
             </p>
           </div>
         </footer>

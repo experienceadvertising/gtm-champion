@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Helmet } from "react-helmet";
 import { useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -108,6 +109,11 @@ export default function AuthPage() {
   }
 
   return (
+    <>
+    <Helmet>
+      <meta name="robots" content="noindex, nofollow" />
+      <title>Sign Up or Log In | GTM Champion</title>
+    </Helmet>
     <div className="min-h-screen flex items-center justify-center bg-slate-50/50 p-4">
       <div className="w-full max-w-md space-y-8">
         <div className="text-center space-y-2">
@@ -272,5 +278,6 @@ export default function AuthPage() {
         </motion.div>
       </div>
     </div>
+    </>
   );
 }

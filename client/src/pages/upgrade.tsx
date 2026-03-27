@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Helmet } from "react-helmet";
 import { useLocation, useSearch, Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -103,6 +104,11 @@ export default function UpgradePage() {
   const gtmProduct = stripeProducts?.data?.find(p => p.name === "GTM Champion Pro") || stripeProducts?.data?.[0];
 
   return (
+    <>
+    <Helmet>
+      <meta name="robots" content="noindex, nofollow" />
+      <title>Upgrade | GTM Champion</title>
+    </Helmet>
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
       <div className="max-w-6xl mx-auto px-4 py-12">
         <Link href={`/dashboard?userId=${userId}`}>
@@ -241,5 +247,6 @@ export default function UpgradePage() {
         </p>
       </div>
     </div>
+    </>
   );
 }

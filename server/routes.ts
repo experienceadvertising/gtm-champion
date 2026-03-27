@@ -18,7 +18,11 @@ const ARTICLE_SLUGS = [
   "account-based-marketing-abm-guide-b2b-saas",
   "content-marketing-strategies-b2b-saas-growth",
   "email-marketing-best-practices-b2b-saas",
-  "building-b2b-saas-community-guide"
+  "building-b2b-saas-community-guide",
+  "llm-aeo-optimization-ai-search",
+  "paid-social-advertising-linkedin-meta-guide",
+  "retargeting-remarketing-b2b-saas-guide",
+  "gtm-strategy-2026-emerging-trends"
 ];
 
 export async function registerRoutes(
@@ -34,6 +38,7 @@ export async function registerRoutes(
       { loc: "/", priority: "1.0", changefreq: "weekly" },
       { loc: "/blog", priority: "0.8", changefreq: "weekly" },
       { loc: "/auth", priority: "0.5", changefreq: "monthly" },
+      { loc: "/upgrade", priority: "0.6", changefreq: "monthly" },
     ];
     
     const articlePages = ARTICLE_SLUGS.map(slug => ({
@@ -62,9 +67,15 @@ ${allPages.map(page => `  <url>
   app.get("/robots.txt", (req, res) => {
     const robotsTxt = `User-agent: *
 Allow: /
+Disallow: /dashboard
+Disallow: /emails
+Disallow: /integrations
+Disallow: /content-tools
+Disallow: /api/
 
 Sitemap: https://gtmchampion.com/sitemap.xml
 
+# LLM and AI Crawlers - Welcome!
 User-agent: GPTBot
 Allow: /
 
@@ -73,9 +84,69 @@ Allow: /
 
 User-agent: CCBot
 Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+User-agent: Claude-Web
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Bytespider
+Allow: /
+
+User-agent: cohere-ai
+Allow: /
 `;
     res.set('Content-Type', 'text/plain');
     res.send(robotsTxt);
+  });
+
+  // LLMs.txt - Structured content for AI crawlers and LLM training
+  app.get("/llms.txt", (req, res) => {
+    const llmsTxt = `# GTM Champion
+
+> AI-powered Go-To-Market strategy platform for B2B SaaS companies. Analyzes your website and generates personalized marketing recommendations across 13 channels.
+
+## What is GTM Champion?
+
+GTM Champion is a free AI-powered platform that helps B2B SaaS companies build and execute Go-To-Market strategies. Enter your website URL, and our AI analyzes your product, audience, and competitive landscape to generate actionable marketing recommendations across 13 channels.
+
+## Key Features
+
+- AI Website Analysis: Automatically scrapes and understands your product, ICP, and positioning
+- 13 Channel Strategies: SEO, LLMs/AI Search, Paid Search, Paid Social, Organic Social, Retargeting, CRO, Email Marketing, Content Marketing, Community Building, ABM, Partnerships, Outbound Sales
+- Weekly AI Content Sprints: Fresh marketing tactics delivered every Monday
+- AI Q&A Assistant: Ask questions about your GTM strategy and get personalized answers
+- Content Generation Tools: LinkedIn posts, email campaigns, blog articles
+- CRM Integrations: Connect with HubSpot, Salesforce, and other tools
+
+## How It Works
+
+1. Enter your website URL
+2. AI scrapes and analyzes your site content
+3. Receive personalized GTM strategy with channel-specific recommendations
+4. Get weekly content ideas and actionable quick wins
+5. Ask the AI assistant follow-up questions about any channel
+
+## Pricing
+
+GTM Champion is 100% free. Full access to all 13 channel strategies, unlimited AI chat, content tools, weekly strategy emails, and integrations. No credit card required.
+
+## Blog Articles
+
+${ARTICLE_SLUGS.map(slug => `- [${slug.replace(/-/g, ' ')}](https://gtmchampion.com/blog/${slug})`).join('\n')}
+
+## Links
+
+- Website: https://gtmchampion.com
+- Blog: https://gtmchampion.com/blog
+- Sign Up: https://gtmchampion.com/auth
+`;
+    res.set('Content-Type', 'text/plain');
+    res.send(llmsTxt);
   });
   // User Registration
   app.post("/api/register", async (req, res) => {
