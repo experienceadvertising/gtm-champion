@@ -627,3 +627,202 @@ export async function sendShareStrategyEmail(data: ShareStrategyData): Promise<v
     throw error;
   }
 }
+
+// Channel Strategy Deep-Dive Email
+export interface ChannelStrategyEmailData {
+  toEmail: string;
+  userName: string;
+  companyName: string;
+  channelId: string;
+  priority: string;
+  whyItMatters: string;
+  companyFitSummary: string;
+  heroStat: { value: string; label: string };
+  topKpis: string[];
+  strategicPillars: Array<{
+    title: string;
+    objective: string;
+    tactics: string[];
+    measurement: string;
+  }>;
+  quickWins: Array<{
+    title: string;
+    steps: string[];
+    effort: string;
+    duration: string;
+  }>;
+}
+
+function getPriorityStyle(priority: string): { bg: string; text: string; label: string } {
+  const p = priority.toLowerCase();
+  if (p === "high") return { bg: "#dcfce7", text: "#166534", label: "High Priority" };
+  if (p === "medium") return { bg: "#fef9c3", text: "#854d0e", label: "Medium Priority" };
+  return { bg: "#f1f5f9", text: "#475569", label: "Lower Priority" };
+}
+
+function getEffortBadge(effort: string): { bg: string; text: string } {
+  const e = effort.toLowerCase();
+  if (e === "low") return { bg: "#dcfce7", text: "#166534" };
+  return { bg: "#fef9c3", text: "#854d0e" };
+}
+
+export async function sendChannelStrategyEmail(data: ChannelStrategyEmailData): Promise<void> {
+  if (!postmarkClient) {
+    console.log("Postmark not configured, skipping channel strategy email");
+    return;
+  }
+
+  const firstName = escapeHtml(data.userName.split(' ')[0]);
+  const companyName = escapeHtml(data.companyName);
+  const channelName = escapeHtml(data.channelId);
+  const priorityStyle = getPriorityStyle(data.priority);
+  const dashboardUrl = `https://gtmchampion.com/dashboard?channel=${encodeURIComponent(data.channelId)}`;
+
+  const pillarsHtml = data.strategicPillars.slice(0, 3).map((pillar, idx) => {
+    const colors = ["#6366f1", "#8b5cf6", "#a855f7"];
+    const tacticsHtml = pillar.tactics.slice(0, 4).map(t =>
+      `<li style="padding: 4px 0; color: #475569; font-size: 14px;">${escapeHtml(t)}</li>`
+    ).join('');
+    return `
+    <div style="margin-bottom: 20px; border-left: 4px solid ${colors[idx] || '#6366f1'}; padding-left: 16px;">
+      <h3 style="margin: 0 0 4px; font-size: 16px; color: #1e293b;">${escapeHtml(pillar.title)}</h3>
+      <p style="margin: 0 0 8px; font-size: 13px; color: #64748b; font-style: italic;">${escapeHtml(pillar.objective)}</p>
+      <ul style="margin: 0; padding-left: 18px;">${tacticsHtml}</ul>
+      <p style="margin: 8px 0 0; font-size: 12px; color: #94a3b8;">📊 Measure: ${escapeHtml(pillar.measurement)}</p>
+    </div>`;
+  }).join('');
+
+  const quickWinsHtml = data.quickWins.slice(0, 3).map((qw) => {
+    const effortStyle = getEffortBadge(qw.effort);
+    const stepsHtml = qw.steps.slice(0, 5).map((s, i) =>
+      `<tr><td style="padding: 4px 8px 4px 0; vertical-align: top; color: #6366f1; font-weight: 600; font-size: 13px;">${i + 1}.</td><td style="padding: 4px 0; color: #475569; font-size: 13px;">${escapeHtml(s)}</td></tr>`
+    ).join('');
+    return `
+    <div style="background: #f0fdf4; border-radius: 8px; padding: 16px; margin-bottom: 12px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+        <h4 style="margin: 0; font-size: 15px; color: #1e293b;">${escapeHtml(qw.title)}</h4>
+      </div>
+      <div style="margin-bottom: 8px;">
+        <span style="display: inline-block; background: ${effortStyle.bg}; color: ${effortStyle.text}; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600;">${escapeHtml(qw.effort)} effort</span>
+        <span style="display: inline-block; background: #ede9fe; color: #5b21b6; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; margin-left: 4px;">${escapeHtml(qw.duration)}</span>
+      </div>
+      <table style="width: 100%; border-collapse: collapse;">${stepsHtml}</table>
+    </div>`;
+  }).join('');
+
+  const kpisHtml = data.topKpis.slice(0, 5).map(k =>
+    `<span style="display: inline-block; background: #ede9fe; color: #5b21b6; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 500; margin: 3px 4px 3px 0;">${escapeHtml(k)}</span>`
+  ).join('');
+
+  const htmlBody = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 0; background: #f8fafc;">
+  <div style="max-width: 600px; margin: 0 auto; background: #ffffff;">
+    <!-- Header -->
+    <div style="background: linear-gradient(135deg, #4f46e5, #7c3aed, #a855f7); padding: 32px 28px; text-align: center;">
+      <p style="color: rgba(255,255,255,0.8); font-size: 13px; margin: 0 0 8px; text-transform: uppercase; letter-spacing: 1px;">This week's deep dive</p>
+      <h1 style="color: #ffffff; font-size: 26px; margin: 0 0 8px; font-weight: 700;">${channelName} Strategy</h1>
+      <p style="color: rgba(255,255,255,0.9); font-size: 15px; margin: 0;">Personalized for ${companyName}</p>
+    </div>
+
+    <div style="padding: 28px;">
+      <!-- Greeting -->
+      <p style="font-size: 15px; color: #334155; margin: 0 0 20px;">Hey ${firstName},</p>
+      <p style="font-size: 15px; color: #334155; margin: 0 0 24px;">This week we're diving deep into your <strong>${channelName}</strong> strategy. Here's your personalized playbook for ${companyName}.</p>
+
+      <!-- Hero Stat + Priority -->
+      <div style="display: flex; gap: 12px; margin-bottom: 24px;">
+        <div style="flex: 1; background: linear-gradient(135deg, #eef2ff, #e0e7ff); border-radius: 12px; padding: 20px; text-align: center;">
+          <p style="font-size: 28px; font-weight: 800; color: #4f46e5; margin: 0;">${escapeHtml(data.heroStat.value)}</p>
+          <p style="font-size: 13px; color: #6366f1; margin: 4px 0 0;">${escapeHtml(data.heroStat.label)}</p>
+        </div>
+        <div style="display: flex; align-items: center;">
+          <span style="background: ${priorityStyle.bg}; color: ${priorityStyle.text}; padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 600;">${priorityStyle.label}</span>
+        </div>
+      </div>
+
+      <!-- Why It Matters -->
+      <div style="background: #fefce8; border-left: 4px solid #eab308; border-radius: 0 8px 8px 0; padding: 16px; margin-bottom: 24px;">
+        <h2 style="margin: 0 0 8px; font-size: 16px; color: #854d0e;">Why ${channelName} Matters for ${companyName}</h2>
+        <p style="margin: 0; font-size: 14px; color: #713f12; line-height: 1.6;">${escapeHtml(data.whyItMatters)}</p>
+      </div>
+
+      <!-- Company Fit -->
+      <p style="font-size: 14px; color: #475569; line-height: 1.6; margin: 0 0 24px;">${escapeHtml(data.companyFitSummary)}</p>
+
+      <!-- Strategic Pillars -->
+      <h2 style="font-size: 18px; color: #1e293b; margin: 0 0 16px; padding-bottom: 8px; border-bottom: 2px solid #e2e8f0;">📋 Strategic Pillars</h2>
+      ${pillarsHtml}
+
+      <!-- Quick Wins -->
+      <h2 style="font-size: 18px; color: #1e293b; margin: 24px 0 16px; padding-bottom: 8px; border-bottom: 2px solid #e2e8f0;">⚡ Quick Wins You Can Do This Week</h2>
+      ${quickWinsHtml}
+
+      <!-- KPIs -->
+      <h2 style="font-size: 18px; color: #1e293b; margin: 24px 0 12px; padding-bottom: 8px; border-bottom: 2px solid #e2e8f0;">📊 KPIs to Track</h2>
+      <div style="margin-bottom: 24px;">${kpisHtml}</div>
+
+      <!-- CTA -->
+      <div style="text-align: center; margin: 32px 0;">
+        <a href="${dashboardUrl}" style="display: inline-block; background: linear-gradient(135deg, #4f46e5, #7c3aed); color: #ffffff; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 15px;">View Full ${channelName} Strategy →</a>
+      </div>
+
+      <!-- Footer -->
+      <div style="border-top: 1px solid #e2e8f0; padding-top: 20px; margin-top: 12px;">
+        <p style="font-size: 13px; color: #94a3b8; text-align: center; margin: 0 0 8px;">Next week we'll deep dive into another channel. Stay tuned!</p>
+        <p style="font-size: 12px; color: #cbd5e1; text-align: center; margin: 0;">
+          <a href="{{{pm:unsubscribe}}}" style="color: #94a3b8;">Unsubscribe</a> · © 2026 GTM Champion
+        </p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>`;
+
+  const textBody = `${channelName} Strategy for ${companyName}
+
+Hey ${firstName},
+
+This week we're diving deep into your ${channelName} strategy.
+
+${data.heroStat.value} - ${data.heroStat.label}
+Priority: ${data.priority}
+
+WHY IT MATTERS
+${data.whyItMatters}
+
+${data.companyFitSummary}
+
+STRATEGIC PILLARS
+${data.strategicPillars.map((p, i) => `${i + 1}. ${p.title}\n   ${p.objective}\n   Tactics: ${p.tactics.join(', ')}\n   Measure: ${p.measurement}`).join('\n\n')}
+
+QUICK WINS
+${data.quickWins.map((qw, i) => `${i + 1}. ${qw.title} (${qw.effort} effort, ${qw.duration})\n   ${qw.steps.join('\n   ')}`).join('\n\n')}
+
+KPIs TO TRACK
+${data.topKpis.join(', ')}
+
+View full strategy: ${dashboardUrl}
+
+Unsubscribe: {{{pm:unsubscribe}}}
+
+© 2026 GTM Champion`;
+
+  try {
+    await postmarkClient.sendEmail({
+      From: FROM_ADDRESS,
+      To: data.toEmail,
+      Subject: `This Week's Deep Dive: ${channelName} Strategy for ${companyName}`,
+      HtmlBody: htmlBody,
+      TextBody: textBody,
+      MessageStream: "outbound",
+    });
+
+    console.log(`Channel strategy email (${data.channelId}) sent to ${data.toEmail}`);
+  } catch (error) {
+    console.error(`Failed to send channel strategy email (${data.channelId}):`, error);
+    throw error;
+  }
+}

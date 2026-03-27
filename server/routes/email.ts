@@ -9,9 +9,10 @@ import {
   type ChannelInsightQuickWin,
 } from "@shared/schema";
 import { requireAuth } from "./middleware";
-import { sendInviteFriendEmail, sendShareStrategyEmail, sendWeeklyEmail } from "../services/email";
+import { sendInviteFriendEmail, sendShareStrategyEmail, sendWeeklyEmail, sendChannelStrategyEmail } from "../services/email";
 import { generateChannelPDF } from "../services/pdfExport";
 import { generateWeeklyIdeas } from "../services/openai";
+import { sendChannelEmailsToAllUsers } from "../services/scheduler";
 
 const router = Router();
 
@@ -175,6 +176,72 @@ router.post("/api/cron/weekly-emails", async (req: Request, res: Response) => {
   } catch (error: unknown) {
     console.error("Weekly email cron error:", error);
     res.status(500).json({ error: "Failed to process weekly emails" });
+  }
+});
+
+// Cron endpoint for channel deep-dive emails
+router.post("/api/cron/channel-emails", async (req: Request, res: Response) => {
+  try {
+    const cronSecret = req.headers["x-cron-secret"];
+    const expectedSecret = process.env.CRON_SECRET;
+
+    if (!expectedSecret) {
+      return res.status(500).json({ error: "Server configuration error" });
+    }
+
+    if (typeof cronSecret !== 'string') {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const cronBuf = Buffer.from(cronSecret);
+    const expectedBuf = Buffer.from(expectedSecret);
+    if (cronBuf.length !== expectedBuf.length || !crypto.timingSafeEqual(cronBuf, expectedBuf)) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    console.log("Starting channel deep-dive email job...");
+    const result = await sendChannelEmailsToAllUsers();
+    res.json({ message: "Channel emails processed", ...result });
+  } catch (error: unknown) {
+    console.error("Channel email cron error:", error);
+    res.status(500).json({ error: "Failed to process channel emails" });
+  }
+});
+
+// Send a test channel strategy email to a specific user
+router.post("/api/send-channel-email/:userId", requireAuth, async (req: Request, res: Response) => {
+  try {
+    const { userId } = req.params;
+    const { channelId } = req.body;
+
+    const user = await storage.getUser(userId);
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    const company = await storage.getCompanyByUserId(userId);
+    if (!company || !company.name) return res.status(400).json({ error: "Company data not available" });
+
+    const channelInsights = await storage.getChannelInsightsByCompanyId(company.id);
+    const insight = channelInsights.find(ci => ci.channelId === channelId);
+    if (!insight) return res.status(404).json({ error: `No insight found for channel: ${channelId}` });
+
+    await sendChannelStrategyEmail({
+      toEmail: user.email,
+      userName: user.fullName,
+      companyName: company.name,
+      channelId: insight.channelId,
+      priority: insight.priority,
+      whyItMatters: insight.whyItMatters || "",
+      companyFitSummary: insight.companyFitSummary || "",
+      heroStat: insight.heroStat as { value: string; label: string },
+      topKpis: insight.topKpis as string[],
+      strategicPillars: insight.strategicPillars as ChannelInsightStrategicPillar[],
+      quickWins: insight.quickWins as ChannelInsightQuickWin[],
+    });
+
+    res.json({ success: true, message: `Channel strategy email (${channelId}) sent to ${user.email}` });
+  } catch (error: unknown) {
+    console.error("Send channel email error:", error);
+    res.status(500).json({ error: "Failed to send channel email" });
   }
 });
 
