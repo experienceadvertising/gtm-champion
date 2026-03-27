@@ -202,7 +202,7 @@ export default function Blog() {
             <span>GTM Champion</span>
           </div>
           <p className="text-sm text-slate-400">
-            © 2025 GTM Champion. All rights reserved.
+            © 2025–2026 GTM Champion. All rights reserved.
           </p>
         </div>
       </footer>

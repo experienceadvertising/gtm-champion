@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Helmet } from "react-helmet";
 import { useLocation, Link, useSearch } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
@@ -223,6 +224,10 @@ export default function Dashboard() {
   }, {} as Record<string, number>);
 
   return (
+    <>
+    <Helmet>
+      <meta name="robots" content="noindex, nofollow" />
+    </Helmet>
     <div className="min-h-screen bg-background flex">
       {/* Channel Sidebar */}
       <aside className="w-64 border-r bg-slate-50/50 hidden md:flex flex-col">
@@ -838,5 +843,6 @@ export default function Dashboard() {
       </main>
 
     </div>
+    </>
   );
 }

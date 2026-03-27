@@ -1,4 +1,5 @@
 import { useLocation } from "wouter";
+import { Helmet } from "react-helmet";
 import { ArrowLeft, Mail, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,6 +26,10 @@ export default function EmailPreview() {
   );
 
   return (
+    <>
+    <Helmet>
+      <meta name="robots" content="noindex, nofollow" />
+    </Helmet>
     <div className="min-h-screen bg-slate-50">
        <header className="h-16 border-b bg-white flex items-center px-8 sticky top-0 z-10">
           <Button variant="ghost" size="sm" className="mr-4" onClick={() => setLocation("/dashboard")}>
@@ -102,5 +107,6 @@ export default function EmailPreview() {
           </Tabs>
        </div>
     </div>
+    </>
   );
 }
