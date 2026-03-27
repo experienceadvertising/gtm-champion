@@ -1,3 +1,4 @@
+import { Helmet } from "react-helmet";
 import { Card, CardContent } from "@/components/ui/card";
 import { AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -7,6 +8,8 @@ export default function NotFound() {
   const [, setLocation] = useLocation();
 
   return (
+    <>
+      <Helmet><meta name="robots" content="noindex" /></Helmet>
     <div className="min-h-screen w-full flex items-center justify-center bg-gray-50">
       <Card className="w-full max-w-md mx-4">
         <CardContent className="pt-6 text-center">
@@ -26,5 +29,6 @@ export default function NotFound() {
         </CardContent>
       </Card>
     </div>
+    </>
   );
 }

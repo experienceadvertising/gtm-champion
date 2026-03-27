@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { Helmet } from "react-helmet";
 import { useLocation, Link, useSearch } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
@@ -1094,6 +1095,8 @@ export default function Dashboard() {
   );
 
   return (
+    <>
+      <Helmet><meta name="robots" content="noindex, nofollow" /></Helmet>
     <div className="h-screen bg-background flex overflow-hidden">
       <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
         <SheetContent side="left" className="w-64 p-0 flex flex-col">
@@ -2727,5 +2730,6 @@ export default function Dashboard() {
       </Dialog>
 
     </div>
+    </>
   );
 }

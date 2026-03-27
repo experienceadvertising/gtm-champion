@@ -131,42 +131,44 @@ export default function Blog() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: idx * 0.05 }}
                 >
-                  <Card 
-                    className="h-full hover:shadow-lg transition-shadow cursor-pointer overflow-hidden group"
-                    onClick={() => setLocation(`/blog/${article.slug}`)}
+                  <a
+                    href={`/blog/${article.slug}`}
+                    className="block h-full"
                     data-testid={`article-card-${article.slug}`}
                   >
-                    <div className="aspect-video overflow-hidden">
-                      <img 
-                        src={article.image} 
-                        alt={article.imageAlt}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                        loading="lazy"
-                      />
-                    </div>
-                    <CardHeader className="pb-2">
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-                        <Badge variant="secondary" className="text-xs">
-                          {article.category}
-                        </Badge>
-                        <span className="flex items-center gap-1">
-                          <Clock className="h-3 w-3" aria-hidden="true" />
-                          {article.readTime}
-                        </span>
+                    <Card className="h-full hover:shadow-lg transition-shadow cursor-pointer overflow-hidden group">
+                      <div className="aspect-video overflow-hidden">
+                        <img
+                          src={article.image}
+                          alt={article.imageAlt}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          loading="lazy"
+                        />
                       </div>
-                      <h2 className="text-lg font-bold leading-tight group-hover:text-primary transition-colors">
-                        {article.title}
-                      </h2>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm text-muted-foreground line-clamp-2">
-                        {article.excerpt}
-                      </p>
-                      <div className="mt-4 flex items-center text-primary text-sm font-medium">
-                        Read article <ArrowRight className="h-4 w-4 ml-1" aria-hidden="true" />
-                      </div>
-                    </CardContent>
-                  </Card>
+                      <CardHeader className="pb-2">
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+                          <Badge variant="secondary" className="text-xs">
+                            {article.category}
+                          </Badge>
+                          <span className="flex items-center gap-1">
+                            <Clock className="h-3 w-3" aria-hidden="true" />
+                            {article.readTime}
+                          </span>
+                        </div>
+                        <h2 className="text-lg font-bold leading-tight group-hover:text-primary transition-colors">
+                          {article.title}
+                        </h2>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-sm text-muted-foreground line-clamp-2">
+                          {article.excerpt}
+                        </p>
+                        <div className="mt-4 flex items-center text-primary text-sm font-medium">
+                          Read article <ArrowRight className="h-4 w-4 ml-1" aria-hidden="true" />
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </a>
                 </motion.article>
               ))}
             </div>
