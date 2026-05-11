@@ -129,7 +129,6 @@ export async function sendWelcomeEmail(data: WelcomeEmailData): Promise<void> {
           <p style="color: #64748b; font-size: 13px; margin: 0 0 4px 0;">📬 You'll receive weekly GTM ideas every Monday to keep your strategy fresh.</p>
           <p style="color: #94a3b8; font-size: 12px; margin: 12px 0 0 0;">Questions? Just reply to this email — a real human will get back to you.</p>
           <p style="color: #cbd5e1; font-size: 11px; margin: 16px 0 0 0;">&copy; 2026 GTM Champion. All rights reserved.</p>
-          <p style="margin: 12px 0 0 0;"><a href="{{{pm:unsubscribe}}}" style="color: #94a3b8; font-size: 11px; text-decoration: underline;">Unsubscribe from emails</a></p>
         </div>
       </div>
 
@@ -156,8 +155,6 @@ View your full dashboard: ${data.dashboardUrl}
 
 You'll receive weekly GTM ideas every Monday to keep your strategy fresh.
 Questions? Just reply to this email.
-
-Unsubscribe: {{{pm:unsubscribe}}}
 
 © 2026 GTM Champion`;
 
@@ -305,7 +302,7 @@ Unsubscribe: {{{pm:unsubscribe}}}
       Subject: `Your Weekly GTM Ideas for ${data.companyName}`,
       HtmlBody: htmlBody,
       TextBody: textBody,
-      MessageStream: "outbound",
+      MessageStream: "broadcast",
     });
 
     console.log(`Weekly email sent to ${data.toEmail}`);
@@ -817,7 +814,7 @@ Unsubscribe: {{{pm:unsubscribe}}}
       Subject: `This Week's Deep Dive: ${channelName} Strategy for ${companyName}`,
       HtmlBody: htmlBody,
       TextBody: textBody,
-      MessageStream: "outbound",
+      MessageStream: "broadcast",
     });
 
     console.log(`Channel strategy email (${data.channelId}) sent to ${data.toEmail}`);
@@ -931,7 +928,7 @@ Unsubscribe: {{{pm:unsubscribe}}}
       Subject: `New in GTM Champion: ${data.featureName}`,
       HtmlBody: htmlBody,
       TextBody: textBody,
-      MessageStream: "outbound",
+      MessageStream: "broadcast",
     });
 
     console.log(`Feature announcement email (${data.featureName}) sent to ${data.toEmail}`);
