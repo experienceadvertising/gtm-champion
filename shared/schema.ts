@@ -403,3 +403,22 @@ export const buyerPersonaUpdateSchema = z.object({
   objections: z.array(z.string().max(300)).max(20).optional(),
   dayInTheLife: z.string().max(2000).optional(),
 });
+
+// Runtime-managed tables (created by connect-pg-simple and the rate-limit middleware).
+// Defined here so drizzle-kit doesn't try to drop them on push.
+export const session = pgTable("session", {
+  sid: varchar("sid").primaryKey(),
+  sess: json("sess").notNull(),
+  expire: timestamp("expire", { precision: 6 }).notNull(),
+}, (table) => ({
+  expireIdx: index("IDX_session_expire").on(table.expire),
+}));
+
+export const rateLimitStore = pgTable("rate_limit_store", {
+  key: varchar("key").notNull(),
+  prefix: varchar("prefix").notNull(),
+  hits: integer("hits").notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+}, (table) => ({
+  pk: primaryKey({ columns: [table.key, table.prefix] }),
+}));
