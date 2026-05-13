@@ -125,6 +125,8 @@ router.patch("/api/recommendations/:id/status", requireAuth, async (req: Request
   }
 });
 
+const REANALYSIS_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
+
 router.post("/api/retry-analysis/:companyId", requireAuth, async (req: Request, res: Response) => {
   try {
     const { companyId } = req.params;
@@ -141,12 +143,50 @@ router.post("/api/retry-analysis/:companyId", requireAuth, async (req: Request, 
       return res.status(401).json({ error: "User not found" });
     }
 
+    if (!user.isPremium && company.lastReanalyzedAt) {
+      const elapsed = Date.now() - company.lastReanalyzedAt.getTime();
+      if (elapsed < REANALYSIS_WINDOW_MS) {
+        const nextEligible = new Date(company.lastReanalyzedAt.getTime() + REANALYSIS_WINDOW_MS);
+        return res.status(403).json({
+          error: "Free plan allows one re-analysis per week. Upgrade to Pro for unlimited re-analyses.",
+          code: "PREMIUM_REQUIRED",
+          reason: "weekly_reanalyze_limit",
+          nextEligibleAt: nextEligible.toISOString(),
+          upgradeUrl: "/pricing",
+        });
+      }
+    }
+
+    try {
+      const recommendations = await storage.getRecommendationsByCompanyId(cid);
+      const channelInsights = await storage.getChannelInsightsByCompanyId(cid);
+      const weeklyIdeas = await storage.getWeeklyIdeasByCompanyId(cid);
+      const personas = await storage.getBuyerPersonasByCompanyId(cid);
+      const budget = await storage.getLatestBudgetAllocation(cid);
+      await storage.createStrategySnapshot({
+        userId,
+        companyId: cid,
+        label: `Snapshot before re-analysis at ${new Date().toISOString()}`,
+        snapshot: {
+          company: company as unknown as Record<string, unknown>,
+          recommendations: recommendations as unknown as Array<Record<string, unknown>>,
+          channelInsights: channelInsights as unknown as Array<Record<string, unknown>>,
+          weeklyIdeas: weeklyIdeas as unknown as Array<Record<string, unknown>>,
+          personas: personas as unknown as Array<Record<string, unknown>>,
+          budget: (budget as unknown as Record<string, unknown>) || null,
+        },
+      });
+    } catch (snapshotError) {
+      console.error("Failed to snapshot strategy before re-analysis:", snapshotError);
+    }
+
     await storage.updateCompany(cid, {
       summary: "Analyzing your website...",
       name: null,
       gtmMotion: null,
       icpScore: null,
       lastScraped: new Date(),
+      lastReanalyzedAt: new Date(),
     });
 
     processCompanyAnalysis(cid, company.url, user.fullName, user.email).catch(

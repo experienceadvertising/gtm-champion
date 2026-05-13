@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { PricingSection } from "@/components/PricingSection";
 import heroImage from "@assets/generated_images/diverse_marketing_team_collaborating-1200.webp";
 import heroImage800 from "@assets/generated_images/diverse_marketing_team_collaborating-800.webp";
 
@@ -63,7 +64,7 @@ const FAQ_ITEMS = [
   },
   {
     question: "Is GTM Champion free to use?",
-    answer: "Yes! GTM Champion is 100% free. You get full access to all 13 channel strategies, unlimited AI chat, content tools, and weekly strategy emails. No credit card required, no hidden fees."
+    answer: "Yes — the free plan is generous. You get full GTM analysis across all 13 channels, AI chat, content tools (with daily limits), weekly strategy emails, and one website re-analysis per week. No credit card required to start. GTM Champion Pro ($29/mo or $290/yr) unlocks 10x higher AI limits, branded multi-page PDF exports, unlimited re-analysis with 12-month strategy history, and up to 8 buyer personas with A/B budget scenarios."
   },
   {
     question: "What are the weekly AI content sprints?",
@@ -223,7 +224,7 @@ const HERO_ROTATING_WORDS = [
   "in Minutes, Not Months",
   "Across 13 Channels",
   "Powered by GPT-5",
-  "100% Free, Forever",
+  "Free to Start",
 ];
 
 function AnimatedCounter({ target, suffix = "", duration = 2000 }: { target: number; suffix?: string; duration?: number }) {
@@ -386,7 +387,7 @@ export default function LandingPage() {
                 </motion.div>
                 
                 <motion.p variants={itemVariants} className="text-sm md:text-xl text-muted-foreground max-w-xl leading-relaxed">
-                  Paste your URL. Our AI scrapes your site, analyzes your business, and builds a <strong className="text-foreground">custom GTM strategy across 13 channels</strong> with weekly updates every Monday. The kind of strategy agencies charge $5,000+ to create. Yours in minutes, for free.
+                  Paste your URL. Our AI scrapes your site, analyzes your business, and builds a <strong className="text-foreground">custom GTM strategy across 13 channels</strong> with weekly updates every Monday. The kind of strategy agencies charge $5,000+ to create. Free to start, Pro from $29/mo.
                 </motion.p>
                 
                 <motion.div variants={itemVariants} className="flex flex-col sm:flex-row gap-3">
@@ -851,79 +852,7 @@ export default function LandingPage() {
           </div>
         </section>
 
-        <section id="pricing" className="py-16 md:py-36 relative overflow-hidden" aria-labelledby="pricing-heading">
-          <div className="absolute inset-0 bg-gradient-to-b from-background via-indigo-50/30 to-background dark:from-background dark:via-indigo-950/10 dark:to-background pointer-events-none" aria-hidden="true" />
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/5 rounded-full blur-3xl pointer-events-none" aria-hidden="true" />
-          <div className="container mx-auto px-4 md:px-8 relative z-10">
-            <div className="text-center max-w-3xl mx-auto mb-14">
-              <motion.span
-                initial={{ opacity: 0, y: 10 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-semibold mb-5 border border-primary/20"
-              >
-                Pricing
-              </motion.span>
-              <h2 id="pricing-heading" className="text-3xl md:text-5xl font-display font-bold mb-5">
-                100% Free. No Catch.
-              </h2>
-              <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                Every feature, every channel, every tool. Completely free. We're on a mission to help B2B SaaS companies grow.
-              </p>
-            </div>
-
-            <div className="max-w-lg mx-auto">
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5 }}
-                className="relative"
-              >
-                <div className="pricing-glow absolute -inset-2 rounded-3xl opacity-60 blur-lg pointer-events-none" aria-hidden="true" />
-                <div className="pricing-shine-border absolute -inset-[1px] rounded-3xl pointer-events-none" aria-hidden="true" />
-                <Card className="relative border-primary/20 shadow-2xl shadow-primary/10 bg-background overflow-hidden">
-                  <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-indigo-500 via-violet-500 to-indigo-500" aria-hidden="true" />
-                  <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-gradient-to-r from-indigo-500 to-violet-600 text-white text-xs font-bold px-4 py-1.5 rounded-full uppercase tracking-wide shadow-lg">
-                    All Features Included
-                  </div>
-                  <CardHeader className="text-center pt-10 pb-2">
-                    <CardTitle className="text-2xl font-bold text-primary">GTM Champion</CardTitle>
-                    <CardDescription className="text-base">Everything you need to build a winning Go-To-Market strategy</CardDescription>
-                    <div className="mt-5">
-                      <span className="text-5xl font-bold gradient-text">Free</span>
-                      <p className="text-sm text-muted-foreground mt-2">No credit card required. Ever.</p>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-4 pt-4">
-                    {[
-                      "AI-powered GTM analysis",
-                      "All 13 channel strategies",
-                      "Unlimited AI chat questions",
-                      "Content tools (LinkedIn, Email, Blog)",
-                      "Weekly strategy emails",
-                      "PageSpeed & performance insights",
-                      "Competitor insights",
-                      "Email support"
-                    ].map((item) => (
-                      <div key={item} className="flex items-center gap-3">
-                        <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                          <CheckCircle2 className="h-4 w-4 text-primary" aria-hidden="true" />
-                        </div>
-                        <span className="text-gray-900 dark:text-gray-100 font-semibold">{item}</span>
-                      </div>
-                    ))}
-                  </CardContent>
-                  <CardFooter className="pt-4 pb-8">
-                    <Button className="w-full h-13 text-lg shadow-lg shadow-primary/20 group" onClick={() => setLocation("/auth")} data-testid="button-get-started-free">
-                      Get Started Free <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" aria-hidden="true" />
-                    </Button>
-                  </CardFooter>
-                </Card>
-              </motion.div>
-            </div>
-          </div>
-        </section>
+        <PricingSection />
 
         <section id="faq" className="py-16 md:py-36 bg-slate-50 dark:bg-slate-900/50" aria-labelledby="faq-heading">
           <div className="container mx-auto px-4 md:px-8">

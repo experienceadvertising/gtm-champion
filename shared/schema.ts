@@ -13,6 +13,7 @@ export const users = pgTable("users", {
   isAdmin: boolean("is_admin").default(false).notNull(),
   stripeCustomerId: text("stripe_customer_id"),
   stripeSubscriptionId: text("stripe_subscription_id"),
+  logoUrl: text("logo_url"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -58,6 +59,23 @@ export const companies = pgTable("companies", {
   }>(),
   siteProfile: jsonb("site_profile").$type<SiteProfile>(),
   lastScraped: timestamp("last_scraped").defaultNow().notNull(),
+  lastReanalyzedAt: timestamp("last_reanalyzed_at"),
+});
+
+export const strategySnapshots = pgTable("strategy_snapshots", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").notNull().references(() => companies.id, { onDelete: 'cascade' }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  label: text("label"),
+  snapshot: jsonb("snapshot").notNull().$type<{
+    company: Record<string, unknown>;
+    recommendations: Array<Record<string, unknown>>;
+    channelInsights: Array<Record<string, unknown>>;
+    weeklyIdeas: Array<Record<string, unknown>>;
+    personas?: Array<Record<string, unknown>>;
+    budget?: Record<string, unknown> | null;
+  }>(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 export const recommendations = pgTable("recommendations", {
@@ -220,6 +238,11 @@ export const insertUserIntegrationSchema = createInsertSchema(userIntegrations).
   connectedAt: true,
 });
 
+export const insertStrategySnapshotSchema = createInsertSchema(strategySnapshots).omit({
+  id: true,
+  createdAt: true,
+});
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 
@@ -246,6 +269,9 @@ export type BuyerPersona = typeof buyerPersonas.$inferSelect;
 
 export type InsertUserIntegration = z.infer<typeof insertUserIntegrationSchema>;
 export type UserIntegration = typeof userIntegrations.$inferSelect;
+
+export type InsertStrategySnapshot = z.infer<typeof insertStrategySnapshotSchema>;
+export type StrategySnapshot = typeof strategySnapshots.$inferSelect;
 
 export type ChannelInsightHeroStat = { value: string; label: string };
 export type ChannelInsightStrategicPillar = {

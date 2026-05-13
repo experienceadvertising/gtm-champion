@@ -1,16 +1,17 @@
-import { eq, and } from "drizzle-orm";
+import { eq, and, desc } from "drizzle-orm";
 import { db } from "../db/index";
-import { 
-  users, 
-  companies, 
-  recommendations, 
+import {
+  users,
+  companies,
+  recommendations,
   weeklyIdeas,
   channelInsights,
   userIntegrations,
   pushSubscriptions,
   budgetAllocations,
   buyerPersonas,
-  type User, 
+  strategySnapshots,
+  type User,
   type InsertUser,
   type Company,
   type InsertCompany,
@@ -27,7 +28,9 @@ import {
   type BudgetAllocation,
   type InsertBudgetAllocation,
   type BuyerPersona,
-  type InsertBuyerPersona
+  type InsertBuyerPersona,
+  type StrategySnapshot,
+  type InsertStrategySnapshot
 } from "@shared/schema";
 
 export interface IStorage {
@@ -37,6 +40,7 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
   updateUserPremiumStatus(id: string, isPremium: boolean): Promise<void>;
   updateUserStripeInfo(id: string, info: { stripeCustomerId?: string; stripeSubscriptionId?: string }): Promise<void>;
+  updateUserLogoUrl(id: string, logoUrl: string | null): Promise<void>;
   deleteUser(id: string): Promise<void>;
 
   getAllCompanies(): Promise<Company[]>;
@@ -86,6 +90,10 @@ export interface IStorage {
   updateBuyerPersona(id: number, updates: Partial<BuyerPersona>): Promise<void>;
   deleteBuyerPersona(id: number): Promise<void>;
   deleteBuyerPersonasByCompanyId(companyId: number): Promise<void>;
+
+  createStrategySnapshot(snapshot: InsertStrategySnapshot): Promise<StrategySnapshot>;
+  getStrategySnapshotsByUserId(userId: string): Promise<StrategySnapshot[]>;
+  getStrategySnapshot(id: number, userId: string): Promise<StrategySnapshot | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -114,6 +122,10 @@ export class DatabaseStorage implements IStorage {
 
   async updateUserStripeInfo(id: string, info: { stripeCustomerId?: string; stripeSubscriptionId?: string }): Promise<void> {
     await db.update(users).set(info).where(eq(users.id, id));
+  }
+
+  async updateUserLogoUrl(id: string, logoUrl: string | null): Promise<void> {
+    await db.update(users).set({ logoUrl }).where(eq(users.id, id));
   }
 
   async deleteUser(id: string): Promise<void> {
@@ -324,6 +336,31 @@ export class DatabaseStorage implements IStorage {
 
   async deleteBuyerPersonasByCompanyId(companyId: number): Promise<void> {
     await db.delete(buyerPersonas).where(eq(buyerPersonas.companyId, companyId));
+  }
+
+  async createStrategySnapshot(snapshot: InsertStrategySnapshot): Promise<StrategySnapshot> {
+    const [result] = await db
+      .insert(strategySnapshots)
+      .values(snapshot as typeof strategySnapshots.$inferInsert)
+      .returning();
+    return result;
+  }
+
+  async getStrategySnapshotsByUserId(userId: string): Promise<StrategySnapshot[]> {
+    return db
+      .select()
+      .from(strategySnapshots)
+      .where(eq(strategySnapshots.userId, userId))
+      .orderBy(desc(strategySnapshots.createdAt));
+  }
+
+  async getStrategySnapshot(id: number, userId: string): Promise<StrategySnapshot | undefined> {
+    const [snapshot] = await db
+      .select()
+      .from(strategySnapshots)
+      .where(and(eq(strategySnapshots.id, id), eq(strategySnapshots.userId, userId)))
+      .limit(1);
+    return snapshot;
   }
 }
 

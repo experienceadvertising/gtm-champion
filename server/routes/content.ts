@@ -1,4 +1,4 @@
-import { Router, type Request, type Response } from "express";
+import { Router, type Request, type Response, type NextFunction, type RequestHandler } from "express";
 import rateLimit from "express-rate-limit";
 import { storage } from "../storage";
 import {
@@ -15,23 +15,56 @@ import { pgRateLimitStore } from "./rateLimitStore";
 
 const router = Router();
 
-const aiLimiter = rateLimit({
+const aiLimiterFree = rateLimit({
   windowMs: 60 * 1000,
   max: 20,
+  message: { error: "Too many AI requests. Upgrade to Pro for 10x higher limits." },
+  standardHeaders: true,
+  legacyHeaders: false,
+  store: pgRateLimitStore("ai_free", 60 * 1000),
+});
+
+const aiLimiterPro = rateLimit({
+  windowMs: 60 * 1000,
+  max: 200,
   message: { error: "Too many AI requests. Please wait a moment." },
   standardHeaders: true,
   legacyHeaders: false,
-  store: pgRateLimitStore("ai", 60 * 1000),
+  store: pgRateLimitStore("ai_pro", 60 * 1000),
 });
 
-const contentGenLimiter = rateLimit({
+const contentGenLimiterFree = rateLimit({
   windowMs: 60 * 1000,
   max: 10,
-  message: { error: "Too many content generation requests. Please wait a moment." },
+  message: { error: "Too many content requests. Upgrade to Pro for 10x higher limits." },
   standardHeaders: true,
   legacyHeaders: false,
-  store: pgRateLimitStore("content_gen", 60 * 1000),
+  store: pgRateLimitStore("content_gen_free", 60 * 1000),
 });
+
+const contentGenLimiterPro = rateLimit({
+  windowMs: 60 * 1000,
+  max: 100,
+  message: { error: "Too many content requests. Please wait a moment." },
+  standardHeaders: true,
+  legacyHeaders: false,
+  store: pgRateLimitStore("content_gen_pro", 60 * 1000),
+});
+
+function tieredLimit(freeLimiter: RequestHandler, proLimiter: RequestHandler): RequestHandler {
+  return async (req: Request, res: Response, next: NextFunction) => {
+    let isPremium = req.session?.isPremium === true;
+    if (!isPremium && req.session?.userId) {
+      const user = await storage.getUser(req.session.userId);
+      isPremium = !!user?.isPremium;
+      if (isPremium) req.session.isPremium = true;
+    }
+    return isPremium ? proLimiter(req, res, next) : freeLimiter(req, res, next);
+  };
+}
+
+const aiLimiter = tieredLimit(aiLimiterFree, aiLimiterPro);
+const contentGenLimiter = tieredLimit(contentGenLimiterFree, contentGenLimiterPro);
 
 router.post("/api/chat", requireAuth, aiLimiter, async (req: Request, res: Response) => {
   try {

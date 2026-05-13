@@ -11,6 +11,7 @@ import integrationsRouter from "./routes/integrations";
 import notificationsRouter from "./routes/notifications";
 import budgetRouter from "./routes/budget";
 import personasRouter from "./routes/personas";
+import historyRouter from "./routes/history";
 
 const ARTICLE_SLUGS = [
   "what-is-go-to-market-strategy-complete-guide",
@@ -149,7 +150,10 @@ GTM Champion is a free AI-powered platform that helps B2B SaaS companies build a
 
 ## Pricing
 
-GTM Champion is 100% free. Full access to all 13 channel strategies, unlimited AI chat, content tools, weekly strategy emails, and integrations. No credit card required.
+GTM Champion has two tiers:
+
+- **Free**: GTM analysis across all 13 channels, AI chat (20 messages/min), content tools (10 generations/min), 3 buyer personas, weekly strategy emails, 1 website re-analysis per week, and standard PDF export. No credit card required to start.
+- **GTM Champion Pro** ($29/month or $290/year — save ~17%): 10x higher AI limits (200 chat msg/min, 100 content gen/min), unlimited website re-analysis with 12-month strategy history, branded multi-page PDF exports with your logo, up to 8 buyer personas, A/B budget scenarios (conservative/balanced/aggressive), and priority email support.
 
 ## Blog Articles
 
@@ -177,6 +181,7 @@ ${ARTICLE_SLUGS.map(slug => `- [${slug.replace(/-/g, ' ')}](https://gtmchampion.
   app.use(notificationsRouter);
   app.use(budgetRouter);
   app.use(personasRouter);
+  app.use(historyRouter);
 
   return httpServer;
 }
