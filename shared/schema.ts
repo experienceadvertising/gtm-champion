@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, serial, timestamp, boolean, integer, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, serial, timestamp, boolean, integer, jsonb, json, index, primaryKey } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -272,6 +272,36 @@ export type UserIntegration = typeof userIntegrations.$inferSelect;
 
 export type InsertStrategySnapshot = z.infer<typeof insertStrategySnapshotSchema>;
 export type StrategySnapshot = typeof strategySnapshots.$inferSelect;
+
+// Runtime-managed tables. Declared here so `drizzle-kit push` does not try to
+// drop them. The runtime "CREATE TABLE IF NOT EXISTS" calls in
+// server/index.ts (session, via connect-pg-simple) and
+// server/routes/rateLimitStore.ts (rate_limit_store) still create them on
+// fresh databases; declaring them here keeps drizzle aware of their shape.
+export const session = pgTable(
+  "session",
+  {
+    sid: varchar("sid").primaryKey().notNull(),
+    sess: json("sess").notNull(),
+    expire: timestamp("expire", { precision: 6, mode: "date" }).notNull(),
+  },
+  (table) => ({
+    expireIdx: index("IDX_session_expire").on(table.expire),
+  })
+);
+
+export const rateLimitStore = pgTable(
+  "rate_limit_store",
+  {
+    key: varchar("key", { length: 255 }).notNull(),
+    prefix: varchar("prefix", { length: 50 }).notNull(),
+    hits: integer("hits").notNull().default(1),
+    expiresAt: timestamp("expires_at").notNull(),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.key, table.prefix] }),
+  })
+);
 
 export type ChannelInsightHeroStat = { value: string; label: string };
 export type ChannelInsightStrategicPillar = {
