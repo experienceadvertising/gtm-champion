@@ -1,10 +1,16 @@
 import { Link } from "wouter";
 import { Zap, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { PageMeta } from "@/components/PageMeta";
 
 export default function TermsPage() {
   return (
     <div className="min-h-screen bg-background">
+      <PageMeta
+        title="Terms of Service - GTM Champion"
+        description="Read the terms of service for using GTM Champion, the free AI-powered Go-To-Market strategy platform for B2B SaaS companies."
+        path="/terms"
+      />
       <nav className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50" role="navigation" aria-label="Main navigation">
         <div className="container mx-auto px-4 md:px-8 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2 font-display font-bold text-lg" data-testid="link-home">

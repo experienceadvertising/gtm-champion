@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
+import { Helmet } from "react-helmet-async";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   ArrowRight, 
@@ -301,6 +302,9 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-background font-sans selection:bg-primary/20 overflow-x-hidden">
+      <Helmet>
+        <link rel="canonical" href="https://gtmchampion.com/" />
+      </Helmet>
       <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 bg-primary text-white px-4 py-2 rounded z-50">
         Skip to main content
       </a>

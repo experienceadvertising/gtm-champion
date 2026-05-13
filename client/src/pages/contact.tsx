@@ -1,10 +1,16 @@
 import { Link } from "wouter";
 import { Zap, ArrowLeft, Mail, Linkedin, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { PageMeta } from "@/components/PageMeta";
 
 export default function ContactPage() {
   return (
     <div className="min-h-screen bg-background">
+      <PageMeta
+        title="Contact GTM Champion - Get in Touch"
+        description="Have questions about Go-To-Market strategy or GTM Champion? Reach out by email or LinkedIn — we typically respond within one business day."
+        path="/contact"
+      />
       <nav className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50" role="navigation" aria-label="Main navigation">
         <div className="container mx-auto px-4 md:px-8 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2 font-display font-bold text-lg" data-testid="link-home">
