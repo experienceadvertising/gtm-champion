@@ -4,7 +4,7 @@ import { Zap, ArrowLeft, Clock, Calendar, User, Tag, ArrowRight, Share2 } from "
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { getArticleBySlug, articles } from "@/data/articles";
-import { Helmet } from "react-helmet";
+import { Helmet } from "react-helmet-async";
 import DOMPurify from "dompurify";
 
 export default function Article() {
