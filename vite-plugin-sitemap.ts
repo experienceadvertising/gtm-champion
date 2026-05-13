@@ -13,23 +13,37 @@ const STATIC_ROUTES: Array<{ path: string; changefreq: string; priority: string 
   { path: '/terms', changefreq: 'yearly', priority: '0.3' },
 ];
 
-type ArticleEntry = { slug: string; modifiedDate: string };
+type ArticleEntry = {
+  slug: string;
+  metaTitle: string;
+  metaDescription: string;
+  imageAlt: string;
+  publishDate: string;
+  modifiedDate: string;
+};
+
+function extractField(block: string, field: string): string {
+  const re = new RegExp(`${field}:\\s*"((?:[^"\\\\]|\\\\.)*)"`);
+  const m = re.exec(block);
+  if (!m) return '';
+  return m[1].replace(/\\"/g, '"');
+}
 
 function parseArticles(articlesFile: string): ArticleEntry[] {
   const source = fs.readFileSync(articlesFile, 'utf-8');
   const entries: ArticleEntry[] = [];
-  const slugRegex = /slug:\s*"([^"]+)"/g;
-  const modifiedRegex = /modifiedDate:\s*"([^"]+)"/g;
-
-  const slugs: string[] = [];
+  const blockRegex = /\{\s*slug:\s*"([^"]+)"[\s\S]*?(?=\n\s{2}\}(?:,|\s*\];))/g;
   let m: RegExpExecArray | null;
-  while ((m = slugRegex.exec(source)) !== null) slugs.push(m[1]);
-
-  const dates: string[] = [];
-  while ((m = modifiedRegex.exec(source)) !== null) dates.push(m[1]);
-
-  for (let i = 0; i < slugs.length; i++) {
-    entries.push({ slug: slugs[i], modifiedDate: dates[i] ?? new Date().toISOString().slice(0, 10) });
+  while ((m = blockRegex.exec(source)) !== null) {
+    const block = m[0];
+    entries.push({
+      slug: m[1],
+      metaTitle: extractField(block, 'metaTitle'),
+      metaDescription: extractField(block, 'metaDescription'),
+      imageAlt: extractField(block, 'imageAlt'),
+      publishDate: extractField(block, 'publishDate') || new Date().toISOString().slice(0, 10),
+      modifiedDate: extractField(block, 'modifiedDate') || new Date().toISOString().slice(0, 10),
+    });
   }
   return entries;
 }
@@ -55,7 +69,8 @@ function buildSitemap(articles: ArticleEntry[]): string {
 
 export function sitemapPlugin(): Plugin {
   const articlesFile = path.resolve(process.cwd(), 'client', 'src', 'data', 'articles.ts');
-  const outputFile = path.resolve(process.cwd(), 'client', 'public', 'sitemap.xml');
+  const sitemapPath = path.resolve(process.cwd(), 'client', 'public', 'sitemap.xml');
+  const metaPath = path.resolve(process.cwd(), 'client', 'public', 'article-meta.json');
 
   function generate() {
     if (!fs.existsSync(articlesFile)) {
@@ -63,9 +78,9 @@ export function sitemapPlugin(): Plugin {
       return;
     }
     const articles = parseArticles(articlesFile);
-    const xml = buildSitemap(articles);
-    fs.writeFileSync(outputFile, xml, 'utf-8');
-    console.log(`[sitemap] wrote ${articles.length + STATIC_ROUTES.length} URLs to ${outputFile}`);
+    fs.writeFileSync(sitemapPath, buildSitemap(articles), 'utf-8');
+    fs.writeFileSync(metaPath, JSON.stringify(articles, null, 2), 'utf-8');
+    console.log(`[sitemap] wrote ${articles.length + STATIC_ROUTES.length} URLs and ${articles.length} article meta entries`);
   }
 
   return {

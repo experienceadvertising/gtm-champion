@@ -29,7 +29,8 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import heroImage from "@assets/generated_images/diverse_marketing_team_collaborating.png";
+import heroImage from "@assets/generated_images/diverse_marketing_team_collaborating-1200.webp";
+import heroImage800 from "@assets/generated_images/diverse_marketing_team_collaborating-800.webp";
 
 const CHANNELS = [
   { id: "SEO", icon: Search, description: "Organic search optimization" },
@@ -189,14 +190,18 @@ function DashboardPreview() {
           ))}
         </div>
         <div className="relative overflow-hidden rounded-lg">
-          <img 
-            src={heroImage} 
-            alt="Marketing team collaborating on Go-To-Market strategy, analyzing growth charts and analytics dashboard in modern office" 
-            className="w-full h-32 object-cover opacity-60"
-            loading="eager"
-            width="800"
-            height="600"
-          />
+          <picture>
+            <source type="image/webp" srcSet={`${heroImage800} 800w, ${heroImage} 1200w`} sizes="(max-width: 768px) 100vw, 600px" />
+            <img
+              src={heroImage800}
+              alt="Marketing team collaborating on Go-To-Market strategy, analyzing growth charts and analytics dashboard in modern office"
+              className="w-full h-32 object-cover opacity-60"
+              loading="eager"
+              decoding="async"
+              width="800"
+              height="600"
+            />
+          </picture>
           <div className="absolute inset-0 bg-gradient-to-t from-slate-900/90 via-slate-900/40 to-transparent" />
           <div className="absolute bottom-3 left-3 right-3 flex gap-2">
             <div className="glass-panel rounded-md px-2.5 py-1.5 text-[10px] text-white flex items-center gap-1.5">

@@ -5,6 +5,7 @@ import path from "path";
 import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
 import { metaImagesPlugin } from "./vite-plugin-meta-images";
 import { sitemapPlugin } from "./vite-plugin-sitemap";
+import { swVersionPlugin } from "./vite-plugin-sw-version";
 
 export default defineConfig({
   plugins: [
@@ -13,6 +14,7 @@ export default defineConfig({
     tailwindcss(),
     metaImagesPlugin(),
     sitemapPlugin(),
+    swVersionPlugin(),
     ...(process.env.NODE_ENV !== "production" &&
     process.env.REPL_ID !== undefined
       ? [

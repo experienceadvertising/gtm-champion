@@ -57,6 +57,19 @@ export default function Blog() {
     ]
   };
 
+  const itemListJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    "itemListOrder": "https://schema.org/ItemListOrderDescending",
+    "numberOfItems": articles.length,
+    "itemListElement": articles.map((article, idx) => ({
+      "@type": "ListItem",
+      "position": idx + 1,
+      "url": `https://gtmchampion.com/blog/${article.slug}`,
+      "name": article.title,
+    })),
+  };
+
   return (
     <>
       <Helmet>
@@ -84,6 +97,9 @@ export default function Blog() {
         </script>
         <script type="application/ld+json">
           {JSON.stringify(breadcrumbJsonLd)}
+        </script>
+        <script type="application/ld+json">
+          {JSON.stringify(itemListJsonLd)}
         </script>
       </Helmet>
       
@@ -143,6 +159,9 @@ export default function Blog() {
                           alt={article.imageAlt}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                           loading="lazy"
+                          decoding="async"
+                          width="800"
+                          height="450"
                         />
                       </div>
                       <CardHeader className="pb-2">
