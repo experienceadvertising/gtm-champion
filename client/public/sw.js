@@ -1,6 +1,5 @@
-const CACHE_NAME = 'gtm-champion-v1';
+const CACHE_NAME = 'gtm-champion-v2';
 const STATIC_ASSETS = [
-  '/',
   '/favicon.svg',
   '/icon-192.png',
   '/icon-512.png',
@@ -29,6 +28,16 @@ self.addEventListener('fetch', (event) => {
   if (request.method !== 'GET') return;
   if (url.pathname.startsWith('/api/')) return;
 
+  const isNavigation =
+    request.mode === 'navigate' ||
+    (request.destination === 'document') ||
+    (request.headers.get('accept') || '').includes('text/html');
+
+  if (isNavigation) {
+    event.respondWith(fetch(request));
+    return;
+  }
+
   event.respondWith(
     fetch(request)
       .then((response) => {
@@ -38,7 +47,7 @@ self.addEventListener('fetch', (event) => {
         }
         return response;
       })
-      .catch(() => caches.match(request).then((cached) => cached || caches.match('/')))
+      .catch(() => caches.match(request))
   );
 });
 
