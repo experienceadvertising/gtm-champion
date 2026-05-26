@@ -195,11 +195,34 @@
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
     <script>
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js').catch(() => {});
+      (function () {
+        if (!('serviceWorker' in navigator)) return;
+        var RECOVERY_KEY = 'sw-recovery-v2';
+        try {
+          if (!localStorage.getItem(RECOVERY_KEY)) {
+            navigator.serviceWorker.getRegistrations().then(function (regs) {
+              return Promise.all(regs.map(function (r) { return r.unregister(); }));
+            }).then(function () {
+              if (window.caches && caches.keys) {
+                return caches.keys().then(function (keys) {
+                  return Promise.all(keys.map(function (k) { return caches.delete(k); }));
+                });
+              }
+            }).then(function () {
+              localStorage.setItem(RECOVERY_KEY, '1');
+              location.reload();
+            }).catch(function () {
+              localStorage.setItem(RECOVERY_KEY, '1');
+            });
+            return;
+          }
+        } catch (e) {}
+        window.addEventListener('load', function () {
+          navigator.serviceWorker.register('/sw.js').then(function (reg) {
+            reg.update().catch(function () {});
+          }).catch(function () {});
         });
-      }
+      })();
     </script>
   </body>
 </html>
