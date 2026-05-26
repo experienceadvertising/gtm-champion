@@ -61,7 +61,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { fetchDashboard, retryAnalysis, updateRecommendationStatus, getSession, logout, type DashboardData, type ChannelInsight } from "@/lib/api";
+import { fetchDashboard, retryAnalysis, updateRecommendationStatus, getSession, logout, createPortalSession, type DashboardData, type ChannelInsight } from "@/lib/api";
+import { useSubscription } from "@/hooks/useSubscription";
 import { AIChat } from "@/components/AIChat";
 import { InteractiveTutorial, useTutorial } from "@/components/InteractiveTutorial";
 import { NotificationBanner } from "@/components/NotificationBanner";
@@ -158,6 +159,23 @@ export default function Dashboard() {
   const searchString = useSearch();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { isPremium } = useSubscription();
+
+  const handleManageSubscription = async () => {
+    try {
+      const { url } = await createPortalSession();
+      window.location.assign(url);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to open billing portal";
+      toast({ title: "Could not open billing portal", description: message, variant: "destructive" });
+    }
+  };
+
+  const handleOpenUpgrade = () => {
+    window.dispatchEvent(new CustomEvent("premium-required", {
+      detail: { message: "Unlock 10x higher AI limits, branded PDFs, unlimited re-analysis, and more." },
+    }));
+  };
   const params = new URLSearchParams(searchString);
   const channelParam = params.get("channel");
   const [selectedChannel, setSelectedChannel] = useState<string>(channelParam || "all");
@@ -1241,6 +1259,25 @@ export default function Dashboard() {
                       </AlertDialogFooter>
                     </AlertDialogContent>
                   </AlertDialog>
+                  {isPremium ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={handleManageSubscription}
+                      data-testid="button-manage-subscription"
+                    >
+                      <Sparkles className="mr-2 h-4 w-4 text-primary" /> Pro · Manage
+                    </Button>
+                  ) : (
+                    <Button
+                      size="sm"
+                      onClick={handleOpenUpgrade}
+                      data-testid="button-upgrade-to-pro"
+                      className="bg-gradient-to-r from-indigo-500 to-violet-600 text-white shadow-md hover:from-indigo-600 hover:to-violet-700"
+                    >
+                      <Sparkles className="mr-2 h-4 w-4" /> Upgrade to Pro
+                    </Button>
+                  )}
                   {(user as any).isAdmin && (
                     <>
                       <Button size="sm" variant="outline" onClick={() => setLocation("/admin")} data-testid="button-admin-panel">

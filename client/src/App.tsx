@@ -7,6 +7,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import { UpgradeModal } from "@/components/UpgradeModal";
 import LandingPage from "@/pages/landing-page";
 import NotFound from "@/pages/not-found";
 
@@ -74,6 +75,7 @@ function App() {
         <QueryClientProvider client={queryClient}>
           <TooltipProvider>
             <Toaster />
+            <UpgradeModal />
             <ErrorBoundary>
               <Router />
             </ErrorBoundary>

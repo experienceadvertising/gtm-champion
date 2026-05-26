@@ -7,7 +7,7 @@ import type {
   ChannelInsightQuickWin,
 } from "@shared/schema";
 import { requireAuth } from "./middleware";
-import { generateStrategyPDF } from "../services/pdfExport";
+import { generateStrategyPDF, fetchLogoBuffer } from "../services/pdfExport";
 
 const router = Router();
 
@@ -56,6 +56,10 @@ router.get("/api/export/csv", requireAuth, async (req: Request, res: Response) =
 router.get("/api/export/pdf", requireAuth, async (req: Request, res: Response) => {
   try {
     const userId = req.session.userId!;
+    const user = await storage.getUser(userId);
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
     const company = await storage.getCompanyByUserId(userId);
     if (!company || !company.name) {
       return res.status(404).json({ error: "No analysis data available to export" });
@@ -64,6 +68,9 @@ router.get("/api/export/pdf", requireAuth, async (req: Request, res: Response) =
     const recommendations = await storage.getRecommendationsByCompanyId(company.id);
     const channelInsights = await storage.getChannelInsightsByCompanyId(company.id);
     const weeklyIdeas = await storage.getWeeklyIdeasByCompanyId(company.id);
+
+    const branded = user.isPremium;
+    const logoBuffer = branded ? await fetchLogoBuffer(user.logoUrl) : null;
 
     const sanitizedName = (company.name || "company").replace(/[^a-zA-Z0-9]/g, "_").toLowerCase();
     const filename = `${sanitizedName}_gtm_strategy.pdf`;
@@ -106,12 +113,41 @@ router.get("/api/export/pdf", requireAuth, async (req: Request, res: Response) =
         description: wi.description,
         type: wi.type,
       })),
-    }, stream);
+    }, stream, {
+      branded,
+      logoBuffer,
+      brandName: branded ? company.name : null,
+    });
   } catch (error: unknown) {
     console.error("PDF export error:", error);
     if (!res.headersSent) {
       res.status(500).json({ error: "Failed to generate PDF" });
     }
+  }
+});
+
+router.post("/api/me/logo", requireAuth, async (req: Request, res: Response) => {
+  try {
+    const userId = req.session.userId!;
+    const { logoUrl } = req.body as { logoUrl?: string | null };
+    if (logoUrl !== null && (typeof logoUrl !== "string" || logoUrl.length > 2048)) {
+      return res.status(400).json({ error: "Invalid logoUrl" });
+    }
+    if (typeof logoUrl === "string") {
+      try {
+        const u = new URL(logoUrl);
+        if (u.protocol !== "https:" && u.protocol !== "http:") {
+          return res.status(400).json({ error: "logoUrl must be http(s)" });
+        }
+      } catch {
+        return res.status(400).json({ error: "Invalid logoUrl" });
+      }
+    }
+    await storage.updateUserLogoUrl(userId, logoUrl ?? null);
+    res.json({ logoUrl: logoUrl ?? null });
+  } catch (error: unknown) {
+    console.error("Update logo error:", error);
+    res.status(500).json({ error: "Failed to update logo" });
   }
 });
 

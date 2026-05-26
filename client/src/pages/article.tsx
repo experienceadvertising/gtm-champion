@@ -199,11 +199,14 @@ export default function Article() {
                   transition={{ delay: 0.1, duration: 0.4, ease: "easeOut" }}
                   className="mb-10 rounded-xl overflow-hidden shadow-lg"
                 >
-                  <img 
-                    src={article.image} 
+                  <img
+                    src={article.image}
                     alt={article.imageAlt}
                     className="w-full aspect-video object-cover"
                     loading="eager"
+                    decoding="async"
+                    width="1200"
+                    height="675"
                   />
                 </motion.div>
 
@@ -255,11 +258,14 @@ export default function Article() {
                       className="group"
                     >
                       <div className="aspect-video rounded-lg overflow-hidden mb-3">
-                        <img 
-                          src={related.image} 
+                        <img
+                          src={related.image}
                           alt={related.imageAlt}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                           loading="lazy"
+                          decoding="async"
+                          width="800"
+                          height="450"
                         />
                       </div>
                       <h3 className="font-semibold group-hover:text-primary transition-colors line-clamp-2">

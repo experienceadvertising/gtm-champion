@@ -125,6 +125,7 @@ router.post("/api/login", loginLimiter, async (req: Request, res: Response) => {
     }
 
     req.session.userId = user.id;
+    req.session.isPremium = user.isPremium;
 
     res.json({
       userId: user.id,
@@ -156,11 +157,14 @@ router.get("/api/session", async (req: Request, res: Response) => {
   if (!user) {
     return res.json({ authenticated: false });
   }
+  req.session.isPremium = user.isPremium;
   res.json({
     authenticated: true,
     userId: user.id,
     email: user.email,
     fullName: user.fullName,
+    isPremium: user.isPremium,
+    isAdmin: user.isAdmin,
   });
 });
 

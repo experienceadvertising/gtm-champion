@@ -4,6 +4,8 @@ import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import cookieParser from "cookie-parser";
 import compression from "compression";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
@@ -11,6 +13,7 @@ import { startWeeklyEmailScheduler } from "./services/scheduler";
 import { runMigrations } from 'stripe-replit-sync';
 import { getStripeSync } from "./services/stripeClient";
 import { WebhookHandlers } from "./services/webhookHandlers";
+import { pgRateLimitStore } from "./routes/rateLimitStore";
 
 const app = express();
 const httpServer = createServer(app);
@@ -24,6 +27,7 @@ declare module "http" {
 declare module "express-session" {
   interface SessionData {
     userId: string;
+    isPremium?: boolean;
   }
 }
 
@@ -121,6 +125,29 @@ app.use(compression());
 
 app.set("trust proxy", 1);
 
+app.use(
+  helmet({
+    contentSecurityPolicy: false,
+    crossOriginEmbedderPolicy: false,
+    crossOriginOpenerPolicy: false,
+    crossOriginResourcePolicy: false,
+    hsts: false,
+    referrerPolicy: false,
+    frameguard: false,
+  })
+);
+
+const globalApiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 300,
+  standardHeaders: "draft-7",
+  legacyHeaders: false,
+  store: pgRateLimitStore("api-global", 15 * 60 * 1000),
+  skip: (req) => req.path.startsWith("/api/stripe/webhook") || req.path.startsWith("/api/cron/"),
+  message: { error: "Too many requests, please try again later." },
+});
+app.use("/api", globalApiLimiter);
+
 async function ensureSessionTable() {
   if (!process.env.DATABASE_URL) return;
   try {
@@ -213,8 +240,8 @@ app.use((_req: Request, res: Response, next: NextFunction) => {
   res.setHeader(
     "Content-Security-Policy",
     isProduction
-      ? "default-src 'self'; script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://www.google-analytics.com https://api.stripe.com; frame-src https://js.stripe.com; object-src 'none'; base-uri 'self'; frame-ancestors 'self' https://*.replit.dev https://*.replit.app;"
-      : "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' ws: wss: https:; object-src 'none'; base-uri 'self';"
+      ? "default-src 'self'; script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: https:; connect-src 'self' https://www.google-analytics.com https://api.stripe.com; frame-src https://js.stripe.com; object-src 'none'; base-uri 'self'; frame-ancestors 'self' https://*.replit.dev https://*.replit.app;"
+      : "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://www.google-analytics.com; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: https:; connect-src 'self' ws: wss: https:; object-src 'none'; base-uri 'self';"
   );
   next();
 });

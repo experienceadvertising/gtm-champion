@@ -1519,11 +1519,20 @@ Return JSON:
   }
 }
 
+export type BudgetScenario = "conservative" | "balanced" | "aggressive";
+
+const BUDGET_SCENARIO_GUIDANCE: Record<BudgetScenario, string> = {
+  conservative: "Bias the allocation toward proven, lower-risk channels with predictable ROI (SEO, email, referral, content). Keep paid spend modest. Prioritize sustainable, compounding channels.",
+  balanced: "Balance proven channels with selective tests in higher-upside channels. Mix of organic and paid. The default recommendation.",
+  aggressive: "Lean heavily into growth/paid channels for fast pipeline (paid search, paid social, ABM, outbound). Accept higher CAC for faster impact.",
+};
+
 export async function generateBudgetAllocation(
   totalBudget: number,
   context: ContentContext,
   channelInsights: Array<{ channelId: string; priority: string }>,
-  recommendations: Array<{ category: string; impact: string }>
+  recommendations: Array<{ category: string; impact: string }>,
+  scenario: BudgetScenario = "balanced"
 ): Promise<{ allocations: Array<{ channelId: string; channelName: string; amount: number; percentage: number; rationale: string; expectedROI: string; timeToImpact: string; benchmarkCPL: string; keyMetrics: string[]; firstMonthActions: string[] }> }> {
   await initPromise;
 
@@ -1535,8 +1544,11 @@ export async function generateBudgetAllocation(
   const channelPriorities = channelInsights.map(ci => `${ci.channelId}: ${ci.priority}`).join(", ");
   const topCategories = [...new Set(recommendations.filter(r => r.impact === "High").map(r => r.category))].join(", ");
   const profileCtx = buildProfileContext(context);
+  const scenarioGuidance = BUDGET_SCENARIO_GUIDANCE[scenario] ?? BUDGET_SCENARIO_GUIDANCE.balanced;
 
   const prompt = `You are a B2B SaaS marketing budget strategist. Allocate a monthly marketing budget across marketing channels.
+
+ALLOCATION SCENARIO (${scenario}): ${scenarioGuidance}
 
 COMPANY CONTEXT:
 - Company: ${context.companyName}

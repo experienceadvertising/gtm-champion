@@ -53,6 +53,38 @@ interface ExportData {
   weeklyIdeas: ExportWeeklyIdea[];
 }
 
+export interface PDFExportOptions {
+  branded?: boolean;
+  logoBuffer?: Buffer | null;
+  brandName?: string | null;
+}
+
+const MAX_LOGO_BYTES = 2 * 1024 * 1024;
+const ALLOWED_LOGO_MIME = new Set(["image/png", "image/jpeg", "image/jpg"]);
+
+export async function fetchLogoBuffer(logoUrl: string | null | undefined): Promise<Buffer | null> {
+  if (!logoUrl) return null;
+  try {
+    const url = new URL(logoUrl);
+    if (url.protocol !== "https:" && url.protocol !== "http:") return null;
+    const response = await fetch(logoUrl, {
+      headers: { "User-Agent": "GTM-Champion-Logo-Fetcher/1.0" },
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!response.ok) return null;
+    const contentType = (response.headers.get("content-type") || "").split(";")[0].trim().toLowerCase();
+    if (!ALLOWED_LOGO_MIME.has(contentType)) return null;
+    const contentLength = parseInt(response.headers.get("content-length") || "0", 10);
+    if (contentLength > MAX_LOGO_BYTES) return null;
+    const arrayBuffer = await response.arrayBuffer();
+    if (arrayBuffer.byteLength > MAX_LOGO_BYTES) return null;
+    return Buffer.from(arrayBuffer);
+  } catch (err) {
+    console.warn("[pdfExport] Failed to fetch logo:", err);
+    return null;
+  }
+}
+
 const COLORS = {
   primary: "#4F46E5" as const,
   primaryLight: "#818CF8" as const,
@@ -145,14 +177,18 @@ function addTag(doc: PDFKit.PDFDocument, label: string, color: string, x: number
   return width + 4;
 }
 
-export function generateStrategyPDF(data: ExportData, stream: PassThrough): void {
+export function generateStrategyPDF(data: ExportData, stream: PassThrough, options: PDFExportOptions = {}): void {
+  const branded = options.branded === true;
+  const logoBuffer = branded ? options.logoBuffer ?? null : null;
+  const brandName = branded ? options.brandName?.trim() || null : null;
+
   const doc = new PDFDocument({
     size: "A4",
     margins: { top: 50, bottom: 50, left: 50, right: 50 },
     bufferPages: true,
     info: {
       Title: `${data.company.name || "Company"} GTM Strategy Report`,
-      Author: "GTM Champion",
+      Author: brandName || "GTM Champion",
       Subject: "Go-To-Market Strategy Report",
     },
   });
@@ -168,8 +204,20 @@ export function generateStrategyPDF(data: ExportData, stream: PassThrough): void
 
   doc.rect(0, 0, doc.page.width, 6).fill(COLORS.primary);
 
-  doc.fontSize(11).fillColor(COLORS.primaryLight).text("GTM CHAMPION", 50, 80);
-  doc.moveDown(4);
+  if (logoBuffer) {
+    try {
+      doc.image(logoBuffer, 50, 60, { fit: [120, 50] });
+    } catch (err) {
+      console.warn("[pdfExport] Failed to embed logo on cover:", err);
+    }
+    doc.y = 130;
+  } else if (brandName) {
+    doc.fontSize(11).fillColor(COLORS.primaryLight).text(brandName.toUpperCase(), 50, 80);
+    doc.moveDown(4);
+  } else {
+    doc.fontSize(11).fillColor(COLORS.primaryLight).text("GTM CHAMPION", 50, 80);
+    doc.moveDown(4);
+  }
 
   doc.fontSize(32).fillColor(COLORS.white).text("Go-To-Market", 50);
   doc.fontSize(32).fillColor(COLORS.primaryLight).text("Strategy Report", 50);
@@ -205,7 +253,9 @@ export function generateStrategyPDF(data: ExportData, stream: PassThrough): void
     `Generated on ${new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}`,
     50
   );
-  doc.fontSize(8).fillColor(COLORS.muted).text("Powered by GTM Champion — gtmchampion.com", 50);
+  if (!branded) {
+    doc.fontSize(8).fillColor(COLORS.muted).text("Powered by GTM Champion — gtmchampion.com", 50);
+  }
   doc.restore();
 
   // ───── EXECUTIVE SUMMARY ─────
@@ -449,7 +499,9 @@ export interface ChannelPDFData {
   recommendations: ExportRecommendation[];
 }
 
-export function generateChannelPDF(data: ChannelPDFData): Promise<Buffer> {
+export function generateChannelPDF(data: ChannelPDFData, options: PDFExportOptions = {}): Promise<Buffer> {
+  const branded = options.branded === true;
+  const logoBuffer = branded ? options.logoBuffer ?? null : null;
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({
       size: "A4",
@@ -591,10 +643,25 @@ export function generateChannelPDF(data: ChannelPDFData): Promise<Buffer> {
     doc.moveTo(50, doc.y).lineTo(doc.page.width - 50, doc.y).strokeColor(COLORS.border).lineWidth(0.5).stroke();
     doc.restore();
     doc.moveDown(0.5);
-    doc.fontSize(8).fillColor(COLORS.muted).text(
-      `Generated on ${new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })} — Powered by GTM Champion (gtmchampion.com)`,
-      50, undefined, { align: "center", width: doc.page.width - 100 }
-    );
+    if (branded) {
+      doc.fontSize(8).fillColor(COLORS.muted).text(
+        `Generated on ${new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}`,
+        50, undefined, { align: "center", width: doc.page.width - 100 }
+      );
+    } else {
+      doc.fontSize(8).fillColor(COLORS.muted).text(
+        `Generated on ${new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })} — Powered by GTM Champion (gtmchampion.com)`,
+        50, undefined, { align: "center", width: doc.page.width - 100 }
+      );
+    }
+
+    if (logoBuffer) {
+      try {
+        doc.image(logoBuffer, 50, 50, { fit: [80, 32] });
+      } catch (err) {
+        console.warn("[pdfExport] Failed to embed channel logo:", err);
+      }
+    }
 
     doc.end();
   });

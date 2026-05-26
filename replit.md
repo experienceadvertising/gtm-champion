@@ -8,7 +8,7 @@ GTM Champion is a B2B SaaS marketing intelligence platform that helps companies 
 - User authentication and account management
 - Automated website scraping and content analysis
 - AI-powered GTM motion classification and recommendations
-- 100% free tool — all features accessible to every user (no paywalls or premium gating)
+- Two tiers — generous free plan + GTM Champion Pro ($29/mo or $290/yr) for 10x AI limits, branded PDFs, unlimited re-analysis with 12-month history, 8 personas, and A/B budget scenarios
 - Automated email campaigns via Postmark
 - Real-time dashboard for tracking recommendations with status management (New/In Progress/Completed)
 - Content Tools: LinkedIn post generator, email campaign writer, blog article writer with download/copy support
@@ -158,9 +158,11 @@ The frontend follows a component-based architecture with:
 - Admin button visible only to `isAdmin` users in the dashboard header
 - API endpoints: `GET /api/admin/users`, `GET /api/admin/analytics`, `DELETE /api/admin/users/:userId`
 
-**Free Tool Model:**
-- All features are 100% free — no paywalls, premium gating, or upgrade prompts
-- Stripe integration retained for potential future use but no feature gating
+**Free + Pro Tier Model:**
+- Generous free plan: full analysis across all 13 channels, AI chat (20 msg/min), content tools (10 gen/min), 3 buyer personas, 1 website re-analysis per week, weekly strategy emails, standard PDF export with footer
+- GTM Champion Pro ($29/mo or $290/yr): 10x AI + content limits (200/min and 100/min respectively), branded multi-page PDF exports with embedded customer logo, unlimited re-analysis with 12-month `strategy_snapshots` history, up to 8 buyer personas, A/B budget scenarios (conservative/balanced/aggressive)
+- Gating implemented via `requirePremium` middleware (`server/routes/middleware.ts`) returning `403 { code: "PREMIUM_REQUIRED" }`; client-side global fetch interceptor (`client/src/lib/premiumInterceptor.ts`) opens `<UpgradeModal>` in response
+- Stripe products seeded by `npx tsx scripts/seed-products.ts`; webhook handlers in `server/services/webhookHandlers.ts` flip `users.isPremium` on subscription lifecycle events
 
 ### Payment Integration (Stripe)
 
