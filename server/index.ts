@@ -241,7 +241,7 @@ app.use((_req: Request, res: Response, next: NextFunction) => {
     "Content-Security-Policy",
     isProduction
       ? "default-src 'self'; script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: https:; connect-src 'self' https://www.google-analytics.com https://api.stripe.com; frame-src https://js.stripe.com; object-src 'none'; base-uri 'self'; frame-ancestors 'self' https://*.replit.dev https://*.replit.app;"
-      : "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: https:; connect-src 'self' ws: wss: https:; object-src 'none'; base-uri 'self';"
+      : "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://www.google-analytics.com; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: https:; connect-src 'self' ws: wss: https:; object-src 'none'; base-uri 'self';"
   );
   next();
 });
