@@ -206,7 +206,8 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (!session) {
-      setLocation("/auth");
+      const currentPath = window.location.pathname + window.location.search;
+      setLocation(`/auth?redirect=${encodeURIComponent(currentPath)}`);
     }
   }, [session, setLocation]);
 
@@ -564,6 +565,10 @@ export default function Dashboard() {
         </motion.div>
       </div>
     );
+  }
+
+  if (!session) {
+    return null;
   }
 
   if (isLoading || !data) {
