@@ -9,9 +9,10 @@ import { sendWelcomeEmail } from "../services/email";
 const router = Router();
 
 const ANALYSIS_TTL_MS = 10 * 60 * 1000;
+const ANALYSIS_CLEANUP_INTERVAL_MS = 5 * 60 * 1000;
 const activeAnalysisRuns = new Map<number, { runId: string; startedAt: number }>();
 
-function cleanupStaleAnalysisRuns() {
+setInterval(() => {
   const now = Date.now();
   for (const [companyId, entry] of Array.from(activeAnalysisRuns.entries())) {
     if (now - entry.startedAt > ANALYSIS_TTL_MS) {
@@ -19,7 +20,7 @@ function cleanupStaleAnalysisRuns() {
       activeAnalysisRuns.delete(companyId);
     }
   }
-}
+}, ANALYSIS_CLEANUP_INTERVAL_MS).unref();
 
 router.get("/api/dashboard", requireAuth, async (req: Request, res: Response) => {
   try {
@@ -207,21 +208,21 @@ export async function processCompanyAnalysis(
   email: string
 ): Promise<void> {
   try {
-    cleanupStaleAnalysisRuns();
-
     const totalStart = Date.now();
     const runId = `${companyId}-${Date.now()}`;
     activeAnalysisRuns.set(companyId, { runId, startedAt: totalStart });
     console.log(`Starting analysis for ${companyUrl} (run: ${runId})...`);
 
-    await storage.deleteRecommendationsByCompanyId(companyId);
-    await storage.deleteWeeklyIdeasByCompanyId(companyId);
-    await storage.deleteChannelInsightsByCompanyId(companyId);
-    await storage.updateCompany(companyId, {
-      screenshotUrl: null,
-      visualAnalysis: null,
-      pageSpeedData: null,
-    });
+    await Promise.all([
+      storage.deleteRecommendationsByCompanyId(companyId),
+      storage.deleteWeeklyIdeasByCompanyId(companyId),
+      storage.deleteChannelInsightsByCompanyId(companyId),
+      storage.updateCompany(companyId, {
+        screenshotUrl: null,
+        visualAnalysis: null,
+        pageSpeedData: null,
+      }),
+    ]);
 
     const [scrapedSite, screenshotData, pageSpeedData] = await Promise.all([
       scrapeWebsiteDeep(companyUrl).catch((err) => {
@@ -381,6 +382,11 @@ export async function processCompanyAnalysis(
       console.log(`All channel insights complete: ${insights?.length || 0} channels in ${Date.now() - totalStart}ms`);
     }).catch((err) => {
       console.error("Channel insights failed:", err?.message || err);
+    }).finally(() => {
+      const entry = activeAnalysisRuns.get(companyId);
+      if (entry && entry.runId === currentRunId) {
+        activeAnalysisRuns.delete(companyId);
+      }
     });
 
     sendWelcomeEmail({
