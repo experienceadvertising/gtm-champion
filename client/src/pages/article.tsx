@@ -341,18 +341,30 @@ function formatContent(content: string): string {
   html = html.replace(/```(\w+)?\n([\s\S]*?)```/g, '<pre><code>$2</code></pre>');
   html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
   
-  // Lists - handle consecutive list items
-  html = html.replace(/^(\d+)\. (.*$)/gim, '<li>$2</li>');
-  html = html.replace(/^\- (.*$)/gim, '<li>$1</li>');
-  
-  // Wrap consecutive li elements in ul
-  html = html.replace(/(<li>.*<\/li>\n?)+/g, (match) => `<ul class="my-4 ml-6 list-disc space-y-2">${match}</ul>`);
+  // Blockquotes (lines starting with >)
+  html = html.replace(/(^> .*(?:\n> .*)*)/gm, (block) => {
+    const text = block.split('\n').map(l => l.replace(/^> ?/, '')).join(' ');
+    return `<blockquote class="border-l-4 border-primary/40 pl-4 italic my-6 text-foreground">${text}</blockquote>`;
+  });
+
+  // Lists - tag ordered vs unordered separately so we can wrap correctly
+  html = html.replace(/^\d+\. (.*$)/gim, '<li data-ol="1">$1</li>');
+  html = html.replace(/^\- (.*$)/gim, '<li data-ul="1">$1</li>');
+
+  // Wrap consecutive ordered list items in <ol>
+  html = html.replace(/(<li data-ol="1">.*?<\/li>\n?)+/g, (match) =>
+    `<ol class="my-4 ml-6 list-decimal space-y-2">${match.replace(/ data-ol="1"/g, '')}</ol>`
+  );
+  // Wrap consecutive unordered list items in <ul>
+  html = html.replace(/(<li data-ul="1">.*?<\/li>\n?)+/g, (match) =>
+    `<ul class="my-4 ml-6 list-disc space-y-2">${match.replace(/ data-ul="1"/g, '')}</ul>`
+  );
   
   // Paragraphs - split by double newlines
   html = html.split('\n\n').map(block => {
     block = block.trim();
     if (!block) return '';
-    if (block.startsWith('<h') || block.startsWith('<ul') || block.startsWith('<table') || block.startsWith('<pre')) {
+    if (block.startsWith('<h') || block.startsWith('<ul') || block.startsWith('<ol') || block.startsWith('<table') || block.startsWith('<pre') || block.startsWith('<blockquote')) {
       return block;
     }
     return `<p>${block}</p>`;

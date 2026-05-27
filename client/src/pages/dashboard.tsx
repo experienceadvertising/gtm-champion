@@ -1457,6 +1457,73 @@ export default function Dashboard() {
                 </Card>
               </div>
 
+              <motion.div
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.07 }}
+              >
+                <Card
+                  className="border-none shadow-md ring-1 ring-violet-200/50 bg-gradient-to-br from-violet-50 via-white to-indigo-50 overflow-hidden relative"
+                  data-testid="card-no-click-marketing"
+                >
+                  <div className="absolute top-0 right-0 w-40 h-40 bg-violet-200/20 rounded-full -translate-y-12 translate-x-12" />
+                  <CardHeader className="relative">
+                    <div className="flex items-start justify-between gap-4 flex-wrap">
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-lg bg-violet-100 flex items-center justify-center">
+                          <Megaphone className="h-5 w-5 text-violet-600" />
+                        </div>
+                        <div>
+                          <Badge variant="secondary" className="mb-1 bg-violet-100 text-violet-700 hover:bg-violet-100">New Framework</Badge>
+                          <CardTitle className="text-lg font-display">No-Click Marketing</CardTitle>
+                          <CardDescription className="text-xs">
+                            Influence buyers without relying on clicks or last-click attribution.
+                          </CardDescription>
+                        </div>
+                      </div>
+                      <a
+                        href="/blog/no-click-marketing-future-of-brand-visibility"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        data-testid="link-no-click-article"
+                      >
+                        <Button variant="outline" size="sm" className="border-violet-200 hover:bg-violet-100 hover:text-violet-700">
+                          Read the guide <ArrowUpRight className="ml-1 h-3.5 w-3.5" />
+                        </Button>
+                      </a>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="relative pt-0">
+                    <p className="text-sm text-muted-foreground mb-4">
+                      AI Overviews, dark social, and platform-native content are breaking last-click attribution.
+                      The brands that win are the ones being seen, mentioned, and remembered everywhere their buyers pay attention.
+                    </p>
+                    <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-3">
+                      {[
+                        { label: "Organic Social & LinkedIn", channel: "Organic Social" },
+                        { label: "LLMs / AEO visibility", channel: "LLMs" },
+                        { label: "Retargeting & display", channel: "Retargeting" },
+                        { label: "Community & word of mouth", channel: "Community" },
+                      ].map((item) => (
+                        <button
+                          key={item.channel}
+                          onClick={() => handleChannelSelect(item.channel)}
+                          className="text-left p-3 rounded-lg bg-white/70 hover:bg-white border border-violet-100 hover:border-violet-300 transition-colors group"
+                          data-testid={`button-no-click-channel-${item.channel}`}
+                        >
+                          <div className="text-xs font-medium text-foreground group-hover:text-violet-700 transition-colors">
+                            {item.label}
+                          </div>
+                          <div className="text-[10px] text-muted-foreground mt-1 flex items-center gap-1">
+                            View strategy <ChevronRight className="h-3 w-3" />
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+
               {company.siteProfile && (
                 <motion.div
                   initial={{ opacity: 0, y: 15 }}
