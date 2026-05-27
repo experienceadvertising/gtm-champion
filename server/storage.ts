@@ -37,6 +37,7 @@ export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
   getAllUsers(): Promise<User[]>;
+  getUsersWithCompanies(): Promise<Array<{ user: User; company: Company }>>;
   createUser(user: InsertUser): Promise<User>;
   updateUserPremiumStatus(id: string, isPremium: boolean): Promise<void>;
   updateUserStripeInfo(id: string, info: { stripeCustomerId?: string; stripeSubscriptionId?: string }): Promise<void>;
@@ -109,6 +110,14 @@ export class DatabaseStorage implements IStorage {
 
   async getAllUsers(): Promise<User[]> {
     return db.select().from(users);
+  }
+
+  async getUsersWithCompanies(): Promise<Array<{ user: User; company: Company }>> {
+    const rows = await db
+      .select({ user: users, company: companies })
+      .from(users)
+      .innerJoin(companies, eq(companies.userId, users.id));
+    return rows;
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
