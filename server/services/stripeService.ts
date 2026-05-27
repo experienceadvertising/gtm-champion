@@ -54,6 +54,10 @@ export class StripeService {
           SELECT id, name, description, metadata, active
           FROM stripe.products
           WHERE active = ${active}
+            AND (
+              metadata->>'tier' = 'premium'
+              OR name = 'GTM Champion Pro'
+            )
           ORDER BY id
           LIMIT ${limit} OFFSET ${offset}
         )
