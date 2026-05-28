@@ -52,3 +52,4 @@ integrations = ["javascript_openai_ai_integrations:1.0.0", "javascript_database:
 POSTMARK_FROM_EMAIL = "hello@gtmchampion.com"
 VAPID_PUBLIC_KEY = "BId7Uh4lL4kk6jz9g6Gx7217DCF8VGBFCQgJYw1t9w4aeMqe0L6456SlmqM6Bk9PNxoE8_8HP8tZbHc00ZR8KHM"
 VAPID_PRIVATE_KEY = "by1cF8MRWUYXBkdBDUleqBAgqdGevk8eF8cswgm8ok4"
+SLACK_CLIENT_ID = "148529924226.11227388217697"
