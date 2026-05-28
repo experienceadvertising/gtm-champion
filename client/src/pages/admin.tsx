@@ -20,6 +20,13 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   ArrowLeft,
   Users,
   BarChart3,
@@ -33,6 +40,13 @@ import {
   Shield,
   Loader2,
   ExternalLink,
+  Bot,
+  Zap,
+  Mail,
+  Trophy,
+  Bell,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 
 interface AdminUser {
@@ -63,13 +77,78 @@ interface Analytics {
   recsByCategory: Record<string, number>;
 }
 
+interface AgentEvent {
+  id: number;
+  userId: string;
+  eventType: string;
+  channelId: string | null;
+  recommendationId: number | null;
+  channel: string;
+  sentAt: string;
+  userEmail: string;
+  userFullName: string;
+}
+
+interface AgentEventsData {
+  events: AgentEvent[];
+  total: number;
+  byEventType: Record<string, number>;
+  activeProUsersWithAgent: number;
+}
+
+const EVENT_TYPES = [
+  { value: "all", label: "All Types" },
+  { value: "milestone_start", label: "Milestone Start" },
+  { value: "stall_nudge", label: "Stall Nudge" },
+  { value: "completion_congrats", label: "Completion Congrats" },
+  { value: "weekly_digest", label: "Weekly Digest" },
+];
+
+const DATE_RANGES = [
+  { value: "all", label: "All Time" },
+  { value: "7", label: "Last 7 Days" },
+  { value: "30", label: "Last 30 Days" },
+  { value: "90", label: "Last 90 Days" },
+];
+
+function eventTypeLabel(type: string) {
+  return EVENT_TYPES.find(e => e.value === type)?.label ?? type;
+}
+
+function eventTypeIcon(type: string) {
+  switch (type) {
+    case "milestone_start": return <Zap className="h-3.5 w-3.5 text-blue-500" />;
+    case "stall_nudge": return <Bell className="h-3.5 w-3.5 text-amber-500" />;
+    case "completion_congrats": return <Trophy className="h-3.5 w-3.5 text-green-500" />;
+    case "weekly_digest": return <Mail className="h-3.5 w-3.5 text-violet-500" />;
+    default: return <Bot className="h-3.5 w-3.5 text-slate-400" />;
+  }
+}
+
+function eventTypeBadgeClass(type: string) {
+  switch (type) {
+    case "milestone_start": return "bg-blue-50 text-blue-700 border-blue-100";
+    case "stall_nudge": return "bg-amber-50 text-amber-700 border-amber-100";
+    case "completion_congrats": return "bg-green-50 text-green-700 border-green-100";
+    case "weekly_digest": return "bg-violet-50 text-violet-700 border-violet-100";
+    default: return "bg-slate-50 text-slate-600 border-slate-100";
+  }
+}
+
+const PAGE_SIZE = 50;
+
 export default function AdminPage() {
   const [, setLocation] = useLocation();
   const session = getSession();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [tab, setTab] = useState<"users" | "analytics">("analytics");
+  const [tab, setTab] = useState<"users" | "analytics" | "agent">("analytics");
   const [searchQuery, setSearchQuery] = useState("");
+
+  // Agent tab filters
+  const [agentEventType, setAgentEventType] = useState("all");
+  const [agentDateRange, setAgentDateRange] = useState("all");
+  const [agentPage, setAgentPage] = useState(0);
 
   const { data: users, isLoading: usersLoading } = useQuery<AdminUser[]>({
     queryKey: ["admin", "users"],
@@ -92,6 +171,25 @@ export default function AdminPage() {
       return res.json();
     },
     enabled: !!session,
+  });
+
+  const agentQueryParams = new URLSearchParams({
+    limit: String(PAGE_SIZE),
+    offset: String(agentPage * PAGE_SIZE),
+    ...(agentEventType !== "all" && { eventType: agentEventType }),
+    ...(agentDateRange !== "all" && {
+      since: new Date(Date.now() - parseInt(agentDateRange) * 24 * 60 * 60 * 1000).toISOString(),
+    }),
+  });
+
+  const { data: agentData, isLoading: agentLoading } = useQuery<AgentEventsData>({
+    queryKey: ["admin", "agent-events", agentEventType, agentDateRange, agentPage],
+    queryFn: async () => {
+      const res = await fetch(`/api/admin/agent-events?${agentQueryParams}`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to load agent events");
+      return res.json();
+    },
+    enabled: !!session && tab === "agent",
   });
 
   const deleteMutation = useMutation({
@@ -134,6 +232,14 @@ export default function AdminPage() {
     return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
   };
 
+  const formatDateTime = (dateStr: string) => {
+    const d = new Date(dateStr);
+    return d.toLocaleString("en-US", {
+      month: "short", day: "numeric", year: "numeric",
+      hour: "numeric", minute: "2-digit",
+    });
+  };
+
   const topCategories = analytics
     ? Object.entries(analytics.recsByCategory)
         .sort(([, a], [, b]) => b - a)
@@ -148,6 +254,8 @@ export default function AdminPage() {
   const maxSignupsInDay = analytics
     ? Math.max(...analytics.recentSignups.map(([, c]) => c), 1)
     : 1;
+
+  const totalAgentPages = agentData ? Math.ceil(agentData.total / PAGE_SIZE) : 0;
 
   return (
     <>
@@ -181,6 +289,14 @@ export default function AdminPage() {
               data-testid="button-tab-users"
             >
               <Users className="h-4 w-4 mr-1.5" /> Users ({users?.length || 0})
+            </Button>
+            <Button
+              variant={tab === "agent" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setTab("agent")}
+              data-testid="button-tab-agent"
+            >
+              <Bot className="h-4 w-4 mr-1.5" /> Agent
             </Button>
           </div>
         </div>
@@ -477,6 +593,244 @@ export default function AdminPage() {
                   ))}
                 </div>
               </div>
+            )}
+          </div>
+        )}
+
+        {tab === "agent" && (
+          <div className="space-y-6">
+            {agentLoading && !agentData ? (
+              <div className="flex items-center justify-center py-20">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : (
+              <>
+                {/* Summary stats */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <Card className="border-none shadow-md" data-testid="stat-agent-total">
+                    <CardContent className="pt-6">
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-violet-500/10 to-violet-600/5 flex items-center justify-center">
+                          <Bot className="h-5 w-5 text-violet-600" />
+                        </div>
+                        <div>
+                          <p className="text-2xl font-bold">{agentData?.total ?? 0}</p>
+                          <p className="text-xs text-muted-foreground">Total Events</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card className="border-none shadow-md" data-testid="stat-agent-pro-users">
+                    <CardContent className="pt-6">
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-amber-500/10 to-amber-600/5 flex items-center justify-center">
+                          <Users className="h-5 w-5 text-amber-600" />
+                        </div>
+                        <div>
+                          <p className="text-2xl font-bold">{agentData?.activeProUsersWithAgent ?? 0}</p>
+                          <p className="text-xs text-muted-foreground">Pro + Agent On</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card className="border-none shadow-md" data-testid="stat-agent-stall-nudges">
+                    <CardContent className="pt-6">
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-amber-500/10 to-orange-600/5 flex items-center justify-center">
+                          <Bell className="h-5 w-5 text-amber-500" />
+                        </div>
+                        <div>
+                          <p className="text-2xl font-bold">{agentData?.byEventType?.stall_nudge ?? 0}</p>
+                          <p className="text-xs text-muted-foreground">Stall Nudges</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card className="border-none shadow-md" data-testid="stat-agent-completions">
+                    <CardContent className="pt-6">
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-green-500/10 to-green-600/5 flex items-center justify-center">
+                          <Trophy className="h-5 w-5 text-green-600" />
+                        </div>
+                        <div>
+                          <p className="text-2xl font-bold">{agentData?.byEventType?.completion_congrats ?? 0}</p>
+                          <p className="text-xs text-muted-foreground">Completions</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Event type breakdown + filters */}
+                <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+                  <div className="flex flex-wrap gap-2" data-testid="agent-event-type-breakdown">
+                    {agentData && Object.entries(agentData.byEventType).length > 0
+                      ? Object.entries(agentData.byEventType)
+                          .sort(([, a], [, b]) => b - a)
+                          .map(([type, c]) => (
+                            <button
+                              key={type}
+                              onClick={() => {
+                                setAgentEventType(agentEventType === type ? "all" : type);
+                                setAgentPage(0);
+                              }}
+                              className={`inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border font-medium transition-all ${eventTypeBadgeClass(type)} ${agentEventType === type ? "ring-2 ring-offset-1 ring-primary/40" : "opacity-80 hover:opacity-100"}`}
+                              data-testid={`filter-event-type-${type}`}
+                            >
+                              {eventTypeIcon(type)}
+                              {eventTypeLabel(type)}
+                              <span className="ml-0.5 font-bold">{c}</span>
+                            </button>
+                          ))
+                      : <p className="text-sm text-muted-foreground">No events yet</p>
+                    }
+                  </div>
+                  <div className="flex gap-2 shrink-0">
+                    <Select
+                      value={agentEventType}
+                      onValueChange={(v) => { setAgentEventType(v); setAgentPage(0); }}
+                    >
+                      <SelectTrigger className="w-44 h-8 text-xs" data-testid="select-agent-event-type">
+                        <SelectValue placeholder="Event type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {EVENT_TYPES.map(t => (
+                          <SelectItem key={t.value} value={t.value} className="text-xs">{t.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Select
+                      value={agentDateRange}
+                      onValueChange={(v) => { setAgentDateRange(v); setAgentPage(0); }}
+                    >
+                      <SelectTrigger className="w-36 h-8 text-xs" data-testid="select-agent-date-range">
+                        <SelectValue placeholder="Date range" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {DATE_RANGES.map(r => (
+                          <SelectItem key={r.value} value={r.value} className="text-xs">{r.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* Events table */}
+                <Card className="border-none shadow-md" data-testid="table-agent-events">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base font-semibold flex items-center gap-2">
+                      <Bot className="h-4 w-4 text-muted-foreground" />
+                      Agent Events
+                      {agentData && (
+                        <span className="ml-1 text-sm font-normal text-muted-foreground">
+                          — {agentData.total} total
+                          {agentEventType !== "all" && ` · filtered by ${eventTypeLabel(agentEventType)}`}
+                          {agentDateRange !== "all" && ` · last ${agentDateRange} days`}
+                        </span>
+                      )}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    {agentLoading ? (
+                      <div className="flex items-center justify-center py-12">
+                        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                      </div>
+                    ) : !agentData || agentData.events.length === 0 ? (
+                      <div className="py-12 text-center text-sm text-muted-foreground">
+                        <Bot className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                        No agent events found
+                      </div>
+                    ) : (
+                      <>
+                        <div className="overflow-x-auto">
+                          <table className="w-full text-sm">
+                            <thead>
+                              <tr className="border-b bg-slate-50/50 text-xs text-muted-foreground">
+                                <th className="text-left px-4 py-2.5 font-medium">User</th>
+                                <th className="text-left px-4 py-2.5 font-medium">Event Type</th>
+                                <th className="text-left px-4 py-2.5 font-medium">Channel</th>
+                                <th className="text-left px-4 py-2.5 font-medium">Delivery</th>
+                                <th className="text-left px-4 py-2.5 font-medium">Sent</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {agentData.events.map((event, idx) => (
+                                <tr
+                                  key={event.id}
+                                  className={`border-b last:border-0 hover:bg-slate-50/60 transition-colors ${idx % 2 === 0 ? "" : "bg-slate-50/30"}`}
+                                  data-testid={`row-agent-event-${event.id}`}
+                                >
+                                  <td className="px-4 py-3">
+                                    <div>
+                                      <p className="font-medium text-sm leading-tight">{event.userFullName}</p>
+                                      <p className="text-xs text-muted-foreground">{event.userEmail}</p>
+                                    </div>
+                                  </td>
+                                  <td className="px-4 py-3">
+                                    <span className={`inline-flex items-center gap-1.5 text-xs px-2 py-0.5 rounded-full border font-medium ${eventTypeBadgeClass(event.eventType)}`}>
+                                      {eventTypeIcon(event.eventType)}
+                                      {eventTypeLabel(event.eventType)}
+                                    </span>
+                                  </td>
+                                  <td className="px-4 py-3">
+                                    <span className="text-xs text-muted-foreground">
+                                      {event.channelId ?? <span className="italic opacity-60">—</span>}
+                                    </span>
+                                  </td>
+                                  <td className="px-4 py-3">
+                                    <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                                      {event.channel === "email"
+                                        ? <Mail className="h-3 w-3" />
+                                        : <Bell className="h-3 w-3" />
+                                      }
+                                      {event.channel}
+                                    </span>
+                                  </td>
+                                  <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
+                                    {formatDateTime(event.sentAt)}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+
+                        {/* Pagination */}
+                        {totalAgentPages > 1 && (
+                          <div className="flex items-center justify-between px-4 py-3 border-t text-xs text-muted-foreground">
+                            <span>
+                              Page {agentPage + 1} of {totalAgentPages}
+                              {" · "}{agentData.total} events
+                            </span>
+                            <div className="flex gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 w-7 p-0"
+                                disabled={agentPage === 0}
+                                onClick={() => setAgentPage(p => p - 1)}
+                                data-testid="button-agent-prev-page"
+                              >
+                                <ChevronLeft className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 w-7 p-0"
+                                disabled={agentPage >= totalAgentPages - 1}
+                                onClick={() => setAgentPage(p => p + 1)}
+                                data-testid="button-agent-next-page"
+                              >
+                                <ChevronRight className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </CardContent>
+                </Card>
+              </>
             )}
           </div>
         )}

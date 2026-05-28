@@ -1,4 +1,4 @@
-import { eq, and, desc, lte, isNull } from "drizzle-orm";
+import { eq, and, desc, lte, isNull, gte, sql, count } from "drizzle-orm";
 import { db } from "../db/index";
 import {
   users,
@@ -108,6 +108,18 @@ export interface IStorage {
   createAgentEvent(event: InsertAgentEvent): Promise<AgentEvent>;
   getRecentAgentEvents(userId: string, limit?: number): Promise<AgentEvent[]>;
   hasAgentEvent(userId: string, eventType: string, channelId: string, windowMs: number): Promise<boolean>;
+  getAgentEventsForAdmin(opts: {
+    limit?: number;
+    offset?: number;
+    eventType?: string;
+    since?: Date;
+    until?: Date;
+  }): Promise<{
+    events: Array<AgentEvent & { userEmail: string; userFullName: string }>;
+    total: number;
+    byEventType: Record<string, number>;
+    activeProUsersWithAgent: number;
+  }>;
 
   createScheduledNudge(nudge: InsertScheduledNudge): Promise<ScheduledNudge>;
   getPendingScheduledNudges(): Promise<Array<ScheduledNudge & { user: User }>>;
@@ -475,6 +487,74 @@ export class DatabaseStorage implements IStorage {
       .orderBy(asc(scheduledNudges.dueAt))
       .limit(1);
     return row;
+  }
+
+  async getAgentEventsForAdmin(opts: {
+    limit?: number;
+    offset?: number;
+    eventType?: string;
+    since?: Date;
+    until?: Date;
+  }): Promise<{
+    events: Array<AgentEvent & { userEmail: string; userFullName: string }>;
+    total: number;
+    byEventType: Record<string, number>;
+    activeProUsersWithAgent: number;
+  }> {
+    const { limit = 50, offset = 0, eventType, since, until } = opts;
+
+    const conditions: ReturnType<typeof eq>[] = [];
+    if (eventType) conditions.push(eq(agentEvents.eventType, eventType));
+    if (since) conditions.push(gte(agentEvents.sentAt, since) as ReturnType<typeof eq>);
+    if (until) conditions.push(lte(agentEvents.sentAt, until) as ReturnType<typeof eq>);
+
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+    const rows = await db
+      .select({
+        id: agentEvents.id,
+        userId: agentEvents.userId,
+        eventType: agentEvents.eventType,
+        channelId: agentEvents.channelId,
+        recommendationId: agentEvents.recommendationId,
+        channel: agentEvents.channel,
+        sentAt: agentEvents.sentAt,
+        userEmail: users.email,
+        userFullName: users.fullName,
+      })
+      .from(agentEvents)
+      .innerJoin(users, eq(users.id, agentEvents.userId))
+      .where(whereClause)
+      .orderBy(desc(agentEvents.sentAt))
+      .limit(limit)
+      .offset(offset);
+
+    const [{ total }] = await db
+      .select({ total: count() })
+      .from(agentEvents)
+      .where(whereClause);
+
+    const allEventRows = await db
+      .select({ eventType: agentEvents.eventType, c: count() })
+      .from(agentEvents)
+      .groupBy(agentEvents.eventType);
+
+    const byEventType: Record<string, number> = {};
+    for (const row of allEventRows) {
+      byEventType[row.eventType] = Number(row.c);
+    }
+
+    const [{ activeProUsersWithAgent }] = await db
+      .select({ activeProUsersWithAgent: count() })
+      .from(users)
+      .where(and(eq(users.isPremium, true), eq(users.agentEnabled, true)));
+
+    return {
+      events: rows,
+      total: Number(total),
+      byEventType,
+      activeProUsersWithAgent: Number(activeProUsersWithAgent),
+    };
   }
 }
 

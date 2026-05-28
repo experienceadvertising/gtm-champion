@@ -112,6 +112,22 @@ router.delete("/api/admin/users/:userId", requireAdmin, async (req: Request, res
   }
 });
 
+router.get("/api/admin/agent-events", requireAdmin, async (req: Request, res: Response) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit as string) || 50, 200);
+    const offset = parseInt(req.query.offset as string) || 0;
+    const eventType = req.query.eventType as string | undefined;
+    const since = req.query.since ? new Date(req.query.since as string) : undefined;
+    const until = req.query.until ? new Date(req.query.until as string) : undefined;
+
+    const data = await storage.getAgentEventsForAdmin({ limit, offset, eventType, since, until });
+    res.json(data);
+  } catch (error: unknown) {
+    console.error("Admin agent events error:", error);
+    res.status(500).json({ error: "Failed to fetch agent events" });
+  }
+});
+
 router.post("/api/send-weekly-email/:userId", requireAdmin, async (req: Request, res: Response) => {
   try {
     const { userId } = req.params;
