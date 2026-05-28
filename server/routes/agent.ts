@@ -52,7 +52,8 @@ router.get("/api/auth/slack", requireAuth, requirePremium, (req: Request, res: R
   const state = crypto.randomBytes(16).toString("hex");
   req.session.slackOAuthState = state;
 
-  const host = req.get("host") || "";
+  const rawHost = req.get("host") || "";
+  const host = rawHost.replace(/^www\./, "");
   const protocol = host.includes("replit.dev") || host.includes("replit.app") ? "https" : req.protocol;
   const redirectUri = `${protocol}://${host}/api/auth/slack/callback`;
 
@@ -86,7 +87,8 @@ router.get("/api/auth/slack/callback", requireAuth, async (req: Request, res: Re
     return res.redirect("/dashboard?slack_error=not_configured");
   }
 
-  const host = req.get("host") || "";
+  const rawHost = req.get("host") || "";
+  const host = rawHost.replace(/^www\./, "");
   const protocol = host.includes("replit.dev") || host.includes("replit.app") ? "https" : req.protocol;
   const redirectUri = `${protocol}://${host}/api/auth/slack/callback`;
 
