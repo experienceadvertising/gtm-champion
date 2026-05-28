@@ -75,6 +75,7 @@ import { useTheme } from "@/components/ThemeProvider";
 import { useKeyboardShortcuts, KEYBOARD_SHORTCUTS } from "@/hooks/use-keyboard-shortcuts";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { Input } from "@/components/ui/input";
 
 const CHANNELS = [
   { id: "all", label: "All Channels", icon: LayoutDashboard, tooltip: "Overview of all marketing channels" },
@@ -155,6 +156,132 @@ function formatStrategyDescription(desc: string, compact = false) {
   );
 }
 
+function SlackConnectSection({
+  slackConnected,
+  onConnected,
+  onDisconnected,
+}: {
+  slackConnected: boolean;
+  onConnected: () => void;
+  onDisconnected: () => void;
+}) {
+  const [webhookUrl, setWebhookUrl] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [disconnecting, setDisconnecting] = useState(false);
+  const [showInput, setShowInput] = useState(false);
+  const { toast } = useToast();
+
+  const getCsrfToken = () => {
+    const m = document.cookie.match(/(?:^|;\s*)csrf-token=([^;]+)/);
+    return m ? m[1] : "";
+  };
+
+  const handleConnect = async () => {
+    if (!webhookUrl.startsWith("https://hooks.slack.com/")) {
+      toast({ title: "Invalid URL", description: "Must be a Slack Incoming Webhook URL (starts with https://hooks.slack.com/)", variant: "destructive" });
+      return;
+    }
+    setSaving(true);
+    try {
+      const res = await fetch("/api/agent/slack", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-CSRF-Token": getCsrfToken() },
+        credentials: "include",
+        body: JSON.stringify({ webhookUrl }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Failed to connect");
+      toast({ title: "Slack connected!", description: "A test message was sent to your channel." });
+      setWebhookUrl("");
+      setShowInput(false);
+      onConnected();
+    } catch (err: any) {
+      toast({ title: "Connection failed", description: err.message, variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDisconnect = async () => {
+    setDisconnecting(true);
+    try {
+      await fetch("/api/agent/slack", {
+        method: "DELETE",
+        headers: { "X-CSRF-Token": getCsrfToken() },
+        credentials: "include",
+      });
+      toast({ title: "Slack disconnected" });
+      onDisconnected();
+    } catch {
+      toast({ title: "Failed to disconnect", variant: "destructive" });
+    } finally {
+      setDisconnecting(false);
+    }
+  };
+
+  return (
+    <div className="rounded-lg border border-indigo-100 bg-white/70 p-3 mb-4">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div className="flex items-center gap-2">
+          <div className="h-7 w-7 rounded bg-[#4A154B] flex items-center justify-center shrink-0">
+            <svg viewBox="0 0 24 24" className="h-4 w-4 fill-white" xmlns="http://www.w3.org/2000/svg">
+              <path d="M5.042 15.165a2.528 2.528 0 0 1-2.52 2.523A2.528 2.528 0 0 1 0 15.165a2.527 2.527 0 0 1 2.522-2.52h2.52v2.52zm1.27 0a2.527 2.527 0 0 1 2.521-2.52 2.527 2.527 0 0 1 2.521 2.52v6.313A2.528 2.528 0 0 1 8.833 24a2.528 2.528 0 0 1-2.521-2.522v-6.313zM8.833 5.042a2.528 2.528 0 0 1-2.521-2.52A2.528 2.528 0 0 1 8.833 0a2.528 2.528 0 0 1 2.521 2.522v2.52H8.833zm0 1.27a2.528 2.528 0 0 1 2.521 2.521 2.528 2.528 0 0 1-2.521 2.521H2.522A2.528 2.528 0 0 1 0 8.833a2.528 2.528 0 0 1 2.522-2.521h6.311zm10.122 2.521a2.528 2.528 0 0 1 2.522-2.521A2.528 2.528 0 0 1 24 8.833a2.528 2.528 0 0 1-2.523 2.521h-2.522V8.833zm-1.268 0a2.528 2.528 0 0 1-2.523 2.521 2.527 2.527 0 0 1-2.52-2.521V2.522A2.527 2.527 0 0 1 15.165 0a2.528 2.528 0 0 1 2.523 2.522v6.311zm-2.523 10.122a2.528 2.528 0 0 1 2.523 2.522A2.528 2.528 0 0 1 15.165 24a2.527 2.527 0 0 1-2.52-2.523v-2.522h2.52zm0-1.268a2.527 2.527 0 0 1-2.52-2.523 2.526 2.526 0 0 1 2.52-2.52h6.313A2.527 2.527 0 0 1 24 15.165a2.528 2.528 0 0 1-2.522 2.523h-6.313z"/>
+            </svg>
+          </div>
+          <div>
+            <p className="text-xs font-semibold text-foreground">Slack notifications</p>
+            <p className="text-xs text-muted-foreground">
+              {slackConnected ? "Connected — nudges sent to your Slack channel" : "Get nudges directly in Slack"}
+            </p>
+          </div>
+        </div>
+        {slackConnected ? (
+          <Button
+            size="sm"
+            variant="outline"
+            className="text-xs h-7 text-red-600 border-red-200 hover:bg-red-50"
+            onClick={handleDisconnect}
+            disabled={disconnecting}
+            data-testid="btn-slack-disconnect"
+          >
+            {disconnecting ? "Disconnecting…" : "Disconnect"}
+          </Button>
+        ) : (
+          <Button
+            size="sm"
+            variant="outline"
+            className="text-xs h-7 border-indigo-200 text-indigo-700 hover:bg-indigo-50"
+            onClick={() => setShowInput(v => !v)}
+            data-testid="btn-slack-connect"
+          >
+            {showInput ? "Cancel" : "Connect Slack"}
+          </Button>
+        )}
+      </div>
+      {showInput && !slackConnected && (
+        <div className="mt-3 flex gap-2">
+          <Input
+            placeholder="https://hooks.slack.com/services/…"
+            value={webhookUrl}
+            onChange={e => setWebhookUrl(e.target.value)}
+            className="h-8 text-xs flex-1"
+            data-testid="input-slack-webhook"
+          />
+          <Button
+            size="sm"
+            className="h-8 text-xs bg-[#4A154B] hover:bg-[#3d1140] text-white"
+            onClick={handleConnect}
+            disabled={saving || !webhookUrl}
+            data-testid="btn-slack-save"
+          >
+            {saving ? "Connecting…" : "Connect"}
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Dashboard() {
   const [, setLocation] = useLocation();
   const searchString = useSearch();
@@ -231,10 +358,11 @@ export default function Dashboard() {
     queryKey: ["agentEvents"],
     queryFn: async () => {
       const res = await fetch("/api/agent/events", { credentials: "include" });
-      if (!res.ok) return { events: [], nextCheckIn: null } as { events: Array<{ id: number; eventType: string; channelId: string | null; sentAt: string; channel: string }>; nextCheckIn: { dueAt: string; channelId: string; nudgeType: string } | null };
+      if (!res.ok) return { events: [], nextCheckIn: null, slackConnected: false } as { events: Array<{ id: number; eventType: string; channelId: string | null; sentAt: string; channel: string }>; nextCheckIn: { dueAt: string; channelId: string; nudgeType: string } | null; slackConnected: boolean };
       return res.json() as Promise<{
         events: Array<{ id: number; eventType: string; channelId: string | null; sentAt: string; channel: string }>;
         nextCheckIn: { dueAt: string; channelId: string; nudgeType: string } | null;
+        slackConnected: boolean;
       }>;
     },
     enabled: !!session && (isPremium || false),
@@ -1661,6 +1789,11 @@ export default function Dashboard() {
                           </div>
                         );
                       })()}
+                      <SlackConnectSection
+                        slackConnected={agentEventsData?.slackConnected ?? false}
+                        onConnected={() => queryClient.invalidateQueries({ queryKey: ["agentEvents"] })}
+                        onDisconnected={() => queryClient.invalidateQueries({ queryKey: ["agentEvents"] })}
+                      />
                       {(agentEventsData?.events?.length ?? 0) > 0 && (
                         <div>
                           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Recent activity</p>

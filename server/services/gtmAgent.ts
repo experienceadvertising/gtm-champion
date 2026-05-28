@@ -23,6 +23,21 @@ async function getOpenAI() {
   });
 }
 
+async function sendSlackNudge(webhookUrl: string, blocks: object[], fallbackText: string): Promise<void> {
+  try {
+    const res = await fetch(webhookUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: fallbackText, blocks }),
+    });
+    if (!res.ok) {
+      console.error(`[GTM Agent] Slack webhook returned ${res.status}`);
+    }
+  } catch (err) {
+    console.error("[GTM Agent] Slack send error:", err);
+  }
+}
+
 async function sendPushToUser(userId: string, title: string, body: string, url: string): Promise<void> {
   try {
     let webpush: any;
@@ -271,6 +286,33 @@ export async function fireMilestoneStart(userId: string, channelId: string, reco
       personalizedWhy: aiMsg.why,
     });
 
+    if (ctx.user.slackWebhookUrl) {
+      await sendSlackNudge(
+        ctx.user.slackWebhookUrl,
+        [
+          {
+            type: "section",
+            text: {
+              type: "mrkdwn",
+              text: `:rocket: *GTM Agent: Great start on ${channelId}!*\n\n*Why it matters:* ${aiMsg.why}\n\n*Your first milestone:* ${aiMsg.goal}`,
+            },
+          },
+          {
+            type: "actions",
+            elements: [
+              {
+                type: "button",
+                text: { type: "plain_text", text: `View ${channelId} Strategy` },
+                url: `https://gtmchampion.com/dashboard?channel=${encodeURIComponent(channelId)}`,
+                style: "primary",
+              },
+            ],
+          },
+        ],
+        `GTM Agent: Great start on ${channelId}! ${aiMsg.goal}`
+      );
+    }
+
     await sendPushToUser(
       userId,
       `GTM Agent: Great start on ${channelId}!`,
@@ -341,6 +383,39 @@ export async function fireStallNudge(userId: string, channelId: string, nudgeId:
       personalizedNudge: aiMsg.nudge,
       personalizedAction: aiMsg.action,
     });
+
+    if (user.slackWebhookUrl) {
+      const slackBlocks: object[] = [
+        {
+          type: "section",
+          text: {
+            type: "mrkdwn",
+            text: `:alarm_clock: *GTM Agent: ${channelId} check-in*\n\n${aiMsg.nudge}\n\n*Action for today:* ${aiMsg.action}`,
+          },
+        },
+      ];
+      if (quickWin) {
+        slackBlocks.push({
+          type: "section",
+          text: {
+            type: "mrkdwn",
+            text: `:white_check_mark: *Quick win to try:* ${quickWin.title}`,
+          },
+        });
+      }
+      slackBlocks.push({
+        type: "actions",
+        elements: [
+          {
+            type: "button",
+            text: { type: "plain_text", text: `Resume ${channelId}` },
+            url: `https://gtmchampion.com/dashboard?channel=${encodeURIComponent(channelId)}`,
+            style: "primary",
+          },
+        ],
+      });
+      await sendSlackNudge(user.slackWebhookUrl, slackBlocks, `GTM Agent: ${channelId} check-in — ${aiMsg.action}`);
+    }
 
     await sendPushToUser(
       userId,
@@ -413,6 +488,33 @@ async function sendCompletionCongrats(userId: string, channelId: string, nudgeId
       generateWhatsNextRecommendation(ctx),
     ]);
 
+    if (ctx.user.slackWebhookUrl) {
+      await sendSlackNudge(
+        ctx.user.slackWebhookUrl,
+        [
+          {
+            type: "section",
+            text: {
+              type: "mrkdwn",
+              text: `:tada: *${ctx.company.name} just completed their ${channelId} strategy!*\n\nEvery recommendation is done. We've added a "what's next" suggestion to your dashboard to keep the momentum going.`,
+            },
+          },
+          {
+            type: "actions",
+            elements: [
+              {
+                type: "button",
+                text: { type: "plain_text", text: "See What's Next" },
+                url: "https://gtmchampion.com/dashboard",
+                style: "primary",
+              },
+            ],
+          },
+        ],
+        `GTM Agent: ${channelId} strategy complete! Check your dashboard for what to do next.`
+      );
+    }
+
     await sendPushToUser(
       userId,
       `GTM Agent: ${channelId} complete!`,
@@ -478,6 +580,42 @@ export async function sendWeeklyCoachingDigest(userId: string): Promise<void> {
       aiRecommendation: aiMsg.recommendation,
       aiReason: aiMsg.reason,
     });
+
+    if (user.slackWebhookUrl) {
+      const statusLines: string[] = [];
+      if (stalled.length) statusLines.push(`:warning: *Stalled:* ${stalled.join(", ")}`);
+      if (onTrack.length) statusLines.push(`:white_check_mark: *On track:* ${onTrack.join(", ")}`);
+      if (notStarted.length) statusLines.push(`:hourglass_flowing_sand: *Not started:* ${notStarted.slice(0, 4).join(", ")}${notStarted.length > 4 ? ` +${notStarted.length - 4} more` : ""}`);
+
+      await sendSlackNudge(
+        user.slackWebhookUrl,
+        [
+          {
+            type: "section",
+            text: {
+              type: "mrkdwn",
+              text: `:bar_chart: *GTM Agent Weekly Report — ${company.name}*\n\n${aiMsg.recommendation}\n_${aiMsg.reason}_`,
+            },
+          },
+          ...(statusLines.length ? [{
+            type: "section",
+            text: { type: "mrkdwn", text: statusLines.join("\n") },
+          }] : []),
+          {
+            type: "actions",
+            elements: [
+              {
+                type: "button",
+                text: { type: "plain_text", text: "Open Dashboard" },
+                url: "https://gtmchampion.com/dashboard",
+                style: "primary",
+              },
+            ],
+          },
+        ],
+        `GTM Agent Weekly Report for ${company.name}: ${aiMsg.recommendation}`
+      );
+    }
 
     await storage.createAgentEvent({
       userId,

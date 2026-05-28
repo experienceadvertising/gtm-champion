@@ -103,6 +103,7 @@ export interface IStorage {
   getStrategySnapshot(id: number, userId: string): Promise<StrategySnapshot | undefined>;
 
   updateUserAgentEnabled(id: string, agentEnabled: boolean): Promise<void>;
+  updateUserSlackWebhook(id: string, slackWebhookUrl: string | null): Promise<void>;
 
   createAgentEvent(event: InsertAgentEvent): Promise<AgentEvent>;
   getRecentAgentEvents(userId: string, limit?: number): Promise<AgentEvent[]>;
@@ -392,6 +393,10 @@ export class DatabaseStorage implements IStorage {
 
   async updateUserAgentEnabled(id: string, agentEnabled: boolean): Promise<void> {
     await db.update(users).set({ agentEnabled }).where(eq(users.id, id));
+  }
+
+  async updateUserSlackWebhook(id: string, slackWebhookUrl: string | null): Promise<void> {
+    await db.update(users).set({ slackWebhookUrl }).where(eq(users.id, id));
   }
 
   async createAgentEvent(event: InsertAgentEvent): Promise<AgentEvent> {

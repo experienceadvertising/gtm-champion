@@ -12,6 +12,7 @@ export const users = pgTable("users", {
   isPremium: boolean("is_premium").default(false).notNull(),
   isAdmin: boolean("is_admin").default(false).notNull(),
   agentEnabled: boolean("agent_enabled").default(true).notNull(),
+  slackWebhookUrl: text("slack_webhook_url"),
   stripeCustomerId: text("stripe_customer_id"),
   stripeSubscriptionId: text("stripe_subscription_id"),
   logoUrl: text("logo_url"),
