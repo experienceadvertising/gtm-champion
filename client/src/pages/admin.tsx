@@ -196,8 +196,10 @@ export default function AdminPage() {
 
   const deleteMutation = useMutation({
     mutationFn: async (userId: string) => {
+      const csrfToken = document.cookie.match(/(?:^|;\s*)csrf-token=([^;]+)/)?.[1] ?? "";
       const res = await fetch(`/api/admin/users/${userId}`, {
         method: "DELETE",
+        headers: { "X-CSRF-Token": csrfToken },
         credentials: "include",
       });
       if (!res.ok) {
@@ -216,8 +218,10 @@ export default function AdminPage() {
 
   const togglePremiumMutation = useMutation({
     mutationFn: async (userId: string) => {
+      const csrfToken = document.cookie.match(/(?:^|;\s*)csrf-token=([^;]+)/)?.[1] ?? "";
       const res = await fetch(`/api/admin/users/${userId}/premium`, {
         method: "PATCH",
+        headers: { "X-CSRF-Token": csrfToken },
         credentials: "include",
       });
       if (!res.ok) {
@@ -239,9 +243,10 @@ export default function AdminPage() {
   const triggerAgentMutation = useMutation({
     mutationFn: async ({ userId, type }: { userId: string; type: string }) => {
       setTriggeringUser(`${userId}:${type}`);
+      const csrfToken = document.cookie.match(/(?:^|;\s*)csrf-token=([^;]+)/)?.[1] ?? "";
       const res = await fetch(`/api/admin/agent/trigger/${userId}`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "X-CSRF-Token": csrfToken },
         credentials: "include",
         body: JSON.stringify({ type }),
       });
