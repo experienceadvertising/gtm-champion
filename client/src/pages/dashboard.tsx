@@ -158,56 +158,21 @@ function formatStrategyDescription(desc: string, compact = false) {
 
 function SlackConnectSection({
   slackConnected,
-  onConnected,
   onDisconnected,
 }: {
   slackConnected: boolean;
-  onConnected: () => void;
   onDisconnected: () => void;
 }) {
-  const [webhookUrl, setWebhookUrl] = useState("");
-  const [saving, setSaving] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
-  const [showInput, setShowInput] = useState(false);
   const { toast } = useToast();
-
-  const getCsrfToken = () => {
-    const m = document.cookie.match(/(?:^|;\s*)csrf-token=([^;]+)/);
-    return m ? m[1] : "";
-  };
-
-  const handleConnect = async () => {
-    if (!webhookUrl.startsWith("https://hooks.slack.com/")) {
-      toast({ title: "Invalid URL", description: "Must be a Slack Incoming Webhook URL (starts with https://hooks.slack.com/)", variant: "destructive" });
-      return;
-    }
-    setSaving(true);
-    try {
-      const res = await fetch("/api/agent/slack", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-CSRF-Token": getCsrfToken() },
-        credentials: "include",
-        body: JSON.stringify({ webhookUrl }),
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "Failed to connect");
-      toast({ title: "Slack connected!", description: "A test message was sent to your channel." });
-      setWebhookUrl("");
-      setShowInput(false);
-      onConnected();
-    } catch (err: any) {
-      toast({ title: "Connection failed", description: err.message, variant: "destructive" });
-    } finally {
-      setSaving(false);
-    }
-  };
 
   const handleDisconnect = async () => {
     setDisconnecting(true);
     try {
+      const csrfMatch = document.cookie.match(/(?:^|;\s*)csrf-token=([^;]+)/);
       await fetch("/api/agent/slack", {
         method: "DELETE",
-        headers: { "X-CSRF-Token": getCsrfToken() },
+        headers: { "X-CSRF-Token": csrfMatch ? csrfMatch[1] : "" },
         credentials: "include",
       });
       toast({ title: "Slack disconnected" });
@@ -247,37 +212,16 @@ function SlackConnectSection({
             {disconnecting ? "Disconnecting…" : "Disconnect"}
           </Button>
         ) : (
-          <Button
-            size="sm"
-            variant="outline"
-            className="text-xs h-7 border-indigo-200 text-indigo-700 hover:bg-indigo-50"
-            onClick={() => setShowInput(v => !v)}
-            data-testid="btn-slack-connect"
-          >
-            {showInput ? "Cancel" : "Connect Slack"}
-          </Button>
+          <a href="/api/auth/slack" data-testid="btn-slack-connect">
+            <img
+              alt="Add to Slack"
+              src="https://platform.slack-edge.com/img/add_to_slack.png"
+              srcSet="https://platform.slack-edge.com/img/add_to_slack.png 1x, https://platform.slack-edge.com/img/add_to_slack@2x.png 2x"
+              className="h-8"
+            />
+          </a>
         )}
       </div>
-      {showInput && !slackConnected && (
-        <div className="mt-3 flex gap-2">
-          <Input
-            placeholder="https://hooks.slack.com/services/…"
-            value={webhookUrl}
-            onChange={e => setWebhookUrl(e.target.value)}
-            className="h-8 text-xs flex-1"
-            data-testid="input-slack-webhook"
-          />
-          <Button
-            size="sm"
-            className="h-8 text-xs bg-[#4A154B] hover:bg-[#3d1140] text-white"
-            onClick={handleConnect}
-            disabled={saving || !webhookUrl}
-            data-testid="btn-slack-save"
-          >
-            {saving ? "Connecting…" : "Connect"}
-          </Button>
-        </div>
-      )}
     </div>
   );
 }
@@ -346,6 +290,32 @@ export default function Dashboard() {
       setSelectedChannel(channelParam);
     }
   }, [channelParam]);
+
+  useEffect(() => {
+    const slackConnected = params.get("slack_connected");
+    const slackError = params.get("slack_error");
+    if (slackConnected === "1") {
+      toast({ title: "Slack connected!", description: "A test message was sent to your channel. You'll now get nudges there." });
+      queryClient.invalidateQueries({ queryKey: ["agentEvents"] });
+      const clean = new URLSearchParams(searchString);
+      clean.delete("slack_connected");
+      const q = clean.toString();
+      window.history.replaceState(null, "", q ? `?${q}` : window.location.pathname);
+    } else if (slackError) {
+      const messages: Record<string, string> = {
+        cancelled: "Slack authorization was cancelled.",
+        invalid_state: "Authorization failed — please try again.",
+        no_webhook: "Slack did not return a webhook. Make sure you select a channel.",
+        not_configured: "Slack is not configured. Contact support.",
+        server_error: "Something went wrong — please try again.",
+      };
+      toast({ title: "Slack connection failed", description: messages[slackError] ?? "Please try again.", variant: "destructive" });
+      const clean = new URLSearchParams(searchString);
+      clean.delete("slack_error");
+      const q = clean.toString();
+      window.history.replaceState(null, "", q ? `?${q}` : window.location.pathname);
+    }
+  }, []);
 
   useEffect(() => {
     if (mainRef.current) {
@@ -1791,7 +1761,6 @@ export default function Dashboard() {
                       })()}
                       <SlackConnectSection
                         slackConnected={agentEventsData?.slackConnected ?? false}
-                        onConnected={() => queryClient.invalidateQueries({ queryKey: ["agentEvents"] })}
                         onDisconnected={() => queryClient.invalidateQueries({ queryKey: ["agentEvents"] })}
                       />
                       {(agentEventsData?.events?.length ?? 0) > 0 && (
