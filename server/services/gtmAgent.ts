@@ -41,7 +41,7 @@ async function sendSlackNudge(webhookUrl: string, blocks: object[], fallbackText
 async function sendPushToUser(userId: string, title: string, body: string, url: string): Promise<void> {
   try {
     let webpush: any;
-    try { webpush = await import("web-push"); } catch { return; }
+    try { const mod = await import("web-push"); webpush = mod.default ?? mod; } catch { return; }
 
     const vapidPublicKey = process.env.VAPID_PUBLIC_KEY;
     const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY;

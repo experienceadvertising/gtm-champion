@@ -117,7 +117,8 @@ router.post("/api/notifications/send-tips", async (req: Request, res: Response) 
 
     let webpush: any;
     try {
-      webpush = await import("web-push");
+      const mod = await import("web-push");
+      webpush = mod.default ?? mod;
     } catch {
       return res.status(500).json({ error: "web-push not available" });
     }
