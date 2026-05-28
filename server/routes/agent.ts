@@ -43,19 +43,66 @@ router.patch("/api/agent/settings", requireAuth, requirePremium, async (req: Req
   }
 });
 
+// Always strip www. — this must match what's registered in Slack's redirect URIs
+function slackRedirectUri(req: Request): string {
+  const host = (req.get("host") || "").replace(/^www\./, "");
+  return `https://${host}/api/auth/slack/callback`;
+}
+
+// Origin used for the post-OAuth dashboard redirect (preserves www. vs non-www.)
+function originBase(req: Request): string {
+  const host = req.get("host") || "";
+  return `https://${host}`;
+}
+
+// Sign a state token: "{userId}:{ts}:{b64origin}:{sig}"
+// Carries everything needed — no session lookup required in callback
+function signSlackState(userId: string, origin: string): string {
+  const ts = Date.now().toString();
+  const b64 = Buffer.from(origin).toString("base64url");
+  const secret = process.env.SESSION_SECRET || "dev-secret";
+  const sig = crypto.createHmac("sha256", secret)
+    .update(`${userId}:${ts}:${b64}`)
+    .digest("hex")
+    .slice(0, 32);
+  return `${userId}:${ts}:${b64}:${sig}`;
+}
+
+interface SlackStatePayload { userId: string; origin: string }
+
+function verifySlackState(state: string): SlackStatePayload | null {
+  try {
+    // format: userId:ts:b64origin:sig  (userId is a UUID — no colons)
+    const parts = state.split(":");
+    if (parts.length < 4) return null;
+    const sig = parts[parts.length - 1];
+    const b64 = parts[parts.length - 2];
+    const ts = parts[parts.length - 3];
+    const userId = parts.slice(0, parts.length - 3).join(":");
+    if (!userId || !ts || !b64 || !sig) return null;
+    if (Date.now() - parseInt(ts) > 10 * 60 * 1000) return null;
+    const secret = process.env.SESSION_SECRET || "dev-secret";
+    const expected = crypto.createHmac("sha256", secret)
+      .update(`${userId}:${ts}:${b64}`)
+      .digest("hex")
+      .slice(0, 32);
+    if (!crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) return null;
+    const origin = Buffer.from(b64, "base64url").toString();
+    return { userId, origin };
+  } catch {
+    return null;
+  }
+}
+
 // Slack OAuth — step 1: redirect to Slack authorization page
 router.get("/api/auth/slack", requireAuth, requirePremium, (req: Request, res: Response) => {
   const clientId = process.env.SLACK_CLIENT_ID;
   if (!clientId) {
     return res.status(500).json({ error: "Slack is not configured" });
   }
-  const state = crypto.randomBytes(16).toString("hex");
-  req.session.slackOAuthState = state;
 
-  const rawHost = req.get("host") || "";
-  const host = rawHost.replace(/^www\./, "");
-  const protocol = host.includes("replit.dev") || host.includes("replit.app") ? "https" : req.protocol;
-  const redirectUri = `${protocol}://${host}/api/auth/slack/callback`;
+  const state = signSlackState(req.session.userId!, originBase(req));
+  const redirectUri = slackRedirectUri(req);
 
   const params = new URLSearchParams({
     client_id: clientId,
@@ -67,30 +114,25 @@ router.get("/api/auth/slack", requireAuth, requirePremium, (req: Request, res: R
   res.redirect(`https://slack.com/oauth/v2/authorize?${params}`);
 });
 
-// Slack OAuth — step 2: handle callback, exchange code for webhook URL
-router.get("/api/auth/slack/callback", requireAuth, async (req: Request, res: Response) => {
+// Slack OAuth — step 2: handle callback — session-free; userId + origin from signed state
+router.get("/api/auth/slack/callback", async (req: Request, res: Response) => {
   const { code, state, error } = req.query as Record<string, string>;
 
-  if (error) {
-    return res.redirect("/dashboard?slack_error=cancelled");
-  }
+  const errRedirect = (key: string, origin = "https://gtmchampion.com") =>
+    res.redirect(`${origin}/dashboard?slack_error=${key}`);
 
-  if (!state || state !== req.session.slackOAuthState) {
-    return res.redirect("/dashboard?slack_error=invalid_state");
-  }
+  if (error) return errRedirect("cancelled");
 
-  delete req.session.slackOAuthState;
+  const payload = verifySlackState(state || "");
+  if (!payload) return errRedirect("invalid_state");
+
+  const { userId, origin } = payload;
 
   const clientId = process.env.SLACK_CLIENT_ID;
   const clientSecret = process.env.SLACK_CLIENT_SECRET;
-  if (!clientId || !clientSecret) {
-    return res.redirect("/dashboard?slack_error=not_configured");
-  }
+  if (!clientId || !clientSecret) return errRedirect("not_configured", origin);
 
-  const rawHost = req.get("host") || "";
-  const host = rawHost.replace(/^www\./, "");
-  const protocol = host.includes("replit.dev") || host.includes("replit.app") ? "https" : req.protocol;
-  const redirectUri = `${protocol}://${host}/api/auth/slack/callback`;
+  const redirectUri = slackRedirectUri(req);
 
   try {
     const tokenRes = await fetch("https://slack.com/api/oauth.v2.access", {
@@ -108,10 +150,10 @@ router.get("/api/auth/slack/callback", requireAuth, async (req: Request, res: Re
 
     if (!data.ok || !data.incoming_webhook?.url) {
       console.error("Slack OAuth error:", data.error || "No webhook URL returned");
-      return res.redirect("/dashboard?slack_error=no_webhook");
+      return errRedirect("no_webhook", origin);
     }
 
-    await storage.updateUserSlackWebhook(req.session.userId!, data.incoming_webhook.url);
+    await storage.updateUserSlackWebhook(userId, data.incoming_webhook.url);
 
     // Send a welcome test message (non-blocking)
     fetch(data.incoming_webhook.url, {
@@ -122,10 +164,10 @@ router.get("/api/auth/slack/callback", requireAuth, async (req: Request, res: Re
       }),
     }).catch(() => {});
 
-    return res.redirect("/dashboard?slack_connected=1");
+    return res.redirect(`${origin}/dashboard?slack_connected=1`);
   } catch (err: any) {
     console.error("Slack callback error:", err?.message || err);
-    return res.redirect("/dashboard?slack_error=server_error");
+    return errRedirect("server_error", origin);
   }
 });
 
