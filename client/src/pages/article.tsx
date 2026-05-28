@@ -15,14 +15,20 @@ export default function Article() {
   
   if (!article) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">Article not found</h1>
-          <Button onClick={() => setLocation("/blog")}>
-            <ArrowLeft className="mr-2 h-4 w-4" /> Back to Blog
-          </Button>
+      <>
+        <Helmet>
+          <meta name="robots" content="noindex, follow" />
+          <title>Article not found - GTM Champion</title>
+        </Helmet>
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold mb-4">Article not found</h1>
+            <Button onClick={() => setLocation("/blog")}>
+              <ArrowLeft className="mr-2 h-4 w-4" /> Back to Blog
+            </Button>
+          </div>
         </div>
-      </div>
+      </>
     );
   }
 
