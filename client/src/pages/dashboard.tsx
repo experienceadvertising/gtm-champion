@@ -66,7 +66,7 @@ import { fetchDashboard, retryAnalysis, updateRecommendationStatus, getSession, 
 import { useSubscription } from "@/hooks/useSubscription";
 import { AIChat } from "@/components/AIChat";
 import { InteractiveTutorial, useTutorial } from "@/components/InteractiveTutorial";
-import { NotificationBanner } from "@/components/NotificationBanner";
+import { PushPermissionPrompt, AgentPushOptIn } from "@/components/PushPermissionPrompt";
 import { BudgetAllocator } from "@/components/BudgetAllocator";
 import { ICPBuilder } from "@/components/ICPBuilder";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -278,6 +278,8 @@ export default function Dashboard() {
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [agentEnabled, setAgentEnabled] = useState<boolean | null>(null);
   const [agentToggling, setAgentToggling] = useState(false);
+  const [pushPromptTriggered, setPushPromptTriggered] = useState(false);
+  const agentCardRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!session) {
@@ -339,6 +341,30 @@ export default function Dashboard() {
     enabled: !!session && (isPremium || false),
     refetchInterval: false,
   });
+
+  useEffect(() => {
+    if (!isPremium) return;
+    const el = agentCardRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setPushPromptTriggered(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.25 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [isPremium, agentCardRef.current]);
+
+  useEffect(() => {
+    if (!isPremium) return;
+    if ((agentEventsData?.events?.length ?? 0) > 0) {
+      setPushPromptTriggered(true);
+    }
+  }, [isPremium, agentEventsData]);
 
   const handleAgentToggle = async (enabled: boolean) => {
     setAgentToggling(true);
@@ -1460,7 +1486,7 @@ export default function Dashboard() {
             </header>
 
             <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-8">
-              <NotificationBanner />
+              <PushPermissionPrompt triggered={pushPromptTriggered} />
               <div className="grid md:grid-cols-3 gap-6">
                 <Card className={`md:col-span-2 border-none shadow-lg overflow-hidden ${analysisFailed ? 'ring-1 ring-red-200' : 'ring-1 ring-slate-200/50'}`}>
                   <div className={`h-2 w-full ${analysisFailed ? 'bg-gradient-to-r from-red-400 to-red-500' : 'bg-gradient-to-r from-primary via-violet-500 to-purple-500'}`} />
@@ -1669,6 +1695,7 @@ export default function Dashboard() {
 
               {isPremium && (
                 <motion.div
+                  ref={agentCardRef}
                   initial={{ opacity: 0, y: 15 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.075 }}
@@ -1760,10 +1787,16 @@ export default function Dashboard() {
                           </div>
                         );
                       })()}
-                      <SlackConnectSection
-                        slackConnected={agentEventsData?.slackConnected ?? false}
-                        onDisconnected={() => queryClient.invalidateQueries({ queryKey: ["agentEvents"] })}
-                      />
+                      <div className="mb-3">
+                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Notification channels</p>
+                        <div className="space-y-2">
+                          <AgentPushOptIn />
+                          <SlackConnectSection
+                            slackConnected={agentEventsData?.slackConnected ?? false}
+                            onDisconnected={() => queryClient.invalidateQueries({ queryKey: ["agentEvents"] })}
+                          />
+                        </div>
+                      </div>
                       {(agentEventsData?.events?.length ?? 0) > 0 && (
                         <div>
                           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Recent activity</p>
