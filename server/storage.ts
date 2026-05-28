@@ -111,7 +111,8 @@ export interface IStorage {
   createScheduledNudge(nudge: InsertScheduledNudge): Promise<ScheduledNudge>;
   getPendingScheduledNudges(): Promise<Array<ScheduledNudge & { user: User }>>;
   markScheduledNudgeSent(id: number): Promise<void>;
-  hasPendingNudge(userId: string, channelId: string): Promise<boolean>;
+  hasPendingNudge(userId: string, channelId: string, nudgeType?: string): Promise<boolean>;
+  getUpcomingScheduledNudge(userId: string): Promise<ScheduledNudge | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -443,20 +444,34 @@ export class DatabaseStorage implements IStorage {
     await db.update(scheduledNudges).set({ sentAt: new Date() }).where(eq(scheduledNudges.id, id));
   }
 
-  async hasPendingNudge(userId: string, channelId: string): Promise<boolean> {
+  async hasPendingNudge(userId: string, channelId: string, nudgeType?: string): Promise<boolean> {
+    const conditions = [
+      eq(scheduledNudges.userId, userId),
+      eq(scheduledNudges.channelId, channelId),
+      isNull(scheduledNudges.sentAt),
+    ];
+    if (nudgeType) {
+      conditions.push(eq(scheduledNudges.nudgeType, nudgeType));
+    }
     const rows = await db
       .select({ id: scheduledNudges.id })
       .from(scheduledNudges)
-      .where(
-        and(
-          eq(scheduledNudges.userId, userId),
-          eq(scheduledNudges.channelId, channelId),
-          isNull(scheduledNudges.sentAt)
-        )
-      )
+      .where(and(...conditions))
       .limit(1);
     return rows.length > 0;
   }
+
+  async getUpcomingScheduledNudge(userId: string): Promise<ScheduledNudge | undefined> {
+    const { asc } = await import("drizzle-orm");
+    const [row] = await db
+      .select()
+      .from(scheduledNudges)
+      .where(and(eq(scheduledNudges.userId, userId), isNull(scheduledNudges.sentAt)))
+      .orderBy(asc(scheduledNudges.dueAt))
+      .limit(1);
+    return row;
+  }
 }
+
 
 export const storage = new DatabaseStorage();

@@ -231,8 +231,11 @@ export default function Dashboard() {
     queryKey: ["agentEvents"],
     queryFn: async () => {
       const res = await fetch("/api/agent/events", { credentials: "include" });
-      if (!res.ok) return { events: [] };
-      return res.json() as Promise<{ events: Array<{ id: number; eventType: string; channelId: string | null; sentAt: string; channel: string }> }>;
+      if (!res.ok) return { events: [], nextCheckIn: null } as { events: Array<{ id: number; eventType: string; channelId: string | null; sentAt: string; channel: string }>; nextCheckIn: { dueAt: string; channelId: string; nudgeType: string } | null };
+      return res.json() as Promise<{
+        events: Array<{ id: number; eventType: string; channelId: string | null; sentAt: string; channel: string }>;
+        nextCheckIn: { dueAt: string; channelId: string; nudgeType: string } | null;
+      }>;
     },
     enabled: !!session && (isPremium || false),
     refetchInterval: false,
@@ -1604,20 +1607,58 @@ export default function Dashboard() {
                           GTM Agent is paused. Toggle it on to receive coaching nudges and weekly digest emails.
                         </div>
                       )}
-                      <div className="grid sm:grid-cols-3 gap-3 mb-4">
-                        <div className="rounded-lg bg-white/70 border border-indigo-100 p-3">
-                          <p className="text-xs font-semibold text-indigo-700 uppercase tracking-wide mb-1">Milestone nudges</p>
-                          <p className="text-xs text-muted-foreground">Sent when you start a channel — sets your first milestone</p>
-                        </div>
-                        <div className="rounded-lg bg-white/70 border border-indigo-100 p-3">
-                          <p className="text-xs font-semibold text-indigo-700 uppercase tracking-wide mb-1">Stall check-ins</p>
-                          <p className="text-xs text-muted-foreground">Checks back 3 days after you start — suggests a quick win if you're stuck</p>
-                        </div>
-                        <div className="rounded-lg bg-white/70 border border-indigo-100 p-3">
-                          <p className="text-xs font-semibold text-indigo-700 uppercase tracking-wide mb-1">Weekly digest</p>
-                          <p className="text-xs text-muted-foreground">Every Monday — your full strategy progress with what to focus on this week</p>
-                        </div>
-                      </div>
+                      {(() => {
+                        const recs = data?.recommendations ?? [];
+                        const inProgressChannels = Array.from(new Set(
+                          recs.filter(r => r.status === "In Progress").map(r => r.category)
+                        ));
+                        const nextCheckIn = agentEventsData?.nextCheckIn;
+                        const nextCheckInDate = nextCheckIn?.dueAt ? new Date(nextCheckIn.dueAt) : null;
+                        const daysUntil = nextCheckInDate
+                          ? Math.ceil((nextCheckInDate.getTime() - Date.now()) / 86400000)
+                          : null;
+                        const nudgeLabel: Record<string, string> = {
+                          stall: "stall check-in",
+                          completion_congrats: "completion congrats",
+                          weekly_digest: "weekly digest",
+                        };
+                        return (
+                          <div className="grid sm:grid-cols-2 gap-3 mb-4">
+                            <div className="rounded-lg bg-white/70 border border-indigo-100 p-3">
+                              <p className="text-xs font-semibold text-indigo-700 uppercase tracking-wide mb-2">In-progress channels</p>
+                              {inProgressChannels.length > 0 ? (
+                                <div className="flex flex-wrap gap-1.5">
+                                  {inProgressChannels.map(ch => (
+                                    <Badge key={ch} variant="outline" className="text-[10px] h-5 px-2 border-indigo-200 text-indigo-600 bg-indigo-50">{ch}</Badge>
+                                  ))}
+                                </div>
+                              ) : (
+                                <p className="text-xs text-muted-foreground">No channels in progress yet. Start a recommendation to activate your agent.</p>
+                              )}
+                            </div>
+                            <div className="rounded-lg bg-white/70 border border-indigo-100 p-3">
+                              <p className="text-xs font-semibold text-indigo-700 uppercase tracking-wide mb-2">Next scheduled check-in</p>
+                              {nextCheckIn ? (
+                                <div>
+                                  <p className="text-sm font-semibold text-foreground">
+                                    {daysUntil !== null && daysUntil <= 0
+                                      ? "Sending today"
+                                      : daysUntil === 1
+                                      ? "Tomorrow"
+                                      : `In ${daysUntil} days`}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground mt-0.5">
+                                    {nudgeLabel[nextCheckIn.nudgeType] ?? nextCheckIn.nudgeType}
+                                    {nextCheckIn.channelId ? ` — ${nextCheckIn.channelId}` : ""}
+                                  </p>
+                                </div>
+                              ) : (
+                                <p className="text-xs text-muted-foreground">No upcoming nudges scheduled. Every Monday you'll get a weekly digest.</p>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })()}
                       {(agentEventsData?.events?.length ?? 0) > 0 && (
                         <div>
                           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Recent activity</p>

@@ -831,12 +831,16 @@ export interface AgentMilestoneEmailData {
   userName: string;
   companyName: string;
   channelId: string;
+  personalizedGoal?: string;
+  personalizedWhy?: string;
 }
 
 export async function sendAgentMilestoneEmail(data: AgentMilestoneEmailData): Promise<void> {
   const firstName = escapeHtml(data.userName.split(' ')[0]);
   const channelName = escapeHtml(data.channelId);
   const dashboardUrl = `https://gtmchampion.com/dashboard?channel=${encodeURIComponent(data.channelId)}`;
+  const goal = escapeHtml(data.personalizedGoal || `Complete at least one ${data.channelId} recommendation this week. I'll check back in 3 days to see how it's going.`);
+  const why = escapeHtml(data.personalizedWhy || `${data.channelId} is a high-leverage channel for growing a company like ${data.companyName}.`);
 
   const htmlBody = `
 <!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
@@ -851,10 +855,14 @@ export async function sendAgentMilestoneEmail(data: AgentMilestoneEmailData): Pr
   <div style="padding:32px;">
     <p style="color:#475569;margin:0 0 4px;">Hi ${firstName},</p>
     <h2 style="color:#0f172a;font-size:20px;margin:12px 0 8px;font-weight:700;">Great start on your <span style="color:#6366f1;">${channelName}</span> strategy!</h2>
-    <p style="color:#64748b;font-size:15px;line-height:1.6;margin:0 0 24px;">You've taken the first step on your ${channelName} channel. I'm your GTM Agent — I'll check in to keep your momentum going and make sure nothing stalls.</p>
+    <p style="color:#64748b;font-size:15px;line-height:1.6;margin:0 0 20px;">You've taken the first step on your ${channelName} channel. I'm your GTM Agent — I'll check in to keep your momentum going and make sure nothing stalls.</p>
+    <div style="background:#fefce8;border-left:4px solid #eab308;border-radius:0 8px 8px 0;padding:14px 16px;margin:0 0 16px;">
+      <p style="color:#854d0e;font-size:13px;font-weight:700;margin:0 0 4px;text-transform:uppercase;letter-spacing:0.05em;">Why this matters for you</p>
+      <p style="color:#713f12;font-size:14px;margin:0;line-height:1.5;">${why}</p>
+    </div>
     <div style="background:#eef2ff;border-radius:12px;padding:20px;margin:0 0 24px;">
       <p style="color:#4338ca;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;margin:0 0 8px;">Your first milestone</p>
-      <p style="color:#1e293b;font-size:15px;margin:0;">Complete at least one ${channelName} recommendation this week. I'll check back in 3 days to see how it's going.</p>
+      <p style="color:#1e293b;font-size:15px;margin:0;line-height:1.5;">${goal}</p>
     </div>
     <div style="text-align:center;margin:24px 0 8px;">
       <a href="${dashboardUrl}" style="display:inline-block;background:linear-gradient(135deg,#4f46e5 0%,#7c3aed 100%);color:#fff;padding:14px 40px;text-decoration:none;border-radius:10px;font-weight:700;font-size:15px;">View ${channelName} Strategy →</a>
@@ -871,7 +879,7 @@ export async function sendAgentMilestoneEmail(data: AgentMilestoneEmailData): Pr
       From: FROM_ADDRESS, To: data.toEmail,
       Subject: `GTM Agent: Great start on ${data.channelId}! Here's your first milestone`,
       HtmlBody: htmlBody,
-      TextBody: `Hi ${firstName},\n\nGreat start on your ${channelName} strategy! You've taken the first step.\n\nYour first milestone: Complete at least one ${channelName} recommendation this week. I'll check back in 3 days.\n\nView strategy: ${dashboardUrl}\n\n© 2026 GTM Champion`,
+      TextBody: `Hi ${firstName},\n\nGreat start on your ${channelName} strategy!\n\nWhy this matters: ${data.personalizedWhy || why}\n\nYour first milestone: ${data.personalizedGoal || goal}\n\nView strategy: ${dashboardUrl}\n\n© 2026 GTM Champion`,
       MessageStream: "outbound",
     });
     console.log(`Agent milestone email sent to ${data.toEmail} (${data.channelId})`);
@@ -884,12 +892,16 @@ export interface AgentStallEmailData {
   companyName: string;
   channelId: string;
   quickWin: { title: string; steps: string[]; effort: string } | null;
+  personalizedNudge?: string;
+  personalizedAction?: string;
 }
 
 export async function sendAgentStallEmail(data: AgentStallEmailData): Promise<void> {
   const firstName = escapeHtml(data.userName.split(' ')[0]);
   const channelName = escapeHtml(data.channelId);
   const dashboardUrl = `https://gtmchampion.com/dashboard?channel=${encodeURIComponent(data.channelId)}`;
+  const nudgeText = escapeHtml(data.personalizedNudge || `It's been 3 days since you started working on ${data.channelId}. You have items in progress — let's keep the momentum going.`);
+  const actionText = escapeHtml(data.personalizedAction || `Spend 20 minutes today on one specific task from your ${data.channelId} recommendations list.`);
   const quickWinHtml = data.quickWin ? `
     <div style="background:#f0fdf4;border-radius:12px;padding:20px;margin:0 0 24px;border-left:4px solid #22c55e;">
       <p style="color:#166534;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;margin:0 0 6px;">Quick win to try today</p>
@@ -911,7 +923,11 @@ export async function sendAgentStallEmail(data: AgentStallEmailData): Promise<vo
   <div style="padding:32px;">
     <p style="color:#475569;margin:0 0 4px;">Hi ${firstName},</p>
     <h2 style="color:#0f172a;font-size:20px;margin:12px 0 8px;font-weight:700;">Checking in on your <span style="color:#6366f1;">${channelName}</span> strategy</h2>
-    <p style="color:#64748b;font-size:15px;line-height:1.6;margin:0 0 24px;">It's been 3 days since you started working on ${channelName}. You have items in progress — let's keep the momentum going. Even one small step this week makes a difference.</p>
+    <p style="color:#64748b;font-size:15px;line-height:1.6;margin:0 0 20px;">${nudgeText}</p>
+    <div style="background:#eef2ff;border-radius:10px;padding:16px;margin:0 0 20px;">
+      <p style="color:#4338ca;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;margin:0 0 6px;">Your action for today</p>
+      <p style="color:#1e293b;font-size:14px;margin:0;line-height:1.5;">${actionText}</p>
+    </div>
     ${quickWinHtml}
     <div style="text-align:center;margin:24px 0 8px;">
       <a href="${dashboardUrl}" style="display:inline-block;background:linear-gradient(135deg,#4f46e5 0%,#7c3aed 100%);color:#fff;padding:14px 40px;text-decoration:none;border-radius:10px;font-weight:700;font-size:15px;">Resume ${channelName} Strategy →</a>
@@ -926,9 +942,9 @@ export async function sendAgentStallEmail(data: AgentStallEmailData): Promise<vo
   try {
     await postmarkClient.sendEmail({
       From: FROM_ADDRESS, To: data.toEmail,
-      Subject: `GTM Agent: Checking in on your ${data.channelId} strategy — here's a quick win`,
+      Subject: `GTM Agent: Checking in on your ${data.channelId} strategy`,
       HtmlBody: htmlBody,
-      TextBody: `Hi ${firstName},\n\nChecking in on your ${channelName} strategy. It's been 3 days — let's keep the momentum going.\n\n${data.quickWin ? `Quick win: ${data.quickWin.title}\n${(data.quickWin.steps || []).join('\n')}` : ''}\n\nView strategy: ${dashboardUrl}\n\n© 2026 GTM Champion`,
+      TextBody: `Hi ${firstName},\n\n${data.personalizedNudge || nudgeText}\n\nYour action for today: ${data.personalizedAction || actionText}\n\n${data.quickWin ? `Quick win: ${data.quickWin.title}\n${(data.quickWin.steps || []).join('\n')}` : ''}\n\nView strategy: ${dashboardUrl}\n\n© 2026 GTM Champion`,
       MessageStream: "outbound",
     });
     console.log(`Agent stall email sent to ${data.toEmail} (${data.channelId})`);
@@ -995,11 +1011,19 @@ export interface AgentWeeklyDigestEmailData {
   onTrack: string[];
   notStarted: string[];
   topFocus: string;
+  aiRecommendation?: string;
+  aiReason?: string;
 }
 
 export async function sendAgentWeeklyDigestEmail(data: AgentWeeklyDigestEmailData): Promise<void> {
   const firstName = escapeHtml(data.userName.split(' ')[0]);
   const dashboardUrl = `https://gtmchampion.com/dashboard`;
+  const aiRecHtml = data.aiRecommendation ? `
+    <div style="background:#eef2ff;border-radius:12px;padding:20px;margin:0 0 24px;">
+      <p style="color:#4338ca;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;margin:0 0 6px;">Your GTM Agent's recommendation this week</p>
+      <p style="color:#1e293b;font-size:15px;font-weight:600;margin:0 0 6px;">${escapeHtml(data.aiRecommendation)}</p>
+      ${data.aiReason ? `<p style="color:#64748b;font-size:13px;margin:0;font-style:italic;">${escapeHtml(data.aiReason)}</p>` : ''}
+    </div>` : '';
 
   const stalledHtml = data.stalled.length ? data.stalled.map(ch =>
     `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f1f5f9;"><span style="background:#fef9c3;color:#854d0e;font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px;">STALLED</span><span style="color:#1e293b;font-size:14px;">${escapeHtml(ch)}</span><a href="${dashboardUrl}?channel=${encodeURIComponent(ch)}" style="color:#6366f1;font-size:12px;font-weight:600;text-decoration:none;margin-left:auto;">Resume →</a></div>`
@@ -1033,6 +1057,7 @@ export async function sendAgentWeeklyDigestEmail(data: AgentWeeklyDigestEmailDat
   <div style="padding:32px;">
     <p style="color:#475569;margin:0 0 4px;">Hi ${firstName},</p>
     <p style="color:#64748b;font-size:15px;line-height:1.6;margin:12px 0 24px;">Here's your weekly GTM progress report. I've reviewed all your channel strategies and here's where things stand:</p>
+    ${aiRecHtml}
     ${focusHtml}
     ${(stalledHtml || onTrackHtml || notStartedHtml) ? `
     <h3 style="color:#0f172a;font-size:16px;margin:0 0 12px;font-weight:700;">Channel Status Overview</h3>

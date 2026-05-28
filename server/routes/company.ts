@@ -141,7 +141,7 @@ router.patch("/api/recommendations/:id/status", requireAuth, async (req: Request
           const freshRecs = await storage.getRecommendationsByCompanyId(company.id);
           const channelRecs = freshRecs.filter(r => r.category === channelId);
           const allDone = channelRecs.every(r => r.id === rec.id || r.status === "Completed");
-          if (allDone && channelRecs.length >= 2) {
+          if (allDone) {
             await fireCompletionCongrats(userId, channelId);
           }
         }

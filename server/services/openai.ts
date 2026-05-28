@@ -1542,7 +1542,7 @@ export async function generateBudgetAllocation(
   });
 
   const channelPriorities = channelInsights.map(ci => `${ci.channelId}: ${ci.priority}`).join(", ");
-  const topCategories = [...new Set(recommendations.filter(r => r.impact === "High").map(r => r.category))].join(", ");
+  const topCategories = Array.from(new Set(recommendations.filter(r => r.impact === "High").map(r => r.category))).join(", ");
   const profileCtx = buildProfileContext(context);
   const scenarioGuidance = BUDGET_SCENARIO_GUIDANCE[scenario] ?? BUDGET_SCENARIO_GUIDANCE.balanced;
 

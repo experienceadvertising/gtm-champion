@@ -8,8 +8,16 @@ const router = Router();
 router.get("/api/agent/events", requireAuth, requirePremium, async (req: Request, res: Response) => {
   try {
     const userId = req.session.userId!;
-    const events = await storage.getRecentAgentEvents(userId, 10);
-    res.json({ events });
+    const [events, nextNudge] = await Promise.all([
+      storage.getRecentAgentEvents(userId, 10),
+      storage.getUpcomingScheduledNudge(userId),
+    ]);
+    res.json({
+      events,
+      nextCheckIn: nextNudge
+        ? { dueAt: nextNudge.dueAt, channelId: nextNudge.channelId, nudgeType: nextNudge.nudgeType }
+        : null,
+    });
   } catch (err: any) {
     console.error("Agent events error:", err?.message || err);
     res.status(500).json({ error: "Failed to fetch agent events" });
