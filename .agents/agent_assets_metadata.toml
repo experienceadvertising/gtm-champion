@@ -1,0 +1,8 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "k6ZtDlRHX2P6D3FT93H2I"
+uri = "file://attached_assets/generated_images/no_click_marketing_visibility-1200.png"
+type = "image"
+title = "generated_image"

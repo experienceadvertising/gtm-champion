@@ -51,10 +51,14 @@ export class StripeService {
     const result = await db.execute(
       sql`
         WITH paginated_products AS (
-          SELECT id, name, description, metadata, active
+          SELECT DISTINCT ON (name) id, name, description, metadata, active
           FROM stripe.products
           WHERE active = ${active}
-          ORDER BY id
+            AND (
+              metadata->>'tier' = 'premium'
+              OR name = 'GTM Champion Pro'
+            )
+          ORDER BY name, id DESC
           LIMIT ${limit} OFFSET ${offset}
         )
         SELECT 

@@ -1,11 +1,21 @@
 [
   {
+    "slug": "no-click-marketing-future-of-brand-visibility",
+    "metaTitle": "No-Click Marketing: Brand Visibility in the AI Era | GTM Champion",
+    "metaDescription": "No-click marketing is reshaping B2B demand generation as AI, social platforms, and broken attribution change how buyers discover brands. Learn the channels, tactics, and metrics that matter now.",
+    "imageAlt": "Conceptual illustration of a brand at the center radiating impressions across AI assistants, podcasts, streaming TV, and social platforms",
+    "publishDate": "2026-05-27",
+    "modifiedDate": "2026-05-27",
+    "ogImage": "/og/no-click-marketing-future-of-brand-visibility.png"
+  },
+  {
     "slug": "what-is-go-to-market-strategy-complete-guide",
     "metaTitle": "Go-To-Market Strategy Guide for B2B SaaS | GTM Champion",
     "metaDescription": "Learn what a Go-To-Market strategy is, why it matters, and how to build one for your B2B SaaS company. Includes frameworks, examples, and actionable steps.",
     "imageAlt": "Go-To-Market strategy concept illustration showing a rocket launching from a laptop with marketing icons",
     "publishDate": "2025-01-15",
-    "modifiedDate": "2025-01-15"
+    "modifiedDate": "2025-01-15",
+    "ogImage": "/og/what-is-go-to-market-strategy-complete-guide.webp"
   },
   {
     "slug": "13-marketing-channels-b2b-saas-2025",
@@ -13,7 +23,8 @@
     "metaDescription": "Discover the 13 essential marketing channels for B2B SaaS success in 2025. From SEO to ABM to partnerships, learn which channels drive the best ROI.",
     "imageAlt": "Network illustration showing 13 interconnected marketing channel icons for B2B SaaS",
     "publishDate": "2025-01-10",
-    "modifiedDate": "2025-01-10"
+    "modifiedDate": "2025-01-10",
+    "ogImage": "/og/13-marketing-channels-b2b-saas-2025.webp"
   },
   {
     "slug": "free-gtm-tools-b2b-marketers",
@@ -21,7 +32,8 @@
     "metaDescription": "Discover 15 free tools to power your Go-To-Market strategy. From SEO to analytics to email, these resources help B2B SaaS marketers do more with less.",
     "imageAlt": "Collection of free marketing tool icons floating with a FREE badge",
     "publishDate": "2025-01-08",
-    "modifiedDate": "2025-01-08"
+    "modifiedDate": "2025-01-08",
+    "ogImage": "/og/free-gtm-tools-b2b-marketers.webp"
   },
   {
     "slug": "seo-for-b2b-saas-guide",
@@ -29,7 +41,8 @@
     "metaDescription": "Master SEO for your B2B SaaS company. Learn keyword strategy, content creation, technical SEO, and link building tactics that drive organic pipeline.",
     "imageAlt": "SEO concept illustration with magnifying glass over website wireframe and rising graph arrows",
     "publishDate": "2025-01-05",
-    "modifiedDate": "2025-01-05"
+    "modifiedDate": "2025-01-05",
+    "ogImage": "/og/seo-for-b2b-saas-guide.webp"
   },
   {
     "slug": "how-to-choose-marketing-channels-startup",
@@ -37,7 +50,8 @@
     "metaDescription": "Stop wasting budget on the wrong channels. Learn a framework for choosing the marketing channels that will actually work for your startup.",
     "imageAlt": "Decision flowchart illustration showing marketing channel selection process with branching paths",
     "publishDate": "2025-01-03",
-    "modifiedDate": "2025-01-03"
+    "modifiedDate": "2025-01-03",
+    "ogImage": "/og/how-to-choose-marketing-channels-startup.webp"
   },
   {
     "slug": "product-led-growth-vs-sales-led-gtm",
@@ -45,7 +59,8 @@
     "metaDescription": "Compare Product-Led Growth and Sales-Led approaches. Learn which GTM motion fits your B2B SaaS based on pricing, complexity, and buyer expectations.",
     "imageAlt": "Split screen illustration comparing Product-Led Growth vs Sales-Led approaches with balanced scale",
     "publishDate": "2024-12-28",
-    "modifiedDate": "2024-12-28"
+    "modifiedDate": "2024-12-28",
+    "ogImage": "/og/product-led-growth-vs-sales-led-gtm.webp"
   },
   {
     "slug": "account-based-marketing-abm-guide-b2b-saas",
@@ -53,7 +68,8 @@
     "metaDescription": "Learn how to implement Account-Based Marketing for your B2B SaaS. Includes account selection, personalization tactics, and measurement frameworks.",
     "imageAlt": "Account-Based Marketing illustration showing target accounts as buildings with bullseye targets",
     "publishDate": "2024-12-22",
-    "modifiedDate": "2024-12-22"
+    "modifiedDate": "2024-12-22",
+    "ogImage": "/og/account-based-marketing-abm-guide-b2b-saas.webp"
   },
   {
     "slug": "content-marketing-strategies-b2b-saas-growth",
@@ -61,7 +77,8 @@
     "metaDescription": "Learn content marketing strategies that drive real B2B SaaS growth. From full-funnel content to distribution tactics, this guide covers everything.",
     "imageAlt": "Content marketing funnel illustration with blog posts and videos flowing into leads",
     "publishDate": "2024-12-18",
-    "modifiedDate": "2024-12-18"
+    "modifiedDate": "2024-12-18",
+    "ogImage": "/og/content-marketing-strategies-b2b-saas-growth.webp"
   },
   {
     "slug": "email-marketing-best-practices-b2b-saas",
@@ -69,7 +86,8 @@
     "metaDescription": "Master email marketing for B2B SaaS. Learn benchmarks, automation strategies, and tactics that drive $40 ROI for every $1 spent.",
     "imageAlt": "Email marketing illustration with envelope transforming into charts and engagement metrics",
     "publishDate": "2024-12-15",
-    "modifiedDate": "2024-12-15"
+    "modifiedDate": "2024-12-15",
+    "ogImage": "/og/email-marketing-best-practices-b2b-saas.webp"
   },
   {
     "slug": "building-b2b-saas-community-guide",
@@ -77,7 +95,8 @@
     "metaDescription": "Learn how to build an engaged B2B SaaS community that drives retention, reduces churn, and creates advocates. Complete guide with tactics and metrics.",
     "imageAlt": "Community building illustration showing diverse group of people connected in a network",
     "publishDate": "2024-12-10",
-    "modifiedDate": "2024-12-10"
+    "modifiedDate": "2024-12-10",
+    "ogImage": "/og/building-b2b-saas-community-guide.webp"
   },
   {
     "slug": "llm-aeo-optimization-ai-search",
@@ -85,7 +104,8 @@
     "metaDescription": "Learn Answer Engine Optimization (AEO) to get your B2B SaaS featured in ChatGPT, Claude, Perplexity, and Google AI. Complete LLM optimization strategy.",
     "imageAlt": "AI and LLM technology visualization showing neural networks and search interface elements for Answer Engine Optimization",
     "publishDate": "2025-12-02",
-    "modifiedDate": "2025-12-02"
+    "modifiedDate": "2025-12-02",
+    "ogImage": "/og/llm-aeo-optimization-ai-search.webp"
   },
   {
     "slug": "paid-social-advertising-linkedin-meta-guide",
@@ -93,7 +113,8 @@
     "metaDescription": "Master paid social advertising for B2B SaaS. Learn LinkedIn Ads, Meta advertising, targeting strategies, and creative best practices for lead generation.",
     "imageAlt": "Professional marketing concept showing paid social media advertising icons with analytics dashboard",
     "publishDate": "2025-12-08",
-    "modifiedDate": "2025-12-08"
+    "modifiedDate": "2025-12-08",
+    "ogImage": "/og/paid-social-advertising-linkedin-meta-guide.webp"
   },
   {
     "slug": "retargeting-remarketing-b2b-saas-guide",
@@ -101,7 +122,8 @@
     "metaDescription": "Master retargeting and remarketing for B2B SaaS. Learn audience segmentation, creative strategies, and multi-platform tactics to convert warm leads.",
     "imageAlt": "Modern retargeting concept showing customer journey touchpoints and conversion funnel visualization",
     "publishDate": "2025-12-10",
-    "modifiedDate": "2025-12-10"
+    "modifiedDate": "2025-12-10",
+    "ogImage": "/og/retargeting-remarketing-b2b-saas-guide.webp"
   },
   {
     "slug": "gtm-strategy-2026-emerging-trends",
@@ -109,6 +131,7 @@
     "metaDescription": "Discover cutting-edge GTM strategies for 2026. AI-powered marketing, product-led growth, community-first approaches, and sustainable growth tactics for B2B SaaS.",
     "imageAlt": "Futuristic GTM strategy concept with AI, growth charts, and multiple marketing channels converging",
     "publishDate": "2025-12-14",
-    "modifiedDate": "2025-12-14"
+    "modifiedDate": "2025-12-14",
+    "ogImage": "/og/gtm-strategy-2026-emerging-trends.webp"
   }
 ]
