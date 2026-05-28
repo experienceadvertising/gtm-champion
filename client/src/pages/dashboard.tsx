@@ -45,7 +45,8 @@ import {
   Keyboard,
   Undo2,
   CheckSquare,
-  Square
+  Square,
+  Lock
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -1800,6 +1801,67 @@ export default function Dashboard() {
                       {(agentEventsData?.events?.length ?? 0) === 0 && agentEnabled !== false && (
                         <p className="text-xs text-muted-foreground italic">No activity yet. Start working on a channel recommendation to trigger your first coaching nudge.</p>
                       )}
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              )}
+
+              {!isPremium && (
+                <motion.div
+                  initial={{ opacity: 0, y: 15 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.075 }}
+                >
+                  <Card
+                    className="border-none shadow-md ring-1 ring-indigo-200/60 bg-gradient-to-br from-indigo-50 via-white to-purple-50 overflow-hidden relative"
+                    data-testid="card-gtm-agent-locked"
+                  >
+                    <div className="absolute top-0 right-0 w-36 h-36 bg-indigo-200/20 rounded-full -translate-y-10 translate-x-10" />
+                    <CardHeader className="relative pb-3">
+                      <div className="flex items-start justify-between gap-4 flex-wrap">
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-lg bg-indigo-100 flex items-center justify-center">
+                            <Bot className="h-5 w-5 text-indigo-600" />
+                          </div>
+                          <div>
+                            <Badge variant="secondary" className="mb-1 bg-indigo-100 text-indigo-700 hover:bg-indigo-100">Pro</Badge>
+                            <CardTitle className="text-lg font-display">GTM Agent</CardTitle>
+                            <CardDescription className="text-xs">Your personal marketing coach — checks in when you stall and celebrates wins</CardDescription>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <Lock className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="relative pt-0">
+                      <div className="grid sm:grid-cols-3 gap-3 mb-4">
+                        {[
+                          { icon: "⏰", label: "Stall nudges", desc: "Notified when you stop making progress on a channel" },
+                          { icon: "🎉", label: "Win celebrations", desc: "Personalised congrats when you complete a recommendation" },
+                          { icon: "📊", label: "Weekly digests", desc: "Monday recap of progress and next-best actions" },
+                        ].map((item) => (
+                          <div key={item.label} className="rounded-lg bg-white/70 border border-indigo-100 p-3 text-center">
+                            <div className="text-2xl mb-1">{item.icon}</div>
+                            <p className="text-xs font-semibold text-indigo-700 mb-1">{item.label}</p>
+                            <p className="text-xs text-muted-foreground leading-snug">{item.desc}</p>
+                          </div>
+                        ))}
+                      </div>
+                      <Button
+                        className="w-full"
+                        onClick={() =>
+                          window.dispatchEvent(
+                            new CustomEvent("premium-required", {
+                              detail: { message: "GTM Agent coaching is a Pro feature. Upgrade to get personal coaching nudges, win celebrations, and weekly digests." },
+                            })
+                          )
+                        }
+                        data-testid="button-gtm-agent-upgrade"
+                      >
+                        <Sparkles className="mr-2 h-4 w-4" />
+                        Upgrade to Pro to unlock GTM Agent
+                      </Button>
                     </CardContent>
                   </Card>
                 </motion.div>

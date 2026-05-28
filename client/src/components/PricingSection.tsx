@@ -22,6 +22,7 @@ const FREE_FEATURES = [
 
 const PRO_FEATURES = [
   "Everything in Free",
+  "🤖 GTM Agent — personal coaching nudges, stall alerts & weekly digests",
   "10x higher AI chat + content limits",
   "Unlimited website re-analysis",
   "12-month strategy history & snapshots",

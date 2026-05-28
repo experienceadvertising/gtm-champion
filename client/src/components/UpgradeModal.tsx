@@ -19,6 +19,7 @@ import {
 } from "@/lib/premiumInterceptor";
 
 const PRO_FEATURES = [
+  "🤖 GTM Agent — personal coaching nudges when you stall, celebrates wins, weekly digests",
   "10x higher AI chat + content generation limits",
   "Branded, multi-page PDF exports with your logo",
   "Unlimited re-analysis + 12-month strategy history",
