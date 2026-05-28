@@ -420,7 +420,7 @@ export async function fireStallNudge(userId: string, channelId: string, nudgeId:
     await sendPushToUser(
       userId,
       `GTM Agent: ${channelId} check-in`,
-      aiMsg.action,
+      quickWin?.title || aiMsg.action,
       `/dashboard?channel=${encodeURIComponent(channelId)}`
     );
 
