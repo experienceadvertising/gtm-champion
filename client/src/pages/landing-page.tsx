@@ -198,6 +198,7 @@ function DashboardPreview() {
               alt="Marketing team collaborating on Go-To-Market strategy, analyzing growth charts and analytics dashboard in modern office"
               className="w-full h-32 object-cover opacity-60"
               loading="eager"
+              fetchPriority="high"
               decoding="async"
               width="800"
               height="600"
@@ -310,6 +311,40 @@ export default function LandingPage() {
     <div className="min-h-screen bg-background font-sans selection:bg-primary/20 overflow-x-hidden">
       <Helmet>
         <link rel="canonical" href="https://gtmchampion.com/" />
+        <script type="application/ld+json">{JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "SoftwareApplication",
+          "name": "GTM Champion",
+          "applicationCategory": "BusinessApplication",
+          "operatingSystem": "Web",
+          "description": "AI-powered Go-To-Market strategy generator that analyzes your website and provides personalized marketing recommendations across 13 channels including SEO, paid search, content marketing, ABM, and partnerships.",
+          "offers": [
+            { "@type": "Offer", "name": "Free", "price": "0", "priceCurrency": "USD", "description": "Free GTM analysis across all 13 channels, AI chat (20 messages/min), content tools (10 generations/min), weekly strategy emails, and 1 website re-analysis per week. No credit card required." },
+            { "@type": "Offer", "name": "Pro Monthly", "price": "29", "priceCurrency": "USD", "description": "10x higher AI limits, branded multi-page PDF exports, unlimited re-analysis with 12-month strategy history, up to 8 buyer personas, and A/B budget scenarios. $29 per month." },
+            { "@type": "Offer", "name": "Pro Annual", "price": "290", "priceCurrency": "USD", "description": "All Pro features billed annually. $290 per year (save ~17% vs monthly)." }
+          ],
+          "featureList": [
+            "AI-powered website analysis",
+            "13 marketing channel strategies",
+            "Personalized GTM recommendations",
+            "Weekly content ideas via email",
+            "AI Q&A assistant",
+            "Content generation tools",
+            "PageSpeed performance insights"
+          ]
+        })}</script>
+        <script type="application/ld+json">{JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "FAQPage",
+          "mainEntity": [
+            { "@type": "Question", "name": "What is GTM Champion?", "acceptedAnswer": { "@type": "Answer", "text": "GTM Champion is an AI-powered Go-To-Market strategy platform for B2B SaaS companies. It analyzes your website, understands your product and target audience, and generates personalized marketing recommendations across 13 channels including SEO, paid search, content marketing, ABM, and partnerships." } },
+            { "@type": "Question", "name": "How does GTM Champion work?", "acceptedAnswer": { "@type": "Answer", "text": "Simply enter your website URL and GTM Champion's AI will scrape and analyze your site content. Within seconds, you'll receive a comprehensive GTM strategy with channel-specific recommendations, quick wins, KPIs to track, and weekly content ideas tailored to your business." } },
+            { "@type": "Question", "name": "What marketing channels does GTM Champion cover?", "acceptedAnswer": { "@type": "Answer", "text": "GTM Champion provides strategies for 13 marketing channels: SEO, LLMs/AI Search, Paid Search, Paid Social, Organic Social, Retargeting, CRO (Conversion Rate Optimization), Email Marketing, Content Marketing, Community Building, ABM (Account-Based Marketing), Partnerships, and Outbound Sales." } },
+            { "@type": "Question", "name": "Is GTM Champion free to use?", "acceptedAnswer": { "@type": "Answer", "text": "Yes — the free plan is generous. You get full GTM analysis across all 13 channels, AI chat (20 messages/min), content tools (10 generations/min), weekly strategy emails, and one website re-analysis per week. No credit card required to start. GTM Champion Pro ($29/mo or $290/yr) unlocks 10x higher AI limits, branded multi-page PDF exports, unlimited re-analysis with 12-month strategy history, and up to 8 buyer personas with A/B budget scenarios." } },
+            { "@type": "Question", "name": "What are the weekly AI content sprints?", "acceptedAnswer": { "@type": "Answer", "text": "Every Monday morning, GTM Champion sends you a fresh batch of actionable content ideas and marketing tactics via email. These are personalized to your business and designed to be executed within the week for maximum impact." } },
+            { "@type": "Question", "name": "Can I ask questions about my GTM strategy?", "acceptedAnswer": { "@type": "Answer", "text": "Yes! GTM Champion includes an AI assistant that answers your marketing questions with personalized advice based on your company's specific context, business model, and GTM motion. Ask about any channel and get actionable recommendations." } }
+          ]
+        })}</script>
       </Helmet>
       <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 bg-primary text-white px-4 py-2 rounded z-50">
         Skip to main content
