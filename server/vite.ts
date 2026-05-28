@@ -5,10 +5,13 @@ import viteConfig from "../vite.config";
 import fs from "fs";
 import path from "path";
 import { nanoid } from "nanoid";
+import { loadArticleMeta, injectMeta } from "./seoMeta";
 
 const viteLogger = createLogger();
 
 export async function setupVite(server: Server, app: Express) {
+  // Load article meta from client/public so dev server can inject OG tags too
+  loadArticleMeta(path.resolve(import.meta.dirname, "..", "client", "public"));
   const serverOptions = {
     middlewareMode: true,
     hmr: { server, path: "/vite-hmr" },
@@ -48,7 +51,8 @@ export async function setupVite(server: Server, app: Express) {
         `src="/src/main.tsx"`,
         `src="/src/main.tsx?v=${nanoid()}"`,
       );
-      const page = await vite.transformIndexHtml(url, template);
+      const transformed = await vite.transformIndexHtml(url, template);
+      const page = injectMeta(transformed, url.split("?")[0]);
       res.status(200).set({ "Content-Type": "text/html" }).end(page);
     } catch (e) {
       vite.ssrFixStacktrace(e as Error);

@@ -10,6 +10,7 @@ interface RouteMeta {
   type?: string;
   publishedTime?: string;
   modifiedTime?: string;
+  ogImage?: string;
 }
 
 interface ArticleMeta {
@@ -19,6 +20,7 @@ interface ArticleMeta {
   imageAlt: string;
   publishDate: string;
   modifiedDate: string;
+  ogImage?: string;
 }
 
 const STATIC_META: Record<string, RouteMeta> = {
@@ -105,6 +107,7 @@ function metaForRoute(reqPath: string): RouteMeta | null {
         type: "article",
         publishedTime: article.publishDate,
         modifiedTime: article.modifiedDate,
+        ogImage: article.ogImage ? `${SITE_URL}${article.ogImage}` : undefined,
       };
     }
   }
@@ -131,6 +134,19 @@ export function injectMeta(html: string, reqPath: string): string {
     .replace(/<meta property="og:description" content="[^"]*" \/>/, `<meta property="og:description" content="${description}" />`)
     .replace(/<meta name="twitter:title" content="[^"]*" \/>/, `<meta name="twitter:title" content="${title}" />`)
     .replace(/<meta name="twitter:description" content="[^"]*" \/>/, `<meta name="twitter:description" content="${description}" />`);
+
+  if (meta.ogImage) {
+    const imageUrl = escapeHtml(meta.ogImage);
+    result = result
+      .replace(
+        /<meta property="og:image" content="[^"]*" \/>/,
+        `<meta property="og:image" content="${imageUrl}" />`
+      )
+      .replace(
+        /<meta name="twitter:image" content="[^"]*" \/>/,
+        `<meta name="twitter:image" content="${imageUrl}" />`
+      );
+  }
 
   if (meta.publishedTime || meta.modifiedTime) {
     const articleTags: string[] = [];
