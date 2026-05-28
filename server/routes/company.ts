@@ -47,6 +47,7 @@ router.get("/api/dashboard", requireAuth, async (req: Request, res: Response) =>
         email: user.email,
         isPremium: user.isPremium,
         isAdmin: user.isAdmin,
+        agentEnabled: user.agentEnabled,
       },
       company: {
         id: company.id,
@@ -118,8 +119,36 @@ router.patch("/api/recommendations/:id/status", requireAuth, async (req: Request
       return res.status(403).json({ error: "Access denied" });
     }
 
+    const previousStatus = rec.status;
     await storage.updateRecommendationStatus(parseInt(id), validatedData.status);
     res.json({ message: "Status updated" });
+
+    setImmediate(async () => {
+      try {
+        const { fireMilestoneStart, fireCompletionCongrats } = await import("../services/gtmAgent");
+        const newStatus = validatedData.status;
+        const channelId = rec.category;
+
+        if (newStatus === "In Progress" && previousStatus !== "In Progress") {
+          const channelRecs = recs.filter(r => r.category === channelId);
+          const wasAlreadyInProgress = channelRecs.some(r => r.id !== rec.id && r.status === "In Progress");
+          if (!wasAlreadyInProgress) {
+            await fireMilestoneStart(userId, channelId, rec.id);
+          }
+        }
+
+        if (newStatus === "Completed") {
+          const freshRecs = await storage.getRecommendationsByCompanyId(company.id);
+          const channelRecs = freshRecs.filter(r => r.category === channelId);
+          const allDone = channelRecs.every(r => r.id === rec.id || r.status === "Completed");
+          if (allDone && channelRecs.length >= 2) {
+            await fireCompletionCongrats(userId, channelId);
+          }
+        }
+      } catch (agentErr) {
+        console.error("Agent hook error (non-blocking):", agentErr);
+      }
+    });
   } catch (error: unknown) {
     console.error("Update status error:", error);
     res.status(500).json({ error: "Failed to update status" });

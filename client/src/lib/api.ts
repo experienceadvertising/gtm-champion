@@ -132,6 +132,7 @@ export interface DashboardData {
     fullName: string;
     email: string;
     isPremium: boolean;
+    agentEnabled: boolean;
   };
   company: Company;
   recommendations: Recommendation[];

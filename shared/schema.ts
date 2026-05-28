@@ -11,6 +11,7 @@ export const users = pgTable("users", {
   companyUrl: text("company_url").notNull(),
   isPremium: boolean("is_premium").default(false).notNull(),
   isAdmin: boolean("is_admin").default(false).notNull(),
+  agentEnabled: boolean("agent_enabled").default(true).notNull(),
   stripeCustomerId: text("stripe_customer_id"),
   stripeSubscriptionId: text("stripe_subscription_id"),
   logoUrl: text("logo_url"),
@@ -243,6 +244,38 @@ export const insertStrategySnapshotSchema = createInsertSchema(strategySnapshots
   createdAt: true,
 });
 
+export const agentEvents = pgTable("agent_events", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  eventType: text("event_type").notNull(),
+  channelId: text("channel_id"),
+  recommendationId: integer("recommendation_id"),
+  channel: text("channel").notNull().default("email"),
+  sentAt: timestamp("sent_at").defaultNow().notNull(),
+});
+
+export const scheduledNudges = pgTable("scheduled_nudges", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  channelId: text("channel_id").notNull(),
+  recommendationId: integer("recommendation_id"),
+  nudgeType: text("nudge_type").notNull().default("stall"),
+  dueAt: timestamp("due_at").notNull(),
+  sentAt: timestamp("sent_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertAgentEventSchema = createInsertSchema(agentEvents).omit({
+  id: true,
+  sentAt: true,
+});
+
+export const insertScheduledNudgeSchema = createInsertSchema(scheduledNudges).omit({
+  id: true,
+  sentAt: true,
+  createdAt: true,
+});
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 
@@ -272,6 +305,12 @@ export type UserIntegration = typeof userIntegrations.$inferSelect;
 
 export type InsertStrategySnapshot = z.infer<typeof insertStrategySnapshotSchema>;
 export type StrategySnapshot = typeof strategySnapshots.$inferSelect;
+
+export type InsertAgentEvent = z.infer<typeof insertAgentEventSchema>;
+export type AgentEvent = typeof agentEvents.$inferSelect;
+
+export type InsertScheduledNudge = z.infer<typeof insertScheduledNudgeSchema>;
+export type ScheduledNudge = typeof scheduledNudges.$inferSelect;
 
 // Runtime-managed tables. Declared here so `drizzle-kit push` does not try to
 // drop them. The runtime "CREATE TABLE IF NOT EXISTS" calls in
@@ -374,6 +413,10 @@ export const checkoutSchema = z.object({
 export const integrationUpdateSchema = z.object({
   integrationName: z.string().min(1).max(200),
   isConnected: z.boolean(),
+});
+
+export const agentSettingsSchema = z.object({
+  agentEnabled: z.boolean(),
 });
 
 export const pushSubscribeSchema = z.object({

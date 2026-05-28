@@ -12,6 +12,7 @@ import notificationsRouter from "./routes/notifications";
 import budgetRouter from "./routes/budget";
 import personasRouter from "./routes/personas";
 import historyRouter from "./routes/history";
+import agentRouter from "./routes/agent";
 
 const ARTICLE_SLUGS = [
   "what-is-go-to-market-strategy-complete-guide",
@@ -182,6 +183,7 @@ ${ARTICLE_SLUGS.map(slug => `- [${slug.replace(/-/g, ' ')}](https://gtmchampion.
   app.use(budgetRouter);
   app.use(personasRouter);
   app.use(historyRouter);
+  app.use(agentRouter);
 
   return httpServer;
 }

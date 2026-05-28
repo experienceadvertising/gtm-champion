@@ -4,6 +4,7 @@ import { storage } from "../storage";
 import type { Company, User } from "@shared/schema";
 import { generateWeeklyIdeas } from "./openai";
 import { sendWeeklyEmail, sendChannelStrategyEmail } from "./email";
+import { processStallNudges, sendWeeklyDigestsToAllProUsers } from "./gtmAgent";
 
 const CHANNEL_ROTATION = [
   "SEO", "Content", "LLMs", "Email Marketing", "Organic Social",
@@ -35,11 +36,26 @@ export function startWeeklyEmailScheduler() {
       console.log("Running weekly ideas email job - Monday 9 AM...");
       await sendWeeklyEmailsToAllUsers();
     }
+
+    console.log("Running GTM Agent weekly digests - Monday 9 AM...");
+    await sendWeeklyDigestsToAllProUsers().catch(err =>
+      console.error("GTM Agent weekly digests error:", err)
+    );
+  }, {
+    timezone: "America/New_York"
+  });
+
+  cron.schedule("0 2 * * *", async () => {
+    console.log("Running GTM Agent stall nudges - 2 AM ET...");
+    await processStallNudges().catch(err =>
+      console.error("GTM Agent stall nudge error:", err)
+    );
   }, {
     timezone: "America/New_York"
   });
 
   console.log("Weekly email scheduler started - alternates between channel deep-dives and weekly ideas every Monday at 9 AM ET");
+  console.log("GTM Agent: stall nudge check runs daily at 2 AM ET; weekly digests run Monday at 9 AM ET (Pro users only)");
 }
 
 async function processWeeklyIdeasFor(user: User, company: Company): Promise<boolean> {

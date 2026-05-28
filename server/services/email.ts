@@ -824,6 +824,243 @@ Unsubscribe: {{{pm:unsubscribe}}}
   }
 }
 
+// GTM Agent Emails
+
+export interface AgentMilestoneEmailData {
+  toEmail: string;
+  userName: string;
+  companyName: string;
+  channelId: string;
+}
+
+export async function sendAgentMilestoneEmail(data: AgentMilestoneEmailData): Promise<void> {
+  const firstName = escapeHtml(data.userName.split(' ')[0]);
+  const channelName = escapeHtml(data.channelId);
+  const dashboardUrl = `https://gtmchampion.com/dashboard?channel=${encodeURIComponent(data.channelId)}`;
+
+  const htmlBody = `
+<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+<div style="background:#f8fafc;padding:40px 20px;">
+<div style="max-width:600px;margin:0 auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+  <div style="background:linear-gradient(135deg,#4f46e5 0%,#7c3aed 50%,#a855f7 100%);padding:32px;text-align:center;">
+    <div style="font-size:36px;margin-bottom:8px;">🚀</div>
+    <div style="font-size:22px;font-weight:800;color:#fff;">GTM Agent</div>
+    <p style="color:rgba(255,255,255,0.85);margin:6px 0 0;font-size:14px;">Your personal marketing coach</p>
+  </div>
+  <div style="padding:32px;">
+    <p style="color:#475569;margin:0 0 4px;">Hi ${firstName},</p>
+    <h2 style="color:#0f172a;font-size:20px;margin:12px 0 8px;font-weight:700;">Great start on your <span style="color:#6366f1;">${channelName}</span> strategy!</h2>
+    <p style="color:#64748b;font-size:15px;line-height:1.6;margin:0 0 24px;">You've taken the first step on your ${channelName} channel. I'm your GTM Agent — I'll check in to keep your momentum going and make sure nothing stalls.</p>
+    <div style="background:#eef2ff;border-radius:12px;padding:20px;margin:0 0 24px;">
+      <p style="color:#4338ca;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;margin:0 0 8px;">Your first milestone</p>
+      <p style="color:#1e293b;font-size:15px;margin:0;">Complete at least one ${channelName} recommendation this week. I'll check back in 3 days to see how it's going.</p>
+    </div>
+    <div style="text-align:center;margin:24px 0 8px;">
+      <a href="${dashboardUrl}" style="display:inline-block;background:linear-gradient(135deg,#4f46e5 0%,#7c3aed 100%);color:#fff;padding:14px 40px;text-decoration:none;border-radius:10px;font-weight:700;font-size:15px;">View ${channelName} Strategy →</a>
+    </div>
+  </div>
+  <div style="background:#f8fafc;padding:20px 32px;border-top:1px solid #e2e8f0;text-align:center;">
+    <p style="color:#94a3b8;font-size:12px;margin:0;">© 2026 GTM Champion · <a href="{{{pm:unsubscribe}}}" style="color:#94a3b8;">Unsubscribe</a></p>
+  </div>
+</div></div></body></html>`;
+
+  if (!postmarkClient) { console.log("Postmark not configured — agent milestone email:", data.toEmail); return; }
+  try {
+    await postmarkClient.sendEmail({
+      From: FROM_ADDRESS, To: data.toEmail,
+      Subject: `GTM Agent: Great start on ${data.channelId}! Here's your first milestone`,
+      HtmlBody: htmlBody,
+      TextBody: `Hi ${firstName},\n\nGreat start on your ${channelName} strategy! You've taken the first step.\n\nYour first milestone: Complete at least one ${channelName} recommendation this week. I'll check back in 3 days.\n\nView strategy: ${dashboardUrl}\n\n© 2026 GTM Champion`,
+      MessageStream: "outbound",
+    });
+    console.log(`Agent milestone email sent to ${data.toEmail} (${data.channelId})`);
+  } catch (err) { console.error("Failed to send agent milestone email:", err); }
+}
+
+export interface AgentStallEmailData {
+  toEmail: string;
+  userName: string;
+  companyName: string;
+  channelId: string;
+  quickWin: { title: string; steps: string[]; effort: string } | null;
+}
+
+export async function sendAgentStallEmail(data: AgentStallEmailData): Promise<void> {
+  const firstName = escapeHtml(data.userName.split(' ')[0]);
+  const channelName = escapeHtml(data.channelId);
+  const dashboardUrl = `https://gtmchampion.com/dashboard?channel=${encodeURIComponent(data.channelId)}`;
+  const quickWinHtml = data.quickWin ? `
+    <div style="background:#f0fdf4;border-radius:12px;padding:20px;margin:0 0 24px;border-left:4px solid #22c55e;">
+      <p style="color:#166534;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;margin:0 0 6px;">Quick win to try today</p>
+      <p style="color:#1e293b;font-size:15px;font-weight:600;margin:0 0 8px;">${escapeHtml(data.quickWin.title)}</p>
+      ${(data.quickWin.steps || []).slice(0, 3).map((s, i) => `<p style="color:#475569;font-size:13px;margin:0 0 4px;">${i + 1}. ${escapeHtml(s)}</p>`).join('')}
+      <p style="color:#94a3b8;font-size:11px;margin:8px 0 0;">${escapeHtml(data.quickWin.effort)} effort</p>
+    </div>` : '';
+
+  const htmlBody = `
+<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+<div style="background:#f8fafc;padding:40px 20px;">
+<div style="max-width:600px;margin:0 auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+  <div style="background:linear-gradient(135deg,#f59e0b 0%,#d97706 100%);padding:32px;text-align:center;">
+    <div style="font-size:36px;margin-bottom:8px;">⏰</div>
+    <div style="font-size:22px;font-weight:800;color:#fff;">GTM Agent Check-In</div>
+    <p style="color:rgba(255,255,255,0.9);margin:6px 0 0;font-size:14px;">Keeping your ${channelName} strategy on track</p>
+  </div>
+  <div style="padding:32px;">
+    <p style="color:#475569;margin:0 0 4px;">Hi ${firstName},</p>
+    <h2 style="color:#0f172a;font-size:20px;margin:12px 0 8px;font-weight:700;">Checking in on your <span style="color:#6366f1;">${channelName}</span> strategy</h2>
+    <p style="color:#64748b;font-size:15px;line-height:1.6;margin:0 0 24px;">It's been 3 days since you started working on ${channelName}. You have items in progress — let's keep the momentum going. Even one small step this week makes a difference.</p>
+    ${quickWinHtml}
+    <div style="text-align:center;margin:24px 0 8px;">
+      <a href="${dashboardUrl}" style="display:inline-block;background:linear-gradient(135deg,#4f46e5 0%,#7c3aed 100%);color:#fff;padding:14px 40px;text-decoration:none;border-radius:10px;font-weight:700;font-size:15px;">Resume ${channelName} Strategy →</a>
+    </div>
+  </div>
+  <div style="background:#f8fafc;padding:20px 32px;border-top:1px solid #e2e8f0;text-align:center;">
+    <p style="color:#94a3b8;font-size:12px;margin:0;">© 2026 GTM Champion · <a href="{{{pm:unsubscribe}}}" style="color:#94a3b8;">Unsubscribe</a></p>
+  </div>
+</div></div></body></html>`;
+
+  if (!postmarkClient) { console.log("Postmark not configured — agent stall email:", data.toEmail); return; }
+  try {
+    await postmarkClient.sendEmail({
+      From: FROM_ADDRESS, To: data.toEmail,
+      Subject: `GTM Agent: Checking in on your ${data.channelId} strategy — here's a quick win`,
+      HtmlBody: htmlBody,
+      TextBody: `Hi ${firstName},\n\nChecking in on your ${channelName} strategy. It's been 3 days — let's keep the momentum going.\n\n${data.quickWin ? `Quick win: ${data.quickWin.title}\n${(data.quickWin.steps || []).join('\n')}` : ''}\n\nView strategy: ${dashboardUrl}\n\n© 2026 GTM Champion`,
+      MessageStream: "outbound",
+    });
+    console.log(`Agent stall email sent to ${data.toEmail} (${data.channelId})`);
+  } catch (err) { console.error("Failed to send agent stall email:", err); }
+}
+
+export interface AgentCongratsEmailData {
+  toEmail: string;
+  userName: string;
+  companyName: string;
+  channelId: string;
+}
+
+export async function sendAgentCongratsEmail(data: AgentCongratsEmailData): Promise<void> {
+  const firstName = escapeHtml(data.userName.split(' ')[0]);
+  const channelName = escapeHtml(data.channelId);
+  const dashboardUrl = `https://gtmchampion.com/dashboard`;
+
+  const htmlBody = `
+<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+<div style="background:#f8fafc;padding:40px 20px;">
+<div style="max-width:600px;margin:0 auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+  <div style="background:linear-gradient(135deg,#22c55e 0%,#16a34a 100%);padding:32px;text-align:center;">
+    <div style="font-size:48px;margin-bottom:8px;">🎉</div>
+    <div style="font-size:22px;font-weight:800;color:#fff;">Channel Complete!</div>
+    <p style="color:rgba(255,255,255,0.9);margin:6px 0 0;font-size:15px;">${channelName} strategy fully executed</p>
+  </div>
+  <div style="padding:32px;">
+    <p style="color:#475569;margin:0 0 4px;">Hi ${firstName},</p>
+    <h2 style="color:#0f172a;font-size:20px;margin:12px 0 8px;font-weight:700;">You've completed your <span style="color:#16a34a;">${channelName}</span> strategy!</h2>
+    <p style="color:#64748b;font-size:15px;line-height:1.6;margin:0 0 20px;">Excellent work! You've completed all ${channelName} recommendations for ${escapeHtml(data.companyName)}. This is a real milestone — most companies never get this far.</p>
+    <div style="background:#f0fdf4;border-radius:12px;padding:20px;margin:0 0 24px;border:1px solid #bbf7d0;">
+      <p style="color:#166534;font-size:14px;margin:0;font-weight:600;">What to do next:</p>
+      <p style="color:#475569;font-size:14px;margin:8px 0 0;line-height:1.6;">Review your other channels and start working on the next highest-priority strategy. Your GTM Agent has already identified what needs attention.</p>
+    </div>
+    <div style="text-align:center;margin:24px 0 8px;">
+      <a href="${dashboardUrl}" style="display:inline-block;background:linear-gradient(135deg,#4f46e5 0%,#7c3aed 100%);color:#fff;padding:14px 40px;text-decoration:none;border-radius:10px;font-weight:700;font-size:15px;">View Next Priorities →</a>
+    </div>
+  </div>
+  <div style="background:#f8fafc;padding:20px 32px;border-top:1px solid #e2e8f0;text-align:center;">
+    <p style="color:#94a3b8;font-size:12px;margin:0;">© 2026 GTM Champion · <a href="{{{pm:unsubscribe}}}" style="color:#94a3b8;">Unsubscribe</a></p>
+  </div>
+</div></div></body></html>`;
+
+  if (!postmarkClient) { console.log("Postmark not configured — agent congrats email:", data.toEmail); return; }
+  try {
+    await postmarkClient.sendEmail({
+      From: FROM_ADDRESS, To: data.toEmail,
+      Subject: `GTM Agent: You completed your ${data.channelId} strategy!`,
+      HtmlBody: htmlBody,
+      TextBody: `Hi ${firstName},\n\nYou've completed all ${channelName} recommendations for ${data.companyName}. Excellent work!\n\nView your next priorities: ${dashboardUrl}\n\n© 2026 GTM Champion`,
+      MessageStream: "outbound",
+    });
+    console.log(`Agent congrats email sent to ${data.toEmail} (${data.channelId})`);
+  } catch (err) { console.error("Failed to send agent congrats email:", err); }
+}
+
+export interface AgentWeeklyDigestEmailData {
+  toEmail: string;
+  userName: string;
+  companyName: string;
+  stalled: string[];
+  onTrack: string[];
+  notStarted: string[];
+  topFocus: string;
+}
+
+export async function sendAgentWeeklyDigestEmail(data: AgentWeeklyDigestEmailData): Promise<void> {
+  const firstName = escapeHtml(data.userName.split(' ')[0]);
+  const dashboardUrl = `https://gtmchampion.com/dashboard`;
+
+  const stalledHtml = data.stalled.length ? data.stalled.map(ch =>
+    `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f1f5f9;"><span style="background:#fef9c3;color:#854d0e;font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px;">STALLED</span><span style="color:#1e293b;font-size:14px;">${escapeHtml(ch)}</span><a href="${dashboardUrl}?channel=${encodeURIComponent(ch)}" style="color:#6366f1;font-size:12px;font-weight:600;text-decoration:none;margin-left:auto;">Resume →</a></div>`
+  ).join('') : '';
+
+  const onTrackHtml = data.onTrack.length ? data.onTrack.map(ch =>
+    `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f1f5f9;"><span style="background:#dcfce7;color:#166534;font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px;">ON TRACK</span><span style="color:#1e293b;font-size:14px;">${escapeHtml(ch)}</span></div>`
+  ).join('') : '';
+
+  const notStartedHtml = data.notStarted.slice(0, 3).length ? data.notStarted.slice(0, 3).map(ch =>
+    `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f1f5f9;"><span style="background:#f1f5f9;color:#64748b;font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px;">NOT STARTED</span><span style="color:#1e293b;font-size:14px;">${escapeHtml(ch)}</span><a href="${dashboardUrl}?channel=${encodeURIComponent(ch)}" style="color:#6366f1;font-size:12px;font-weight:600;text-decoration:none;margin-left:auto;">Start →</a></div>`
+  ).join('') : '';
+
+  const focusHtml = data.topFocus ? `
+    <div style="background:#eef2ff;border-radius:12px;padding:20px;margin:24px 0;">
+      <p style="color:#4338ca;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;margin:0 0 6px;">This week's focus</p>
+      <p style="color:#1e293b;font-size:16px;font-weight:600;margin:0 0 8px;">${escapeHtml(data.topFocus)}</p>
+      <a href="${dashboardUrl}?channel=${encodeURIComponent(data.topFocus)}" style="color:#6366f1;font-size:14px;font-weight:600;text-decoration:none;">View strategy →</a>
+    </div>` : '';
+
+  const htmlBody = `
+<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+<div style="background:#f8fafc;padding:40px 20px;">
+<div style="max-width:600px;margin:0 auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+  <div style="background:linear-gradient(135deg,#4f46e5 0%,#7c3aed 50%,#a855f7 100%);padding:32px;text-align:center;">
+    <div style="font-size:30px;margin-bottom:8px;">🤖</div>
+    <div style="font-size:22px;font-weight:800;color:#fff;">GTM Agent Weekly Report</div>
+    <p style="color:rgba(255,255,255,0.85);margin:6px 0 0;font-size:14px;">Your personalized coaching digest for ${escapeHtml(data.companyName)}</p>
+  </div>
+  <div style="padding:32px;">
+    <p style="color:#475569;margin:0 0 4px;">Hi ${firstName},</p>
+    <p style="color:#64748b;font-size:15px;line-height:1.6;margin:12px 0 24px;">Here's your weekly GTM progress report. I've reviewed all your channel strategies and here's where things stand:</p>
+    ${focusHtml}
+    ${(stalledHtml || onTrackHtml || notStartedHtml) ? `
+    <h3 style="color:#0f172a;font-size:16px;margin:0 0 12px;font-weight:700;">Channel Status Overview</h3>
+    <div style="border:1px solid #e2e8f0;border-radius:10px;padding:0 16px;">
+      ${stalledHtml}${onTrackHtml}${notStartedHtml}
+    </div>` : ''}
+    <div style="text-align:center;margin:28px 0 8px;">
+      <a href="${dashboardUrl}" style="display:inline-block;background:linear-gradient(135deg,#4f46e5 0%,#7c3aed 100%);color:#fff;padding:14px 40px;text-decoration:none;border-radius:10px;font-weight:700;font-size:15px;">Open Dashboard →</a>
+    </div>
+  </div>
+  <div style="background:#f8fafc;padding:20px 32px;border-top:1px solid #e2e8f0;text-align:center;">
+    <p style="color:#94a3b8;font-size:12px;margin:0;">GTM Agent checks in every week to keep your strategy on track. · © 2026 GTM Champion · <a href="{{{pm:unsubscribe}}}" style="color:#94a3b8;">Unsubscribe</a></p>
+  </div>
+</div></div></body></html>`;
+
+  if (!postmarkClient) { console.log("Postmark not configured — agent weekly digest:", data.toEmail); return; }
+  try {
+    await postmarkClient.sendEmail({
+      From: FROM_ADDRESS, To: data.toEmail,
+      Subject: `GTM Agent: Your weekly strategy report for ${data.companyName}`,
+      HtmlBody: htmlBody,
+      TextBody: `Hi ${firstName},\n\nHere's your weekly GTM progress report.\n\nThis week's focus: ${data.topFocus || "Get started on your first channel"}\n\nStalled channels: ${data.stalled.join(", ") || "None"}\nOn track: ${data.onTrack.join(", ") || "None"}\nNot started: ${data.notStarted.join(", ") || "None"}\n\nOpen dashboard: ${dashboardUrl}\n\n© 2026 GTM Champion`,
+      MessageStream: "broadcast",
+    });
+    console.log(`Agent weekly digest sent to ${data.toEmail}`);
+  } catch (err) { console.error("Failed to send agent weekly digest email:", err); }
+}
+
 // Feature Announcement Email
 export interface FeatureAnnouncementEmailData {
   toEmail: string;

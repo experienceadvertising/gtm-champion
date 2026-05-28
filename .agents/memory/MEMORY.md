@@ -1,0 +1,1 @@
+- [GTM Agent architecture](gtm-agent.md) — agent_events + scheduled_nudges tables drive all Pro coaching; hooks fire non-blocking from status-change route

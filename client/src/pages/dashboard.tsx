@@ -74,6 +74,7 @@ import { useAmbientMusic } from "@/hooks/use-ambient-music";
 import { useTheme } from "@/components/ThemeProvider";
 import { useKeyboardShortcuts, KEYBOARD_SHORTCUTS } from "@/hooks/use-keyboard-shortcuts";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 
 const CHANNELS = [
   { id: "all", label: "All Channels", icon: LayoutDashboard, tooltip: "Overview of all marketing channels" },
@@ -203,6 +204,8 @@ export default function Dashboard() {
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [bulkMode, setBulkMode] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const [agentEnabled, setAgentEnabled] = useState<boolean | null>(null);
+  const [agentToggling, setAgentToggling] = useState(false);
 
   useEffect(() => {
     if (!session) {
@@ -223,6 +226,36 @@ export default function Dashboard() {
     }
     window.scrollTo({ top: 0, behavior: "instant" });
   }, [selectedChannel]);
+
+  const { data: agentEventsData } = useQuery({
+    queryKey: ["agentEvents"],
+    queryFn: async () => {
+      const res = await fetch("/api/agent/events", { credentials: "include" });
+      if (!res.ok) return { events: [] };
+      return res.json() as Promise<{ events: Array<{ id: number; eventType: string; channelId: string | null; sentAt: string; channel: string }> }>;
+    },
+    enabled: !!session && (isPremium || false),
+    refetchInterval: false,
+  });
+
+  const handleAgentToggle = async (enabled: boolean) => {
+    setAgentToggling(true);
+    try {
+      const res = await fetch("/api/agent/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ agentEnabled: enabled }),
+      });
+      if (!res.ok) throw new Error();
+      setAgentEnabled(enabled);
+      toast({ title: enabled ? "GTM Agent enabled" : "GTM Agent paused", description: enabled ? "You'll receive coaching nudges and weekly digests." : "You won't receive coaching emails until you re-enable the agent." });
+    } catch {
+      toast({ title: "Failed to update agent settings", variant: "destructive" });
+    } finally {
+      setAgentToggling(false);
+    }
+  };
 
   const { data, isLoading, error, refetch, isFetching } = useQuery({
     queryKey: ["dashboard"],
@@ -245,6 +278,12 @@ export default function Dashboard() {
     },
   });
 
+
+  useEffect(() => {
+    if (data?.user?.agentEnabled !== undefined && agentEnabled === null) {
+      setAgentEnabled(data.user.agentEnabled);
+    }
+  }, [data?.user?.agentEnabled]);
 
   const handleRefresh = async () => {
     try {
@@ -1523,6 +1562,103 @@ export default function Dashboard() {
                   </CardContent>
                 </Card>
               </motion.div>
+
+              {isPremium && (
+                <motion.div
+                  initial={{ opacity: 0, y: 15 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.075 }}
+                >
+                  <Card
+                    className="border-none shadow-md ring-1 ring-indigo-200/60 bg-gradient-to-br from-indigo-50 via-white to-purple-50 overflow-hidden relative"
+                    data-testid="card-gtm-agent"
+                  >
+                    <div className="absolute top-0 right-0 w-36 h-36 bg-indigo-200/20 rounded-full -translate-y-10 translate-x-10" />
+                    <CardHeader className="relative pb-3">
+                      <div className="flex items-start justify-between gap-4 flex-wrap">
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-lg bg-indigo-100 flex items-center justify-center">
+                            <Bot className="h-5 w-5 text-indigo-600" />
+                          </div>
+                          <div>
+                            <Badge variant="secondary" className="mb-1 bg-indigo-100 text-indigo-700 hover:bg-indigo-100">Pro</Badge>
+                            <CardTitle className="text-lg font-display">GTM Agent</CardTitle>
+                            <CardDescription className="text-xs">Your personal marketing coach — checks in when you stall and celebrates wins</CardDescription>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className="text-xs text-muted-foreground">{agentEnabled === false ? "Paused" : "Active"}</span>
+                          <Switch
+                            checked={agentEnabled === true}
+                            onCheckedChange={handleAgentToggle}
+                            disabled={agentToggling || agentEnabled === null}
+                            aria-label="Toggle GTM Agent"
+                            data-testid="toggle-gtm-agent"
+                          />
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="relative pt-0">
+                      {agentEnabled === false && (
+                        <div className="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800 mb-4">
+                          GTM Agent is paused. Toggle it on to receive coaching nudges and weekly digest emails.
+                        </div>
+                      )}
+                      <div className="grid sm:grid-cols-3 gap-3 mb-4">
+                        <div className="rounded-lg bg-white/70 border border-indigo-100 p-3">
+                          <p className="text-xs font-semibold text-indigo-700 uppercase tracking-wide mb-1">Milestone nudges</p>
+                          <p className="text-xs text-muted-foreground">Sent when you start a channel — sets your first milestone</p>
+                        </div>
+                        <div className="rounded-lg bg-white/70 border border-indigo-100 p-3">
+                          <p className="text-xs font-semibold text-indigo-700 uppercase tracking-wide mb-1">Stall check-ins</p>
+                          <p className="text-xs text-muted-foreground">Checks back 3 days after you start — suggests a quick win if you're stuck</p>
+                        </div>
+                        <div className="rounded-lg bg-white/70 border border-indigo-100 p-3">
+                          <p className="text-xs font-semibold text-indigo-700 uppercase tracking-wide mb-1">Weekly digest</p>
+                          <p className="text-xs text-muted-foreground">Every Monday — your full strategy progress with what to focus on this week</p>
+                        </div>
+                      </div>
+                      {(agentEventsData?.events?.length ?? 0) > 0 && (
+                        <div>
+                          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Recent activity</p>
+                          <div className="space-y-1">
+                            {agentEventsData!.events.slice(0, 5).map((event) => {
+                              const eventLabels: Record<string, string> = {
+                                milestone_start: "Milestone check-in sent",
+                                stall_nudge: "Stall nudge sent",
+                                completion_congrats: "Congrats email sent",
+                                weekly_digest: "Weekly digest sent",
+                              };
+                              const eventIcons: Record<string, string> = {
+                                milestone_start: "🚀",
+                                stall_nudge: "⏰",
+                                completion_congrats: "🎉",
+                                weekly_digest: "📊",
+                              };
+                              const label = eventLabels[event.eventType] || event.eventType;
+                              const icon = eventIcons[event.eventType] || "🤖";
+                              const sentAt = new Date(event.sentAt);
+                              const daysAgo = Math.floor((Date.now() - sentAt.getTime()) / 86400000);
+                              const timeLabel = daysAgo === 0 ? "Today" : daysAgo === 1 ? "Yesterday" : `${daysAgo}d ago`;
+                              return (
+                                <div key={event.id} className="flex items-center gap-2 text-xs py-1.5 border-b border-indigo-50 last:border-0" data-testid={`agent-event-${event.id}`}>
+                                  <span className="text-base leading-none">{icon}</span>
+                                  <span className="text-foreground font-medium">{label}</span>
+                                  {event.channelId && <Badge variant="outline" className="text-[10px] h-4 px-1.5 border-indigo-200 text-indigo-600">{event.channelId}</Badge>}
+                                  <span className="ml-auto text-muted-foreground">{timeLabel}</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                      {(agentEventsData?.events?.length ?? 0) === 0 && agentEnabled !== false && (
+                        <p className="text-xs text-muted-foreground italic">No activity yet. Start working on a channel recommendation to trigger your first coaching nudge.</p>
+                      )}
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              )}
 
               {company.siteProfile && (
                 <motion.div

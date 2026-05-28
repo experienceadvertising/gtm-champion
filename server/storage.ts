@@ -1,4 +1,4 @@
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, lte, isNull } from "drizzle-orm";
 import { db } from "../db/index";
 import {
   users,
@@ -11,6 +11,8 @@ import {
   budgetAllocations,
   buyerPersonas,
   strategySnapshots,
+  agentEvents,
+  scheduledNudges,
   type User,
   type InsertUser,
   type Company,
@@ -30,7 +32,11 @@ import {
   type BuyerPersona,
   type InsertBuyerPersona,
   type StrategySnapshot,
-  type InsertStrategySnapshot
+  type InsertStrategySnapshot,
+  type AgentEvent,
+  type InsertAgentEvent,
+  type ScheduledNudge,
+  type InsertScheduledNudge,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -95,6 +101,17 @@ export interface IStorage {
   createStrategySnapshot(snapshot: InsertStrategySnapshot): Promise<StrategySnapshot>;
   getStrategySnapshotsByUserId(userId: string): Promise<StrategySnapshot[]>;
   getStrategySnapshot(id: number, userId: string): Promise<StrategySnapshot | undefined>;
+
+  updateUserAgentEnabled(id: string, agentEnabled: boolean): Promise<void>;
+
+  createAgentEvent(event: InsertAgentEvent): Promise<AgentEvent>;
+  getRecentAgentEvents(userId: string, limit?: number): Promise<AgentEvent[]>;
+  hasAgentEvent(userId: string, eventType: string, channelId: string, windowMs: number): Promise<boolean>;
+
+  createScheduledNudge(nudge: InsertScheduledNudge): Promise<ScheduledNudge>;
+  getPendingScheduledNudges(): Promise<Array<ScheduledNudge & { user: User }>>;
+  markScheduledNudgeSent(id: number): Promise<void>;
+  hasPendingNudge(userId: string, channelId: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -370,6 +387,75 @@ export class DatabaseStorage implements IStorage {
       .where(and(eq(strategySnapshots.id, id), eq(strategySnapshots.userId, userId)))
       .limit(1);
     return snapshot;
+  }
+
+  async updateUserAgentEnabled(id: string, agentEnabled: boolean): Promise<void> {
+    await db.update(users).set({ agentEnabled }).where(eq(users.id, id));
+  }
+
+  async createAgentEvent(event: InsertAgentEvent): Promise<AgentEvent> {
+    const [result] = await db.insert(agentEvents).values(event).returning();
+    return result;
+  }
+
+  async getRecentAgentEvents(userId: string, limit = 10): Promise<AgentEvent[]> {
+    return db
+      .select()
+      .from(agentEvents)
+      .where(eq(agentEvents.userId, userId))
+      .orderBy(desc(agentEvents.sentAt))
+      .limit(limit);
+  }
+
+  async hasAgentEvent(userId: string, eventType: string, channelId: string, windowMs: number): Promise<boolean> {
+    const cutoff = new Date(Date.now() - windowMs);
+    const { sql: sqlFn } = await import("drizzle-orm");
+    const rows = await db
+      .select({ id: agentEvents.id })
+      .from(agentEvents)
+      .where(
+        and(
+          eq(agentEvents.userId, userId),
+          eq(agentEvents.eventType, eventType),
+          eq(agentEvents.channelId, channelId),
+          sqlFn`${agentEvents.sentAt} >= ${cutoff}`
+        )
+      )
+      .limit(1);
+    return rows.length > 0;
+  }
+
+  async createScheduledNudge(nudge: InsertScheduledNudge): Promise<ScheduledNudge> {
+    const [result] = await db.insert(scheduledNudges).values(nudge).returning();
+    return result;
+  }
+
+  async getPendingScheduledNudges(): Promise<Array<ScheduledNudge & { user: User }>> {
+    const rows = await db
+      .select({ nudge: scheduledNudges, user: users })
+      .from(scheduledNudges)
+      .innerJoin(users, eq(users.id, scheduledNudges.userId))
+      .where(and(isNull(scheduledNudges.sentAt), lte(scheduledNudges.dueAt, new Date())));
+    return rows.map(r => ({ ...r.nudge, user: r.user }));
+  }
+
+  async markScheduledNudgeSent(id: number): Promise<void> {
+    await db.update(scheduledNudges).set({ sentAt: new Date() }).where(eq(scheduledNudges.id, id));
+  }
+
+  async hasPendingNudge(userId: string, channelId: string): Promise<boolean> {
+    const rows = await db
+      .select({ id: scheduledNudges.id })
+      .from(scheduledNudges)
+      .where(
+        and(
+          eq(scheduledNudges.userId, userId),
+          eq(scheduledNudges.channelId, channelId),
+          isNull(scheduledNudges.sentAt)
+        )
+      )
+      .limit(1);
+    return rows.length > 0;
   }
 }
 
