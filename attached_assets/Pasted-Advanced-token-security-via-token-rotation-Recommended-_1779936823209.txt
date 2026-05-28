@@ -1,0 +1,49 @@
+Advanced token security via token rotation
+Recommended for developers building on or for security-minded organizations – opting into token rotation allows app tokens to automatically expire after they’re issued within your app code. View documentation.
+
+At least one redirect URL needs to be set below before this app can be opted into token rotation
+Proof Key for Code Exchange (PKCE)
+Enabling this feature lets your app use PKCE during OAuth. This is required if your app redirects to a custom URI scheme like myapp://OAuth, and optional for web-based authentication. See documentation for more details.
+
+OAuth Tokens
+OAuth Tokens will be automatically generated when you finish installing your app to your workspace. You’ll use these tokens to authenticate your app.
+
+Please add at least one feature or permission scope below to install your app.
+Redirect URLs
+You will need to configure redirect URLs in order to automatically generate the Add to Slack button or to distribute your app. If you pass a URL in an OAuth request, it must (partially) match one of the URLs you enter here. Learn more.
+
+Redirect URLs
+https://gtmchampion.com/api/auth/slack/callback
+https://4ae7c720-ce84-4ffb-b214-d27a5fd2bc1b-00-1xp224zncrcoe.spock.replit.dev/api/auth/slack/callback
+Scopes
+A Slack app's capabilities and permissions are governed by the scopes it requests.
+
+Changes in optional status apply immediately to your published app as long as the scopes are already approved.
+
+Bot Token Scopes
+Scopes that govern what your app can access.
+
+Required
+
+OAuth Scope
+Description
+ 
+You haven’t added any OAuth Scopes for your Bot token.
+User Token Scopes
+Scopes that access user data and act on behalf of users that authorize them.
+
+Required
+
+OAuth Scope
+Description
+ 
+You haven’t added any OAuth Scopes for your User token.
+Scopes define the API methods an app is allowed to call, which information and capabilities are available on the workspace it’s installed on. Many scopes are restricted to specific resources like channels or files.
+
+Restrict API Token Usage
+Slack can limit use of your app’s OAuth tokens to a list of IP addresses and ranges you provide. Slack will then reject Web API method calls from unlisted IP addresses. Learn more.
+
+Allowed IP Address Ranges
+You haven’t added any IP address ranges
+Revoke All OAuth Tokens
+You can revoke all OAuth tokens if you want to invalidate the access any existing tokens have to Slack workspace data. Users will need to grant your app permissions again to use it.
