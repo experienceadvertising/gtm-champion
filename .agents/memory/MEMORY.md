@@ -1,1 +1,2 @@
 - [GTM Agent architecture](gtm-agent.md) — agent_events + scheduled_nudges tables drive all Pro coaching; hooks fire non-blocking from status-change route
+- [Slack OAuth www/session pitfalls](slack-oauth-www-session.md) — HMAC-signed state fixes both www-stripping redirect mismatch and cross-domain session cookie failure.
