@@ -3,6 +3,11 @@ import { storage } from "../storage";
 import { requireAdmin } from "./middleware";
 import { generateWeeklyIdeas } from "../services/openai";
 import { sendWeeklyEmail } from "../services/email";
+import {
+  fireMilestoneStart,
+  fireStallNudge,
+  sendWeeklyCoachingDigest,
+} from "../services/gtmAgent";
 
 const router = Router();
 
@@ -91,6 +96,65 @@ router.get("/api/admin/analytics", requireAdmin, async (_req: Request, res: Resp
   } catch (error: unknown) {
     console.error("Admin analytics error:", error);
     res.status(500).json({ error: "Failed to fetch analytics" });
+  }
+});
+
+router.patch("/api/admin/users/:userId/premium", requireAdmin, async (req: Request, res: Response) => {
+  try {
+    const { userId } = req.params;
+    const target = await storage.getUser(userId);
+    if (!target) return res.status(404).json({ error: "User not found" });
+    const newStatus = !target.isPremium;
+    await storage.updateUserPremiumStatus(userId, newStatus);
+    res.json({ isPremium: newStatus });
+  } catch (err: any) {
+    console.error("Admin toggle premium error:", err?.message || err);
+    res.status(500).json({ error: "Failed to update premium status" });
+  }
+});
+
+router.post("/api/admin/agent/trigger/:userId", requireAdmin, async (req: Request, res: Response) => {
+  try {
+    const { userId } = req.params;
+    const { type } = req.body as { type: string };
+
+    const user = await storage.getUser(userId);
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    if (type === "weekly_digest") {
+      await sendWeeklyCoachingDigest(userId);
+      return res.json({ message: "Weekly digest sent" });
+    }
+
+    const company = await storage.getCompanyByUserId(userId);
+    if (!company) return res.status(400).json({ error: "User has no company data yet" });
+
+    const recs = await storage.getRecommendationsByCompanyId(company.id);
+    const inProgress = recs.find(r => r.status === "In Progress") ?? recs[0];
+    if (!inProgress) return res.status(400).json({ error: "User has no recommendations yet" });
+
+    const channelId = inProgress.category.toLowerCase().replace(/\s+/g, "-");
+
+    if (type === "milestone_start") {
+      await fireMilestoneStart(userId, channelId, inProgress.id);
+      return res.json({ message: `Milestone start fired for channel "${channelId}"` });
+    }
+
+    if (type === "stall_nudge") {
+      const nudge = await storage.createScheduledNudge({
+        userId,
+        channelId,
+        nudgeType: "stall",
+        dueAt: new Date(Date.now() - 1000),
+      });
+      await fireStallNudge(userId, channelId, nudge.id);
+      return res.json({ message: `Stall nudge fired for channel "${channelId}"` });
+    }
+
+    return res.status(400).json({ error: "Unknown trigger type" });
+  } catch (err: any) {
+    console.error("Admin agent trigger error:", err?.message || err);
+    res.status(500).json({ error: err?.message || "Failed to trigger agent event" });
   }
 });
 

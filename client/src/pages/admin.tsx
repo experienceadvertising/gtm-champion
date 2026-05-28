@@ -47,6 +47,8 @@ import {
   Bell,
   ChevronLeft,
   ChevronRight,
+  Crown,
+  Play,
 } from "lucide-react";
 
 interface AdminUser {
@@ -210,6 +212,51 @@ export default function AdminPage() {
     onError: (err: Error) => {
       toast({ title: "Error", description: err.message, variant: "destructive" });
     },
+  });
+
+  const togglePremiumMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      const res = await fetch(`/api/admin/users/${userId}/premium`, {
+        method: "PATCH",
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Failed to toggle premium");
+      }
+      return res.json() as Promise<{ isPremium: boolean }>;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
+      toast({ title: data.isPremium ? "Pro granted" : "Pro revoked" });
+    },
+    onError: (err: Error) => {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const [triggeringUser, setTriggeringUser] = useState<string | null>(null);
+  const triggerAgentMutation = useMutation({
+    mutationFn: async ({ userId, type }: { userId: string; type: string }) => {
+      setTriggeringUser(`${userId}:${type}`);
+      const res = await fetch(`/api/admin/agent/trigger/${userId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ type }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Failed to trigger");
+      return json as { message: string };
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "agent-events"] });
+      toast({ title: "Agent triggered", description: data.message });
+    },
+    onError: (err: Error) => {
+      toast({ title: "Trigger failed", description: err.message, variant: "destructive" });
+    },
+    onSettled: () => setTriggeringUser(null),
   });
 
   const filteredUsers = (users || []).filter(u =>
@@ -545,7 +592,59 @@ export default function AdminPage() {
                               )}
                             </div>
                           </div>
-                          <div className="flex items-center gap-1.5 shrink-0">
+                          <div className="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
+                            {/* Pro toggle */}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className={`h-8 px-2 text-xs gap-1 ${user.isPremium ? "text-amber-600 hover:bg-amber-50" : "text-slate-500 hover:bg-slate-100"}`}
+                              onClick={() => togglePremiumMutation.mutate(user.id)}
+                              disabled={togglePremiumMutation.isPending}
+                              title={user.isPremium ? "Revoke Pro" : "Grant Pro"}
+                              data-testid={`button-toggle-premium-${user.id}`}
+                            >
+                              <Crown className="h-3.5 w-3.5" />
+                              {user.isPremium ? "Pro" : "Free"}
+                            </Button>
+
+                            {/* Agent triggers */}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 px-2 text-xs gap-1 text-blue-600 hover:bg-blue-50"
+                              onClick={() => triggerAgentMutation.mutate({ userId: user.id, type: "milestone_start" })}
+                              disabled={triggeringUser === `${user.id}:milestone_start`}
+                              title="Fire milestone start nudge"
+                              data-testid={`button-trigger-milestone-${user.id}`}
+                            >
+                              {triggeringUser === `${user.id}:milestone_start` ? <Loader2 className="h-3 w-3 animate-spin" /> : <Zap className="h-3.5 w-3.5" />}
+                              Milestone
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 px-2 text-xs gap-1 text-amber-600 hover:bg-amber-50"
+                              onClick={() => triggerAgentMutation.mutate({ userId: user.id, type: "stall_nudge" })}
+                              disabled={triggeringUser === `${user.id}:stall_nudge`}
+                              title="Fire stall nudge"
+                              data-testid={`button-trigger-stall-${user.id}`}
+                            >
+                              {triggeringUser === `${user.id}:stall_nudge` ? <Loader2 className="h-3 w-3 animate-spin" /> : <Bell className="h-3.5 w-3.5" />}
+                              Stall
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 px-2 text-xs gap-1 text-violet-600 hover:bg-violet-50"
+                              onClick={() => triggerAgentMutation.mutate({ userId: user.id, type: "weekly_digest" })}
+                              disabled={triggeringUser === `${user.id}:weekly_digest`}
+                              title="Send weekly digest"
+                              data-testid={`button-trigger-digest-${user.id}`}
+                            >
+                              {triggeringUser === `${user.id}:weekly_digest` ? <Loader2 className="h-3 w-3 animate-spin" /> : <Mail className="h-3.5 w-3.5" />}
+                              Digest
+                            </Button>
+
                             <Button
                               variant="ghost"
                               size="sm"
