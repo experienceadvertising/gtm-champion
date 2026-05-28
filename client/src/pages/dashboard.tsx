@@ -244,9 +244,11 @@ export default function Dashboard() {
   const handleAgentToggle = async (enabled: boolean) => {
     setAgentToggling(true);
     try {
+      const csrfMatch = document.cookie.match(/(?:^|;\s*)csrf-token=([^;]+)/);
+      const csrfToken = csrfMatch ? csrfMatch[1] : "";
       const res = await fetch("/api/agent/settings", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "X-CSRF-Token": csrfToken },
         credentials: "include",
         body: JSON.stringify({ agentEnabled: enabled }),
       });

@@ -395,6 +395,14 @@ async function sendCompletionCongrats(userId: string, channelId: string, nudgeId
       return;
     }
 
+    const channelRecs = ctx.recs.filter(r => r.category === channelId);
+    const stillComplete = channelRecs.length > 0 && channelRecs.every(r => r.status === "Completed");
+    if (!stillComplete) {
+      console.log(`[GTM Agent] Skipping completion congrats for ${userId}/${channelId} — channel no longer fully completed`);
+      await storage.markScheduledNudgeSent(nudgeId);
+      return;
+    }
+
     await Promise.all([
       sendAgentCongratsEmail({
         toEmail: ctx.user.email,
