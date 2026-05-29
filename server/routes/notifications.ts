@@ -99,7 +99,7 @@ const GTM_TIPS = [
   { title: "📈 Community Building", body: "Companies with active user communities see 5x higher retention. Start a Slack group, Discord server, or forum for your users.", url: "/dashboard?channel=Community" },
 ];
 
-router.post("/api/notifications/send-tips", async (req: Request, res: Response) => {
+router.post("/api/cron/send-tips", async (req: Request, res: Response) => {
   try {
     const cronSecret = req.headers["x-cron-secret"];
     const envSecret = process.env.CRON_SECRET;
@@ -107,11 +107,9 @@ router.post("/api/notifications/send-tips", async (req: Request, res: Response) 
       return res.status(401).json({ error: "Unauthorized" });
     }
     const crypto = await import("crypto");
-    const isValid = crypto.timingSafeEqual(
-      Buffer.from(String(cronSecret)),
-      Buffer.from(envSecret)
-    );
-    if (!isValid) {
+    const cronBuf = Buffer.from(String(cronSecret));
+    const envBuf = Buffer.from(envSecret);
+    if (cronBuf.length !== envBuf.length || !crypto.timingSafeEqual(cronBuf, envBuf)) {
       return res.status(401).json({ error: "Unauthorized" });
     }
 

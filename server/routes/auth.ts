@@ -9,6 +9,18 @@ import { pgRateLimitStore } from "./rateLimitStore";
 
 const router = Router();
 
+function regenerateSession(req: Request): Promise<void> {
+  return new Promise((resolve, reject) => {
+    req.session.regenerate((err) => (err ? reject(err) : resolve()));
+  });
+}
+
+function saveSession(req: Request): Promise<void> {
+  return new Promise((resolve, reject) => {
+    req.session.save((err) => (err ? reject(err) : resolve()));
+  });
+}
+
 const loginLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 5,
@@ -51,7 +63,10 @@ router.post("/api/register", registerLimiter, async (req: Request, res: Response
           );
         }
 
+        await regenerateSession(req);
         req.session.userId = existingUser.id;
+        req.session.isPremium = existingUser.isPremium;
+        await saveSession(req);
       }
 
       return res.status(200).json({
@@ -92,7 +107,10 @@ router.post("/api/register", registerLimiter, async (req: Request, res: Response
       companyUrl: validatedData.companyUrl,
     }).catch(err => console.error("Admin notification failed:", err));
 
+    await regenerateSession(req);
     req.session.userId = user.id;
+    req.session.isPremium = user.isPremium;
+    await saveSession(req);
 
     res.status(201).json({
       message: "Check your email to continue.",
@@ -124,8 +142,10 @@ router.post("/api/login", loginLimiter, async (req: Request, res: Response) => {
       return res.status(401).json({ error: "Invalid credentials" });
     }
 
+    await regenerateSession(req);
     req.session.userId = user.id;
     req.session.isPremium = user.isPremium;
+    await saveSession(req);
 
     res.json({
       userId: user.id,
