@@ -31,110 +31,149 @@ export interface SiteProfile {
   keyDifferentiators: string[];
 }
 
-export const companies = pgTable("companies", {
-  id: serial("id").primaryKey(),
-  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
-  url: text("url").notNull(),
-  name: text("name"),
-  summary: text("summary"),
-  gtmMotion: text("gtm_motion"),
-  icpScore: integer("icp_score"),
-  screenshotUrl: text("screenshot_url"),
-  visualAnalysis: text("visual_analysis"),
-  pageSpeedData: jsonb("page_speed_data").$type<{
-    performanceScore: number;
-    coreWebVitals: {
-      lcp: { value: number; rating: string };
-      fid: { value: number; rating: string };
-      cls: { value: number; rating: string };
-      inp: { value: number; rating: string };
-      fcp: { value: number; rating: string };
-      ttfb: { value: number; rating: string };
-    };
-    opportunities: Array<{
+export const companies = pgTable(
+  "companies",
+  {
+    id: serial("id").primaryKey(),
+    userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+    url: text("url").notNull(),
+    name: text("name"),
+    summary: text("summary"),
+    gtmMotion: text("gtm_motion"),
+    icpScore: integer("icp_score"),
+    screenshotUrl: text("screenshot_url"),
+    visualAnalysis: text("visual_analysis"),
+    pageSpeedData: jsonb("page_speed_data").$type<{
+      performanceScore: number;
+      coreWebVitals: {
+        lcp: { value: number; rating: string };
+        fid: { value: number; rating: string };
+        cls: { value: number; rating: string };
+        inp: { value: number; rating: string };
+        fcp: { value: number; rating: string };
+        ttfb: { value: number; rating: string };
+      };
+      opportunities: Array<{
+        title: string;
+        description: string;
+        savings: string;
+      }>;
+    }>(),
+    siteProfile: jsonb("site_profile").$type<SiteProfile>(),
+    lastScraped: timestamp("last_scraped").defaultNow().notNull(),
+    lastReanalyzedAt: timestamp("last_reanalyzed_at"),
+  },
+  (table) => ({
+    userIdx: index("companies_user_id_idx").on(table.userId),
+  })
+);
+
+export const strategySnapshots = pgTable(
+  "strategy_snapshots",
+  {
+    id: serial("id").primaryKey(),
+    companyId: integer("company_id").notNull().references(() => companies.id, { onDelete: 'cascade' }),
+    userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+    label: text("label"),
+    snapshot: jsonb("snapshot").notNull().$type<{
+      company: Record<string, unknown>;
+      recommendations: Array<Record<string, unknown>>;
+      channelInsights: Array<Record<string, unknown>>;
+      weeklyIdeas: Array<Record<string, unknown>>;
+      personas?: Array<Record<string, unknown>>;
+      budget?: Record<string, unknown> | null;
+    }>(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    userIdx: index("strategy_snapshots_user_id_idx").on(table.userId),
+    companyIdx: index("strategy_snapshots_company_id_idx").on(table.companyId),
+  })
+);
+
+export const recommendations = pgTable(
+  "recommendations",
+  {
+    id: serial("id").primaryKey(),
+    companyId: integer("company_id").notNull().references(() => companies.id, { onDelete: 'cascade' }),
+    category: text("category").notNull(),
+    title: text("title").notNull(),
+    description: text("description").notNull(),
+    impact: text("impact").notNull(),
+    effort: text("effort").notNull(),
+    status: text("status").default("New").notNull(),
+    gtmFunnel: text("gtm_funnel").default("both"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    companyIdx: index("recommendations_company_id_idx").on(table.companyId),
+  })
+);
+
+export const weeklyIdeas = pgTable(
+  "weekly_ideas",
+  {
+    id: serial("id").primaryKey(),
+    companyId: integer("company_id").notNull().references(() => companies.id, { onDelete: 'cascade' }),
+    title: text("title").notNull(),
+    description: text("description").notNull(),
+    type: text("type").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    companyIdx: index("weekly_ideas_company_id_idx").on(table.companyId),
+  })
+);
+
+export const channelInsights = pgTable(
+  "channel_insights",
+  {
+    id: serial("id").primaryKey(),
+    companyId: integer("company_id").notNull().references(() => companies.id, { onDelete: 'cascade' }),
+    channelId: text("channel_id").notNull(),
+    priority: text("priority").notNull(),
+    whyItMatters: text("why_it_matters").notNull(),
+    companyFitSummary: text("company_fit_summary").notNull(),
+    heroStat: jsonb("hero_stat").notNull().$type<{ value: string; label: string }>(),
+    topKpis: jsonb("top_kpis").notNull().$type<string[]>(),
+    strategicPillars: jsonb("strategic_pillars").notNull().$type<Array<{
       title: string;
-      description: string;
-      savings: string;
-    }>;
-  }>(),
-  siteProfile: jsonb("site_profile").$type<SiteProfile>(),
-  lastScraped: timestamp("last_scraped").defaultNow().notNull(),
-  lastReanalyzedAt: timestamp("last_reanalyzed_at"),
-});
+      objective: string;
+      tactics: string[];
+      measurement: string;
+    }>>(),
+    quickWins: jsonb("quick_wins").notNull().$type<Array<{
+      title: string;
+      steps: string[];
+      effort: string;
+      duration: string;
+    }>>(),
+    resources: jsonb("resources").notNull().$type<string[]>(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    companyIdx: index("channel_insights_company_id_idx").on(table.companyId),
+    companyChannelIdx: index("channel_insights_company_channel_idx").on(table.companyId, table.channelId),
+  })
+);
 
-export const strategySnapshots = pgTable("strategy_snapshots", {
-  id: serial("id").primaryKey(),
-  companyId: integer("company_id").notNull().references(() => companies.id, { onDelete: 'cascade' }),
-  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
-  label: text("label"),
-  snapshot: jsonb("snapshot").notNull().$type<{
-    company: Record<string, unknown>;
-    recommendations: Array<Record<string, unknown>>;
-    channelInsights: Array<Record<string, unknown>>;
-    weeklyIdeas: Array<Record<string, unknown>>;
-    personas?: Array<Record<string, unknown>>;
-    budget?: Record<string, unknown> | null;
-  }>(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
-
-export const recommendations = pgTable("recommendations", {
-  id: serial("id").primaryKey(),
-  companyId: integer("company_id").notNull().references(() => companies.id, { onDelete: 'cascade' }),
-  category: text("category").notNull(),
-  title: text("title").notNull(),
-  description: text("description").notNull(),
-  impact: text("impact").notNull(),
-  effort: text("effort").notNull(),
-  status: text("status").default("New").notNull(),
-  gtmFunnel: text("gtm_funnel").default("both"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
-
-export const weeklyIdeas = pgTable("weekly_ideas", {
-  id: serial("id").primaryKey(),
-  companyId: integer("company_id").notNull().references(() => companies.id, { onDelete: 'cascade' }),
-  title: text("title").notNull(),
-  description: text("description").notNull(),
-  type: text("type").notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
-
-export const channelInsights = pgTable("channel_insights", {
-  id: serial("id").primaryKey(),
-  companyId: integer("company_id").notNull().references(() => companies.id, { onDelete: 'cascade' }),
-  channelId: text("channel_id").notNull(),
-  priority: text("priority").notNull(),
-  whyItMatters: text("why_it_matters").notNull(),
-  companyFitSummary: text("company_fit_summary").notNull(),
-  heroStat: jsonb("hero_stat").notNull().$type<{ value: string; label: string }>(),
-  topKpis: jsonb("top_kpis").notNull().$type<string[]>(),
-  strategicPillars: jsonb("strategic_pillars").notNull().$type<Array<{
-    title: string;
-    objective: string;
-    tactics: string[];
-    measurement: string;
-  }>>(),
-  quickWins: jsonb("quick_wins").notNull().$type<Array<{
-    title: string;
-    steps: string[];
-    effort: string;
-    duration: string;
-  }>>(),
-  resources: jsonb("resources").notNull().$type<string[]>(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
-
-export const userIntegrations = pgTable("user_integrations", {
-  id: serial("id").primaryKey(),
-  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
-  integrationId: text("integration_id").notNull(),
-  integrationName: text("integration_name").notNull(),
-  isConnected: boolean("is_connected").default(false).notNull(),
-  connectedAt: timestamp("connected_at"),
-  metadata: jsonb("metadata").$type<Record<string, any>>(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+export const userIntegrations = pgTable(
+  "user_integrations",
+  {
+    id: serial("id").primaryKey(),
+    userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+    integrationId: text("integration_id").notNull(),
+    integrationName: text("integration_name").notNull(),
+    isConnected: boolean("is_connected").default(false).notNull(),
+    connectedAt: timestamp("connected_at"),
+    metadata: jsonb("metadata").$type<Record<string, any>>(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    userIdx: index("user_integrations_user_id_idx").on(table.userId),
+    userIntegrationIdx: index("user_integrations_user_integration_idx").on(table.userId, table.integrationId),
+  })
+);
 
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -170,52 +209,70 @@ export const insertChannelInsightSchema = createInsertSchema(channelInsights).om
   createdAt: true,
 });
 
-export const pushSubscriptions = pgTable("push_subscriptions", {
-  id: serial("id").primaryKey(),
-  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
-  endpoint: text("endpoint").notNull(),
-  keys: jsonb("keys").notNull().$type<{ p256dh: string; auth: string }>(),
-  enabled: boolean("enabled").default(true).notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+export const pushSubscriptions = pgTable(
+  "push_subscriptions",
+  {
+    id: serial("id").primaryKey(),
+    userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+    endpoint: text("endpoint").notNull(),
+    keys: jsonb("keys").notNull().$type<{ p256dh: string; auth: string }>(),
+    enabled: boolean("enabled").default(true).notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    userIdx: index("push_subscriptions_user_id_idx").on(table.userId),
+  })
+);
 
-export const budgetAllocations = pgTable("budget_allocations", {
-  id: serial("id").primaryKey(),
-  companyId: integer("company_id").notNull().references(() => companies.id, { onDelete: 'cascade' }),
-  totalBudget: integer("total_budget").notNull(),
-  allocations: jsonb("allocations").notNull().$type<Array<{
-    channelId: string;
-    channelName: string;
-    amount: number;
-    percentage: number;
-    rationale: string;
-  }>>(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+export const budgetAllocations = pgTable(
+  "budget_allocations",
+  {
+    id: serial("id").primaryKey(),
+    companyId: integer("company_id").notNull().references(() => companies.id, { onDelete: 'cascade' }),
+    totalBudget: integer("total_budget").notNull(),
+    allocations: jsonb("allocations").notNull().$type<Array<{
+      channelId: string;
+      channelName: string;
+      amount: number;
+      percentage: number;
+      rationale: string;
+    }>>(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    companyIdx: index("budget_allocations_company_id_idx").on(table.companyId),
+  })
+);
 
-export const buyerPersonas = pgTable("buyer_personas", {
-  id: serial("id").primaryKey(),
-  companyId: integer("company_id").notNull().references(() => companies.id, { onDelete: 'cascade' }),
-  name: text("name").notNull(),
-  jobTitle: text("job_title").notNull(),
-  seniority: text("seniority").notNull(),
-  department: text("department").notNull(),
-  companySizeRange: text("company_size_range").notNull(),
-  industryVerticals: text("industry_verticals").array().notNull(),
-  geographicFocus: text("geographic_focus").notNull(),
-  painPoints: text("pain_points").array().notNull(),
-  goals: text("goals").array().notNull(),
-  buyingTriggers: text("buying_triggers").array().notNull(),
-  preferredChannels: text("preferred_channels").array().notNull(),
-  objections: text("objections").array().notNull(),
-  dayInTheLife: text("day_in_the_life").notNull(),
-  messagingAngle: text("messaging_angle").notNull().default(""),
-  contentPreferences: text("content_preferences").array().notNull().default([]),
-  buyerJourneyStage: jsonb("buyer_journey_stage").notNull().default({}),
-  internalChampionTips: text("internal_champion_tips").notNull().default(""),
-  socialProofNeeded: text("social_proof_needed").notNull().default(""),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+export const buyerPersonas = pgTable(
+  "buyer_personas",
+  {
+    id: serial("id").primaryKey(),
+    companyId: integer("company_id").notNull().references(() => companies.id, { onDelete: 'cascade' }),
+    name: text("name").notNull(),
+    jobTitle: text("job_title").notNull(),
+    seniority: text("seniority").notNull(),
+    department: text("department").notNull(),
+    companySizeRange: text("company_size_range").notNull(),
+    industryVerticals: text("industry_verticals").array().notNull(),
+    geographicFocus: text("geographic_focus").notNull(),
+    painPoints: text("pain_points").array().notNull(),
+    goals: text("goals").array().notNull(),
+    buyingTriggers: text("buying_triggers").array().notNull(),
+    preferredChannels: text("preferred_channels").array().notNull(),
+    objections: text("objections").array().notNull(),
+    dayInTheLife: text("day_in_the_life").notNull(),
+    messagingAngle: text("messaging_angle").notNull().default(""),
+    contentPreferences: text("content_preferences").array().notNull().default([]),
+    buyerJourneyStage: jsonb("buyer_journey_stage").notNull().default({}),
+    internalChampionTips: text("internal_champion_tips").notNull().default(""),
+    socialProofNeeded: text("social_proof_needed").notNull().default(""),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    companyIdx: index("buyer_personas_company_id_idx").on(table.companyId),
+  })
+);
 
 export const insertPushSubscriptionSchema = createInsertSchema(pushSubscriptions).omit({
   id: true,

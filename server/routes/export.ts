@@ -65,12 +65,13 @@ router.get("/api/export/pdf", requireAuth, async (req: Request, res: Response) =
       return res.status(404).json({ error: "No analysis data available to export" });
     }
 
-    const recommendations = await storage.getRecommendationsByCompanyId(company.id);
-    const channelInsights = await storage.getChannelInsightsByCompanyId(company.id);
-    const weeklyIdeas = await storage.getWeeklyIdeasByCompanyId(company.id);
-
     const branded = user.isPremium;
-    const logoBuffer = branded ? await fetchLogoBuffer(user.logoUrl) : null;
+    const [recommendations, channelInsights, weeklyIdeas, logoBuffer] = await Promise.all([
+      storage.getRecommendationsByCompanyId(company.id),
+      storage.getChannelInsightsByCompanyId(company.id),
+      storage.getWeeklyIdeasByCompanyId(company.id),
+      branded ? fetchLogoBuffer(user.logoUrl) : Promise.resolve(null),
+    ]);
 
     const sanitizedName = (company.name || "company").replace(/[^a-zA-Z0-9]/g, "_").toLowerCase();
     const filename = `${sanitizedName}_gtm_strategy.pdf`;

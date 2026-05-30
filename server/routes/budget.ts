@@ -140,11 +140,17 @@ router.post("/api/budget/save", requireAuth, async (req: Request, res: Response)
 
 router.delete("/api/budget/:id", requireAuth, async (req: Request, res: Response) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(req.params.id, 10);
     if (isNaN(id)) {
       return res.status(400).json({ error: "Invalid ID" });
     }
-    await storage.deleteBudgetAllocation(id);
+
+    const company = await storage.getCompanyByUserId(req.session.userId!);
+    if (!company) {
+      return res.status(404).json({ error: "Company not found" });
+    }
+
+    await storage.deleteBudgetAllocation(id, company.id);
     res.json({ message: "Deleted" });
   } catch (error: any) {
     console.error("Budget delete error:", error?.message || error);

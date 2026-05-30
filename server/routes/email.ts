@@ -8,7 +8,7 @@ import {
   type ChannelInsightStrategicPillar,
   type ChannelInsightQuickWin,
 } from "@shared/schema";
-import { requireAuth } from "./middleware";
+import { requireAuth, requireAdmin } from "./middleware";
 import { sendInviteFriendEmail, sendShareStrategyEmail, sendWeeklyEmail, sendChannelStrategyEmail } from "../services/email";
 import { generateChannelPDF } from "../services/pdfExport";
 import { generateWeeklyIdeas } from "../services/openai";
@@ -209,7 +209,7 @@ router.post("/api/cron/channel-emails", async (req: Request, res: Response) => {
 });
 
 // Send a test channel strategy email to a specific user
-router.post("/api/send-channel-email/:userId", requireAuth, async (req: Request, res: Response) => {
+router.post("/api/send-channel-email/:userId", requireAdmin, async (req: Request, res: Response) => {
   try {
     const { userId } = req.params;
     const { channelId } = req.body;

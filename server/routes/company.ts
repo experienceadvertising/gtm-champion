@@ -26,19 +26,22 @@ router.get("/api/dashboard", requireAuth, async (req: Request, res: Response) =>
   try {
     const userId = req.session.userId!;
 
-    const user = await storage.getUser(userId);
+    const [user, company] = await Promise.all([
+      storage.getUser(userId),
+      storage.getCompanyByUserId(userId),
+    ]);
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
-
-    const company = await storage.getCompanyByUserId(userId);
     if (!company) {
       return res.status(404).json({ error: "Company data not yet available" });
     }
 
-    const recommendations = await storage.getRecommendationsByCompanyId(company.id);
-    const weeklyIdeas = await storage.getWeeklyIdeasByCompanyId(company.id);
-    const channelInsights = await storage.getChannelInsightsByCompanyId(company.id);
+    const [recommendations, weeklyIdeas, channelInsights] = await Promise.all([
+      storage.getRecommendationsByCompanyId(company.id),
+      storage.getWeeklyIdeasByCompanyId(company.id),
+      storage.getChannelInsightsByCompanyId(company.id),
+    ]);
 
     res.json({
       user: {
@@ -159,11 +162,13 @@ router.post("/api/retry-analysis/:companyId", requireAuth, async (req: Request, 
     }
 
     try {
-      const recommendations = await storage.getRecommendationsByCompanyId(cid);
-      const channelInsights = await storage.getChannelInsightsByCompanyId(cid);
-      const weeklyIdeas = await storage.getWeeklyIdeasByCompanyId(cid);
-      const personas = await storage.getBuyerPersonasByCompanyId(cid);
-      const budget = await storage.getLatestBudgetAllocation(cid);
+      const [recommendations, channelInsights, weeklyIdeas, personas, budget] = await Promise.all([
+        storage.getRecommendationsByCompanyId(cid),
+        storage.getChannelInsightsByCompanyId(cid),
+        storage.getWeeklyIdeasByCompanyId(cid),
+        storage.getBuyerPersonasByCompanyId(cid),
+        storage.getLatestBudgetAllocation(cid),
+      ]);
       await storage.createStrategySnapshot({
         userId,
         companyId: cid,

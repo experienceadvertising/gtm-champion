@@ -64,7 +64,7 @@ router.get("/api/personas", requireAuth, async (req: Request, res: Response) => 
 
 router.patch("/api/personas/:id", requireAuth, async (req: Request, res: Response) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(req.params.id, 10);
     if (isNaN(id)) {
       return res.status(400).json({ error: "Invalid ID" });
     }
@@ -76,6 +76,11 @@ router.patch("/api/personas/:id", requireAuth, async (req: Request, res: Respons
 
     const persona = await storage.getBuyerPersona(id);
     if (!persona) {
+      return res.status(404).json({ error: "Persona not found" });
+    }
+
+    const company = await storage.getCompanyByUserId(req.session.userId!);
+    if (!company || persona.companyId !== company.id) {
       return res.status(404).json({ error: "Persona not found" });
     }
 
@@ -136,10 +141,21 @@ router.post("/api/personas/add", requireAuth, async (req: Request, res: Response
 
 router.delete("/api/personas/:id", requireAuth, async (req: Request, res: Response) => {
   try {
-    const id = parseInt(req.params.id);
+    const id = parseInt(req.params.id, 10);
     if (isNaN(id)) {
       return res.status(400).json({ error: "Invalid ID" });
     }
+
+    const persona = await storage.getBuyerPersona(id);
+    if (!persona) {
+      return res.status(404).json({ error: "Persona not found" });
+    }
+
+    const company = await storage.getCompanyByUserId(req.session.userId!);
+    if (!company || persona.companyId !== company.id) {
+      return res.status(404).json({ error: "Persona not found" });
+    }
+
     await storage.deleteBuyerPersona(id);
     res.json({ message: "Deleted" });
   } catch (error: any) {
