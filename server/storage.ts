@@ -88,7 +88,7 @@ export interface IStorage {
   getBudgetAllocationsByCompanyId(companyId: number): Promise<BudgetAllocation[]>;
   getLatestBudgetAllocation(companyId: number): Promise<BudgetAllocation | undefined>;
   createBudgetAllocation(allocation: InsertBudgetAllocation): Promise<BudgetAllocation>;
-  deleteBudgetAllocation(id: number): Promise<void>;
+  deleteBudgetAllocation(id: number, companyId: number): Promise<void>;
 
   getBuyerPersonasByCompanyId(companyId: number): Promise<BuyerPersona[]>;
   getBuyerPersona(id: number): Promise<BuyerPersona | undefined>;
@@ -333,7 +333,7 @@ export class DatabaseStorage implements IStorage {
   async getLatestBudgetAllocation(companyId: number): Promise<BudgetAllocation | undefined> {
     const [alloc] = await db.select().from(budgetAllocations)
       .where(eq(budgetAllocations.companyId, companyId))
-      .orderBy(budgetAllocations.createdAt)
+      .orderBy(desc(budgetAllocations.createdAt))
       .limit(1);
     return alloc;
   }
@@ -343,8 +343,10 @@ export class DatabaseStorage implements IStorage {
     return result;
   }
 
-  async deleteBudgetAllocation(id: number): Promise<void> {
-    await db.delete(budgetAllocations).where(eq(budgetAllocations.id, id));
+  async deleteBudgetAllocation(id: number, companyId: number): Promise<void> {
+    await db.delete(budgetAllocations).where(
+      and(eq(budgetAllocations.id, id), eq(budgetAllocations.companyId, companyId))
+    );
   }
 
   async getBuyerPersonasByCompanyId(companyId: number): Promise<BuyerPersona[]> {
