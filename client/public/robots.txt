@@ -1,0 +1,66 @@
+# robots.txt for GTM Champion — https://gtmchampion.com
+
+# Default: public content is crawlable; app/API routes are protected.
+# (Anything not explicitly disallowed is allowed.)
+User-agent: *
+Disallow: /api/
+Disallow: /auth
+Disallow: /dashboard
+Disallow: /admin
+Disallow: /content-tools
+Disallow: /emails
+
+# AI / LLM crawlers — explicitly welcomed to public content so GTM Champion
+# can be discovered, cited, and surfaced in AI search experiences.
+User-agent: GPTBot
+Allow: /
+Disallow: /api/
+Disallow: /auth
+Disallow: /dashboard
+Disallow: /admin
+Disallow: /content-tools
+Disallow: /emails
+
+User-agent: OAI-SearchBot
+Allow: /
+Disallow: /api/
+Disallow: /dashboard
+Disallow: /admin
+
+User-agent: ChatGPT-User
+Allow: /
+Disallow: /api/
+Disallow: /dashboard
+Disallow: /admin
+
+User-agent: ClaudeBot
+Allow: /
+Disallow: /api/
+Disallow: /dashboard
+Disallow: /admin
+
+User-agent: Claude-Web
+Allow: /
+Disallow: /api/
+Disallow: /dashboard
+Disallow: /admin
+
+User-agent: anthropic-ai
+Allow: /
+Disallow: /api/
+Disallow: /dashboard
+Disallow: /admin
+
+User-agent: PerplexityBot
+Allow: /
+Disallow: /api/
+Disallow: /dashboard
+Disallow: /admin
+
+User-agent: Google-Extended
+Allow: /
+Disallow: /api/
+Disallow: /dashboard
+Disallow: /admin
+
+Sitemap: https://gtmchampion.com/sitemap.xml

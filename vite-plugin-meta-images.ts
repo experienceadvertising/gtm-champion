@@ -10,6 +10,14 @@ export function metaImagesPlugin(): Plugin {
   return {
     name: 'vite-plugin-meta-images',
     transformIndexHtml(html) {
+      // In production, keep the canonical gtmchampion.com og:image/twitter:image
+      // already present in index.html. Only rewrite to a Replit preview domain
+      // for non-production preview deploys so share previews resolve there.
+      if (process.env.NODE_ENV === 'production') {
+        log('[meta-images] production build, keeping canonical og:image');
+        return html;
+      }
+
       const baseUrl = getDeploymentUrl();
       if (!baseUrl) {
         log('[meta-images] no Replit deployment domain found, skipping meta tag updates');

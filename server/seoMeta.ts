@@ -23,6 +23,19 @@ interface ArticleMeta {
   ogImage?: string;
 }
 
+interface PrerenderArticle {
+  slug: string;
+  title: string;
+  excerpt: string;
+  author: string;
+  category: string;
+  readTime: string;
+  publishDate: string;
+  modifiedDate: string;
+  tags: string[];
+  contentHtml: string;
+}
+
 const STATIC_META: Record<string, RouteMeta> = {
   "/": {
     title: "GTM Champion - AI-Powered Go-To-Market Strategy for B2B SaaS",
@@ -70,18 +83,74 @@ const STATIC_META: Record<string, RouteMeta> = {
 
 const articleMetaMap = new Map<string, ArticleMeta>();
 
+// Routes that should never be indexed (private/app/utility pages). These are
+// enforced server-side so the directive is present even for crawlers that do
+// not execute JavaScript (the client-side Helmet noindex is JS-dependent).
+const NOINDEX_PREFIXES = [
+  "/auth",
+  "/dashboard",
+  "/admin",
+  "/content-tools",
+  "/emails",
+  "/api",
+];
+
+const prerenderMap = new Map<string, PrerenderArticle>();
+
 export function loadArticleMeta(distPath: string) {
   const filePath = path.join(distPath, "article-meta.json");
-  if (!fs.existsSync(filePath)) return;
-  try {
-    const data = JSON.parse(fs.readFileSync(filePath, "utf-8")) as ArticleMeta[];
-    for (const article of data) {
-      articleMetaMap.set(article.slug, article);
+  if (fs.existsSync(filePath)) {
+    try {
+      const data = JSON.parse(fs.readFileSync(filePath, "utf-8")) as ArticleMeta[];
+      for (const article of data) {
+        articleMetaMap.set(article.slug, article);
+      }
+      console.log(`[seo-meta] loaded ${articleMetaMap.size} article meta entries`);
+    } catch (err) {
+      console.error("[seo-meta] failed to load article-meta.json:", err);
     }
-    console.log(`[seo-meta] loaded ${articleMetaMap.size} article meta entries`);
-  } catch (err) {
-    console.error("[seo-meta] failed to load article-meta.json:", err);
   }
+
+  const prerenderPath = path.join(distPath, "prerender.json");
+  if (fs.existsSync(prerenderPath)) {
+    try {
+      const data = JSON.parse(fs.readFileSync(prerenderPath, "utf-8")) as PrerenderArticle[];
+      for (const article of data) {
+        prerenderMap.set(article.slug, article);
+      }
+      console.log(`[seo-meta] loaded ${prerenderMap.size} prerendered article bodies`);
+    } catch (err) {
+      console.error("[seo-meta] failed to load prerender.json:", err);
+    }
+  }
+}
+
+// Search engines, AI/LLM crawlers, and social/link-preview fetchers that
+// benefit from (or require) server-delivered HTML content.
+const BOT_UA_RE =
+  /googlebot|bingbot|duckduckbot|yandex|baiduspider|applebot|slurp|gptbot|oai-searchbot|chatgpt-user|claudebot|claude-web|anthropic-ai|perplexitybot|google-extended|ccbot|bytespider|amazonbot|meta-externalagent|facebookexternalhit|twitterbot|linkedinbot|slackbot|discordbot|whatsapp|telegrambot|embedly|redditbot|pinterest|petalbot/i;
+
+export function isBotUserAgent(userAgent: string | undefined): boolean {
+  if (!userAgent) return false;
+  return BOT_UA_RE.test(userAgent);
+}
+
+function isPrivateRoute(reqPath: string): boolean {
+  return NOINDEX_PREFIXES.some(
+    (p) => reqPath === p || reqPath.startsWith(`${p}/`),
+  );
+}
+
+/**
+ * Decide the robots directive for a route:
+ * - public, known routes (home, marketing, blog, real articles) → index, follow
+ * - private/app routes → noindex, nofollow
+ * - unknown routes (soft 404) → noindex, follow
+ */
+function robotsForRoute(reqPath: string): string | null {
+  if (isPrivateRoute(reqPath)) return "noindex, nofollow";
+  if (metaForRoute(reqPath)) return null; // known public route → keep default index
+  return "noindex, follow"; // unknown route → mitigate soft 404
 }
 
 function escapeHtml(value: string): string {
@@ -114,7 +183,96 @@ function metaForRoute(reqPath: string): RouteMeta | null {
   return null;
 }
 
-export function injectMeta(html: string, reqPath: string): string {
+function applyRobots(html: string, reqPath: string): string {
+  const robots = robotsForRoute(reqPath);
+  if (!robots) return html;
+  return html.replace(
+    /<meta name="robots" content="[^"]*" \/>/,
+    `<meta name="robots" content="${robots}" />`,
+  );
+}
+
+/**
+ * Build a server-rendered <main> for a route, used only for crawler/LLM
+ * user-agents (dynamic rendering). The same content the SPA renders for users
+ * — never bot-specific text — so this is not cloaking. Real users with JS get
+ * the normal empty SPA root and React renders client-side as before.
+ */
+function buildBotBody(reqPath: string): string | null {
+  const articleMatch = /^\/blog\/([^/]+)\/?$/.exec(reqPath);
+  if (articleMatch) {
+    const article = prerenderMap.get(articleMatch[1]);
+    if (article) {
+      const url = `${SITE_URL}/blog/${article.slug}`;
+      const date = escapeHtml(article.publishDate);
+      const tags = article.tags
+        .map((t) => `<li>${escapeHtml(t)}</li>`)
+        .join("");
+      return (
+        `<nav aria-label="Breadcrumb"><ol>` +
+        `<li><a href="/">Home</a></li>` +
+        `<li><a href="/blog">Blog</a></li>` +
+        `<li>${escapeHtml(article.title)}</li>` +
+        `</ol></nav>` +
+        `<main id="main-content"><article>` +
+        `<header>` +
+        `<p>${escapeHtml(article.category)}</p>` +
+        `<h1>${escapeHtml(article.title)}</h1>` +
+        `<p>${escapeHtml(article.excerpt)}</p>` +
+        `<p>By <span>${escapeHtml(article.author)}</span> · ` +
+        `<time datetime="${date}">${date}</time> · ${escapeHtml(article.readTime)}</p>` +
+        `</header>` +
+        article.contentHtml +
+        `<footer><ul>${tags}</ul>` +
+        `<p><a href="${url}">Read this guide on GTM Champion</a></p>` +
+        `<p><a href="/">Get your personalized GTM strategy free</a></p>` +
+        `</footer></article></main>`
+      );
+    }
+    return null;
+  }
+
+  // For other known public routes, give bots a titled, described landmark
+  // instead of an empty root (the rich JSON-LD already lives in <head>).
+  const meta = metaForRoute(reqPath);
+  if (meta && !isPrivateRoute(reqPath)) {
+    return (
+      `<main id="main-content">` +
+      `<h1>${escapeHtml(meta.title)}</h1>` +
+      `<p>${escapeHtml(meta.description)}</p>` +
+      `<p><a href="/">GTM Champion home</a> · <a href="/blog">Blog</a></p>` +
+      `</main>`
+    );
+  }
+
+  return null;
+}
+
+function injectBotBody(html: string, reqPath: string): string {
+  const body = buildBotBody(reqPath);
+  if (!body) return html;
+  // The SPA mounts with createRoot().render(), which replaces #root's children,
+  // so JS users never see this. Non-JS crawlers keep it as the page content.
+  return html.replace(
+    '<div id="root"></div>',
+    `<div id="root">${body}</div>`,
+  );
+}
+
+export interface InjectOptions {
+  isBot?: boolean;
+}
+
+export function injectMeta(
+  html: string,
+  reqPath: string,
+  opts: InjectOptions = {},
+): string {
+  html = applyRobots(html, reqPath);
+  if (opts.isBot) {
+    html = injectBotBody(html, reqPath);
+  }
+
   const meta = metaForRoute(reqPath);
   if (!meta) return html;
 

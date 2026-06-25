@@ -1,6 +1,7 @@
 import { build as esbuild } from "esbuild";
 import { build as viteBuild } from "vite";
 import { rm, readFile } from "fs/promises";
+import { generatePrerender } from "../scripts/generate-prerender";
 
 // server deps to bundle to reduce openat(2) syscalls
 // which helps cold start times
@@ -34,6 +35,11 @@ const allowlist = [
 
 async function buildAll() {
   await rm("dist", { recursive: true, force: true });
+
+  // Generate prerendered article bodies into client/public so Vite copies them
+  // into dist/public. Used for dynamic rendering to non-JS crawlers / LLM bots.
+  console.log("generating prerender content...");
+  await generatePrerender();
 
   console.log("building client...");
   await viteBuild();

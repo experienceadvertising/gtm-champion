@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { getArticleBySlug, articles } from "@/data/articles";
 import { Helmet } from "react-helmet-async";
 import DOMPurify from "dompurify";
+import { renderArticleMarkdown } from "@shared/markdown";
 
 export default function Article() {
   const [, params] = useRoute("/blog/:slug");
@@ -222,7 +223,7 @@ export default function Article() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.15, duration: 0.4, ease: "easeOut" }}
                   className="prose prose-lg max-w-none prose-headings:font-display prose-headings:font-bold prose-h2:text-2xl prose-h2:mt-10 prose-h2:mb-4 prose-h3:text-xl prose-h3:mt-8 prose-p:text-muted-foreground prose-p:leading-relaxed prose-li:text-muted-foreground prose-strong:text-foreground prose-a:text-primary prose-a:no-underline hover:prose-a:underline prose-code:bg-slate-100 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-pre:bg-slate-900 prose-pre:text-slate-50"
-                  dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(formatContent(article.content)) }}
+                  dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(renderArticleMarkdown(article.content)) }}
                 />
 
                 {/* Tags */}
@@ -300,86 +301,4 @@ export default function Article() {
       </div>
     </>
   );
-}
-
-function formatContent(content: string): string {
-  let html = content;
-  
-  // Process tables first (before other transformations)
-  html = html.replace(/(\|[^\n]+\|\n)+/g, (tableMatch) => {
-    const rows = tableMatch.trim().split('\n');
-    let tableHtml = '<table class="w-full border-collapse my-6 text-sm">';
-    
-    rows.forEach((row, index) => {
-      // Skip separator rows (|---|---|)
-      if (/^\|[\s\-:]+\|$/.test(row.trim())) {
-        return;
-      }
-      
-      const cells = row.split('|').filter(cell => cell.trim() !== '');
-      const isHeader = index === 0;
-      const cellTag = isHeader ? 'th' : 'td';
-      const cellClass = isHeader 
-        ? 'border border-slate-300 px-4 py-3 bg-slate-100 font-semibold text-left' 
-        : 'border border-slate-300 px-4 py-3';
-      
-      tableHtml += '<tr>';
-      cells.forEach(cell => {
-        tableHtml += `<${cellTag} class="${cellClass}">${cell.trim()}</${cellTag}>`;
-      });
-      tableHtml += '</tr>';
-    });
-    
-    tableHtml += '</table>';
-    return tableHtml;
-  });
-  
-  // Headers
-  html = html.replace(/^## (.*$)/gim, '<h2>$1</h2>');
-  html = html.replace(/^### (.*$)/gim, '<h3>$1</h3>');
-  html = html.replace(/^#### (.*$)/gim, '<h4>$1</h4>');
-  
-  // Bold and italic
-  html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-  html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
-  
-  // Code blocks
-  html = html.replace(/```(\w+)?\n([\s\S]*?)```/g, '<pre><code>$2</code></pre>');
-  html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
-  
-  // Blockquotes (lines starting with >)
-  html = html.replace(/(^> .*(?:\n> .*)*)/gm, (block) => {
-    const text = block.split('\n').map(l => l.replace(/^> ?/, '')).join(' ');
-    return `<blockquote class="border-l-4 border-primary/40 pl-4 italic my-6 text-foreground">${text}</blockquote>`;
-  });
-
-  // Lists - tag ordered vs unordered separately so we can wrap correctly
-  html = html.replace(/^\d+\. (.*$)/gim, '<li data-ol="1">$1</li>');
-  html = html.replace(/^\- (.*$)/gim, '<li data-ul="1">$1</li>');
-
-  // Wrap consecutive ordered list items in <ol>
-  html = html.replace(/(<li data-ol="1">.*?<\/li>\n?)+/g, (match) =>
-    `<ol class="my-4 ml-6 list-decimal space-y-2">${match.replace(/ data-ol="1"/g, '')}</ol>`
-  );
-  // Wrap consecutive unordered list items in <ul>
-  html = html.replace(/(<li data-ul="1">.*?<\/li>\n?)+/g, (match) =>
-    `<ul class="my-4 ml-6 list-disc space-y-2">${match.replace(/ data-ul="1"/g, '')}</ul>`
-  );
-  
-  // Paragraphs - split by double newlines
-  html = html.split('\n\n').map(block => {
-    block = block.trim();
-    if (!block) return '';
-    if (block.startsWith('<h') || block.startsWith('<ul') || block.startsWith('<ol') || block.startsWith('<table') || block.startsWith('<pre') || block.startsWith('<blockquote')) {
-      return block;
-    }
-    return `<p>${block}</p>`;
-  }).join('\n');
-  
-  // Clean up any remaining single newlines in paragraphs
-  html = html.replace(/<p>([^<]*)<\/p>/g, (match, content) => {
-    return `<p>${content.replace(/\n/g, ' ')}</p>`;
-  });
-  
-  return html;
 }

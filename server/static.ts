@@ -1,7 +1,7 @@
 import express, { type Express } from "express";
 import fs from "fs";
 import path from "path";
-import { injectMeta, loadArticleMeta } from "./seoMeta";
+import { injectMeta, loadArticleMeta, isBotUserAgent } from "./seoMeta";
 
 export function serveStatic(app: Express) {
   const distPath = path.resolve(__dirname, "public");
@@ -33,6 +33,10 @@ export function serveStatic(app: Express) {
   app.use("*", (req, res) => {
     res.setHeader("Cache-Control", "no-cache");
     res.setHeader("Content-Type", "text/html; charset=utf-8");
-    res.send(injectMeta(indexHtml, req.originalUrl.split("?")[0]));
+    // Vary on User-Agent: bots receive server-rendered body content, users get
+    // the SPA shell. Keeps shared caches from serving one variant to the other.
+    res.setHeader("Vary", "User-Agent");
+    const isBot = isBotUserAgent(req.headers["user-agent"]);
+    res.send(injectMeta(indexHtml, req.originalUrl.split("?")[0], { isBot }));
   });
 }
