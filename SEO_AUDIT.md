@@ -70,3 +70,15 @@ Per-route server meta, canonical tags, sitemap automation, JSON-LD coverage, sem
 5. Build, verify (bot vs. user HTML), final re-audit.
 
 Every change is verified with `tsc` and a production build, and checked to ensure real-user rendering is unaffected.
+
+## 5. Round 2 — follow-up opportunities (implemented)
+
+- **Richer homepage & blog-index prerender.** Bots previously got only a title/description landmark on `/` and `/blog`. Now the home page prerender includes the H1, value proposition, the 3-step process, all 13 channels grouped, and the full FAQ; the blog index prerenders all article cards with links. Marketing copy moved to `shared/siteContent.ts` (single source of truth) so the landing page and prerenderer cannot diverge, and the home FAQ JSON-LD is now generated from that same data instead of being duplicated.
+- **Image optimization.** Home `og-image.png` reduced ~954 KB → ~114 KB and corrected to the declared 1200×630. The one article still shipping a ~1.1 MB PNG was converted to a 32 KB WebP. (Re-run `npm run optimize:images` for any future PNG source assets.)
+- **Removed vestigial root `public/`** (Vite's `publicDir` is `client/public`; the root copy was dead).
+- **Dashboard code-split.** `BudgetAllocator` and `ICPBuilder` are now lazy-loaded and `recharts`/`d3` are isolated into a `charts` chunk. The initial dashboard chunk dropped from ~540 KB to ~150 KB; recharts (~382 KB) loads only when the budget allocator view is opened — a large Core Web Vitals win for the app shell.
+
+## 6. Remaining opportunities (not yet done)
+- Other large PNG source assets in `attached_assets/generated_images/` (1–1.5 MB each) still ship where used; converting any remaining PNG-imported article images to WebP would further cut transfer.
+- A real XML `lastmod` per static route (currently the build date) would be marginally more accurate.
+- Consider a hard `404` status for clearly-invalid paths (today they are `200` + `noindex, follow`).

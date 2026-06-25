@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, lazy, Suspense } from "react";
 import { Helmet } from "react-helmet-async";
 import { useLocation, Link, useSearch } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -67,8 +67,14 @@ import { useSubscription } from "@/hooks/useSubscription";
 import { AIChat } from "@/components/AIChat";
 import { InteractiveTutorial, useTutorial } from "@/components/InteractiveTutorial";
 import { PushPermissionPrompt, AgentPushOptIn } from "@/components/PushPermissionPrompt";
-import { BudgetAllocator } from "@/components/BudgetAllocator";
-import { ICPBuilder } from "@/components/ICPBuilder";
+// Lazy-loaded: these views are only reached on demand and BudgetAllocator pulls
+// in recharts, so deferring them keeps the initial dashboard chunk smaller.
+const BudgetAllocator = lazy(() =>
+  import("@/components/BudgetAllocator").then((m) => ({ default: m.BudgetAllocator })),
+);
+const ICPBuilder = lazy(() =>
+  import("@/components/ICPBuilder").then((m) => ({ default: m.ICPBuilder })),
+);
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { CheckCircle2, Circle, Clock, BarChart3, Bookmark, ArrowRight, Sparkles, Gauge, AlertTriangle, Activity, FileText, Linkedin, MailOpen, Globe, Video, Mic, Volume2, VolumeX } from "lucide-react";
 import { useAmbientMusic } from "@/hooks/use-ambient-music";
@@ -1331,7 +1337,9 @@ export default function Dashboard() {
                 ← Back
               </Button>
             </header>
-            <BudgetAllocator />
+            <Suspense fallback={<div className="flex justify-center py-12"><div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" aria-label="Loading" /></div>}>
+              <BudgetAllocator />
+            </Suspense>
           </div>
         ) : selectedChannel === "icp-builder" ? (
           <div className="p-4 md:p-8 space-y-6">
@@ -1343,7 +1351,9 @@ export default function Dashboard() {
                 ← Back
               </Button>
             </header>
-            <ICPBuilder />
+            <Suspense fallback={<div className="flex justify-center py-12"><div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" aria-label="Loading" /></div>}>
+              <ICPBuilder />
+            </Suspense>
           </div>
         ) : selectedChannel === "all" ? (
           <>

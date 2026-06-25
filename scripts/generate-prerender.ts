@@ -19,6 +19,13 @@ import { tmpdir } from "os";
 import path from "path";
 import { pathToFileURL } from "url";
 import { renderArticleMarkdown } from "../shared/markdown";
+import {
+  HERO,
+  STEPS,
+  CHANNELS,
+  CHANNEL_GROUPS,
+  FAQ_ITEMS,
+} from "../shared/siteContent";
 
 interface Article {
   slug: string;
@@ -47,6 +54,79 @@ export interface PrerenderArticle {
   modifiedDate: string;
   tags: string[];
   contentHtml: string;
+}
+
+export interface PrerenderManifest {
+  articles: PrerenderArticle[];
+  pages: Record<string, string>;
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+/** Server-rendered <main> for the home page (crawler/LLM facing). */
+function buildHomeHtml(): string {
+  const steps = STEPS.map(
+    (s) =>
+      `<li><h3>${escapeHtml(s.title)}</h3><p>${escapeHtml(s.description)}</p></li>`,
+  ).join("");
+
+  const channelGroups = Object.values(CHANNEL_GROUPS)
+    .map((group) => {
+      const items = group.channels
+        .map((id) => {
+          const ch = CHANNELS.find((c) => c.id === id);
+          const desc = ch ? `: ${escapeHtml(ch.description)}` : "";
+          return `<li>${escapeHtml(id)}${desc}</li>`;
+        })
+        .join("");
+      return `<section><h3>${escapeHtml(group.label)}</h3><ul>${items}</ul></section>`;
+    })
+    .join("");
+
+  const faqs = FAQ_ITEMS.map(
+    (f) =>
+      `<section><h3>${escapeHtml(f.question)}</h3><p>${escapeHtml(f.answer)}</p></section>`,
+  ).join("");
+
+  return (
+    `<main id="main-content">` +
+    `<section><h1>${escapeHtml(HERO.headline)}</h1>` +
+    `<p>${escapeHtml(HERO.subhead)}</p>` +
+    `<p><a href="/auth">Analyze my website free</a></p></section>` +
+    `<section aria-label="How it works"><h2>From URL to Full Strategy in 3 Steps</h2><ol>${steps}</ol></section>` +
+    `<section aria-label="Marketing channels"><h2>Strategies for Every Marketing Channel</h2>${channelGroups}</section>` +
+    `<section aria-label="Frequently asked questions"><h2>Frequently Asked Questions</h2>${faqs}</section>` +
+    `<nav aria-label="Site"><a href="/blog">Blog</a> · <a href="/about">About</a> · <a href="/contact">Contact</a></nav>` +
+    `</main>`
+  );
+}
+
+/** Server-rendered <main> for the blog index (crawler/LLM facing). */
+function buildBlogHtml(articles: Article[]): string {
+  const items = articles
+    .map(
+      (a) =>
+        `<li><article>` +
+        `<h2><a href="/blog/${a.slug}">${escapeHtml(a.title)}</a></h2>` +
+        `<p>${escapeHtml(a.category)} · ${escapeHtml(a.readTime)}</p>` +
+        `<p>${escapeHtml(a.excerpt)}</p>` +
+        `</article></li>`,
+    )
+    .join("");
+  return (
+    `<main id="main-content">` +
+    `<nav aria-label="Breadcrumb"><ol><li><a href="/">Home</a></li><li>Blog</li></ol></nav>` +
+    `<h1>GTM Champion Blog</h1>` +
+    `<p>Expert insights on Go-To-Market strategy, B2B SaaS marketing, and growth tactics for modern companies.</p>` +
+    `<ul>${items}</ul>` +
+    `</main>`
+  );
 }
 
 const stubAssetsPlugin = {
@@ -106,8 +186,18 @@ export async function generatePrerender(): Promise<number> {
     contentHtml: renderArticleMarkdown(a.content),
   }));
 
-  writeFileSync(outPath, JSON.stringify(entries), "utf-8");
-  console.log(`[prerender] wrote ${entries.length} article bodies to prerender.json`);
+  const manifest: PrerenderManifest = {
+    articles: entries,
+    pages: {
+      "/": buildHomeHtml(),
+      "/blog": buildBlogHtml(articles),
+    },
+  };
+
+  writeFileSync(outPath, JSON.stringify(manifest), "utf-8");
+  console.log(
+    `[prerender] wrote ${entries.length} article bodies + ${Object.keys(manifest.pages).length} page bodies to prerender.json`,
+  );
   return entries.length;
 }
 

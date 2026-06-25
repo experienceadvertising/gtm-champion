@@ -95,7 +95,13 @@ const NOINDEX_PREFIXES = [
   "/api",
 ];
 
+interface PrerenderManifest {
+  articles: PrerenderArticle[];
+  pages: Record<string, string>;
+}
+
 const prerenderMap = new Map<string, PrerenderArticle>();
+const prerenderPages = new Map<string, string>();
 
 export function loadArticleMeta(distPath: string) {
   const filePath = path.join(distPath, "article-meta.json");
@@ -114,11 +120,16 @@ export function loadArticleMeta(distPath: string) {
   const prerenderPath = path.join(distPath, "prerender.json");
   if (fs.existsSync(prerenderPath)) {
     try {
-      const data = JSON.parse(fs.readFileSync(prerenderPath, "utf-8")) as PrerenderArticle[];
-      for (const article of data) {
+      const data = JSON.parse(fs.readFileSync(prerenderPath, "utf-8")) as PrerenderManifest;
+      for (const article of data.articles ?? []) {
         prerenderMap.set(article.slug, article);
       }
-      console.log(`[seo-meta] loaded ${prerenderMap.size} prerendered article bodies`);
+      for (const [route, html] of Object.entries(data.pages ?? {})) {
+        prerenderPages.set(route, html);
+      }
+      console.log(
+        `[seo-meta] loaded ${prerenderMap.size} prerendered article bodies + ${prerenderPages.size} page bodies`,
+      );
     } catch (err) {
       console.error("[seo-meta] failed to load prerender.json:", err);
     }
@@ -231,6 +242,11 @@ function buildBotBody(reqPath: string): string | null {
     }
     return null;
   }
+
+  // Fully prerendered page bodies (home, blog index).
+  const normalized = reqPath.length > 1 ? reqPath.replace(/\/$/, "") : reqPath;
+  const pageHtml = prerenderPages.get(normalized) ?? prerenderPages.get(reqPath);
+  if (pageHtml) return pageHtml;
 
   // For other known public routes, give bots a titled, described landmark
   // instead of an empty root (the rich JSON-LD already lives in <head>).

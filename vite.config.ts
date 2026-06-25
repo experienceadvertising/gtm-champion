@@ -50,6 +50,7 @@ export default defineConfig({
           if (id.includes("framer-motion")) return "framer-motion";
           if (id.includes("@radix-ui")) return "radix";
           if (id.includes("lucide-react")) return "icons";
+          if (id.includes("recharts") || id.includes("d3-")) return "charts";
         },
       },
     },

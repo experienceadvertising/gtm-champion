@@ -12,7 +12,7 @@ import llmAeoImage from "@assets/generated_images/llm_aeo_search_optimization-12
 import paidSocialImage from "@assets/generated_images/paid_social_media_advertising-1200.webp";
 import retargetingImage from "@assets/generated_images/retargeting_remarketing_strategy-1200.webp";
 import gtm2026Image from "@assets/generated_images/gtm_strategy_2026_trends-1200.webp";
-import noClickMarketingImage from "@assets/generated_images/no_click_marketing_visibility-1200.png";
+import noClickMarketingImage from "@assets/generated_images/no_click_marketing_visibility-1200.webp";
 
 export interface Article {
   slug: string;
