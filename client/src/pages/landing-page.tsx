@@ -25,7 +25,13 @@ import {
   ChevronUp,
   Sparkles,
   Clock,
-  Shield
+  Shield,
+  FileText,
+  Download,
+  Layers,
+  UserCheck,
+  Wallet,
+  History
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -52,27 +58,39 @@ const CHANNELS = [
 const FAQ_ITEMS = [
   {
     question: "What is GTM Champion?",
-    answer: "GTM Champion is an AI-powered Go-To-Market strategy platform for B2B SaaS companies. It analyzes your website, understands your product and target audience, and generates personalized marketing recommendations across 13 channels including SEO, paid search, content marketing, ABM, and partnerships."
+    answer: "GTM Champion is an AI-powered Go-To-Market strategy platform for B2B SaaS companies. It analyzes your website, detects your Ideal Customer Profile, and generates a personalized GTM playbook across 13 channels — complete with LinkedIn posts, email campaigns, blog articles, and weekly strategy updates."
   },
   {
     question: "How does GTM Champion work?",
-    answer: "Simply enter your website URL and GTM Champion's AI will scrape and analyze your site content. Within seconds, you'll receive a comprehensive GTM strategy with channel-specific recommendations, quick wins, KPIs to track, and weekly content ideas tailored to your business."
+    answer: "Enter your website URL and GTM Champion crawls your homepage, pricing page, about page, and more to extract your real product details, pricing tiers, competitors, and brand voice. It then builds a full strategy with channel-specific recommendations, quick wins, KPIs, and ready-to-publish content — all in about 2 minutes."
   },
   {
     question: "What marketing channels does GTM Champion cover?",
     answer: "GTM Champion provides strategies for 13 marketing channels: SEO, LLMs/AI Search, Paid Search, Paid Social, Organic Social, Retargeting, CRO (Conversion Rate Optimization), Email Marketing, Content Marketing, Community Building, ABM (Account-Based Marketing), Partnerships, and Outbound Sales."
   },
   {
+    question: "What are the AI Content Tools?",
+    answer: "Once your strategy is built, you can instantly generate publish-ready content: LinkedIn posts written in your brand voice, full email campaigns with subject lines and body copy, and long-form blog articles optimized for SEO — all referencing your actual product names, features, and competitive positioning. Every piece can be copied or downloaded in one click."
+  },
+  {
+    question: "What does 'GTM funnel tagging' mean?",
+    answer: "Every recommendation is automatically labeled as PLG (Product-Led Growth), Sales-Led, or Both — so you always know which motion a tactic serves. This helps you prioritize the right activities whether you're running a freemium self-serve model, a high-touch enterprise sales cycle, or a hybrid approach."
+  },
+  {
+    question: "What is ICP detection?",
+    answer: "GTM Champion automatically extracts your Ideal Customer Profile from your website — including the buyer persona, company size, industry, and pain points your product solves. You can view and edit this directly on the dashboard, and every recommendation is personalized around it."
+  },
+  {
     question: "Is GTM Champion free to use?",
-    answer: "Yes — the free plan is generous. You get full GTM analysis across all 13 channels, AI chat, content tools (with daily limits), weekly strategy emails, and one website re-analysis per week. No credit card required to start. GTM Champion Pro ($29/mo or $290/yr) unlocks 10x higher AI limits, branded multi-page PDF exports, unlimited re-analysis with 12-month strategy history, and up to 8 buyer personas with A/B budget scenarios."
+    answer: "Yes — the free plan is generous. You get full GTM analysis across all 13 channels, AI chat, content tools, weekly strategy emails, PDF and CSV export, and one website re-analysis per week. No credit card required. GTM Champion Pro ($29/mo or $290/yr) unlocks 10x higher AI limits, branded multi-page PDF exports, unlimited re-analysis with 12-month strategy history, up to 8 buyer personas, and A/B budget scenarios."
   },
   {
     question: "What are the weekly AI content sprints?",
-    answer: "Every Monday morning, GTM Champion sends you a fresh batch of actionable content ideas and marketing tactics via email. These are personalized to your business and designed to be executed within the week for maximum impact."
+    answer: "Every Monday morning, GTM Champion sends a fresh batch of actionable content ideas and marketing tactics to your inbox — personalized to your business and designed to be executed within the week for maximum impact."
   },
   {
-    question: "Can I ask questions about my GTM strategy?",
-    answer: "Yes! GTM Champion includes an AI assistant that answers your marketing questions with personalized advice based on your company's specific context, business model, and GTM motion. Ask about any channel and get actionable recommendations."
+    question: "Can I export my GTM strategy?",
+    answer: "Yes. Download your full strategy as a professionally formatted PDF report (cover page, executive summary, per-channel strategies, weekly ideas, and a recommendations summary) or export all recommendations as a CSV to share with your team. Pro users get branded multi-page PDFs with your company logo embedded."
   }
 ];
 
@@ -222,10 +240,10 @@ function DashboardPreview() {
 }
 
 const HERO_ROTATING_WORDS = [
-  "in Minutes, Not Months",
+  "in 2 Minutes, Not Months",
   "Across 13 Channels",
-  "Powered by GPT-5",
-  "Free to Start",
+  "With AI That Knows Your Brand",
+  "Free to Start Today",
 ];
 
 function AnimatedCounter({ target, suffix = "", duration = 2000 }: { target: number; suffix?: string; duration?: number }) {
@@ -324,13 +342,18 @@ export default function LandingPage() {
             { "@type": "Offer", "name": "Pro Annual", "price": "290", "priceCurrency": "USD", "description": "All Pro features billed annually. $290 per year (save ~17% vs monthly)." }
           ],
           "featureList": [
-            "AI-powered website analysis",
+            "Deep website personalization with multi-page scraping",
+            "ICP detection and editing",
             "13 marketing channel strategies",
-            "Personalized GTM recommendations",
-            "Weekly content ideas via email",
+            "GTM funnel tagging (PLG, Sales-Led, Both)",
+            "AI LinkedIn post, email campaign, and blog article generator",
             "AI Q&A assistant",
-            "Content generation tools",
-            "PageSpeed performance insights"
+            "Weekly email strategy sprints",
+            "PDF and CSV export",
+            "PageSpeed and Core Web Vitals insights",
+            "A/B budget scenarios (Pro)",
+            "12-month strategy history (Pro)",
+            "Up to 8 buyer personas (Pro)"
           ]
         })}</script>
         <script type="application/ld+json">{JSON.stringify({
@@ -402,9 +425,9 @@ export default function LandingPage() {
                     AI-Powered Go-To-Market Strategy
                   </span>
                   <h1 id="hero-heading" className="text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-display font-bold tracking-tight leading-[1.08] text-foreground">
-                    Your <span className="gradient-text">GTM Playbook</span>
-                    <br className="hidden sm:block" />
-                    <span className="block text-2xl sm:text-3xl md:text-5xl lg:text-6xl mt-1">
+                    Stop Guessing.<br className="hidden sm:block" />
+                    <span className="gradient-text">Get a Full GTM Strategy</span>
+                    <span className="block text-2xl sm:text-3xl md:text-5xl lg:text-5xl mt-2">
                       <AnimatePresence mode="wait">
                         <motion.span
                           key={heroWordIndex}
@@ -422,7 +445,7 @@ export default function LandingPage() {
                 </motion.div>
                 
                 <motion.p variants={itemVariants} className="text-sm md:text-xl text-muted-foreground max-w-xl leading-relaxed">
-                  Paste your URL. Our AI scrapes your site, analyzes your business, and builds a <strong className="text-foreground">custom GTM strategy across 13 channels</strong> with weekly updates every Monday. The kind of strategy agencies charge $5,000+ to create. Free to start, Pro from $29/mo.
+                  Paste your URL. Our AI reads your site, detects your ICP, and delivers a <strong className="text-foreground">complete GTM playbook across 13 channels</strong> — with ready-to-publish LinkedIn posts, email campaigns, blog articles, and fresh ideas every Monday. The work of a $5,000 consultant, free to start.
                 </motion.p>
                 
                 <motion.div variants={itemVariants} className="flex flex-col sm:flex-row gap-3">
@@ -543,8 +566,8 @@ export default function LandingPage() {
                   },
                   {
                     step: "3",
-                    title: "Execute & Get Weekly Updates",
-                    description: "Track recommendations, generate content with built-in writing tools, and receive fresh strategy ideas in your inbox every Monday morning.",
+                    title: "Write, Execute & Stay Current",
+                    description: "Generate LinkedIn posts, email campaigns, and blog articles in one click. Track recommendations on the dashboard, and get fresh strategy ideas every Monday morning.",
                     gradient: "from-indigo-500 to-violet-600",
                     shadow: "shadow-indigo-500/30",
                   }
@@ -603,8 +626,8 @@ export default function LandingPage() {
               {[
                 {
                   icon: <Brain className="h-8 w-8 text-indigo-500" aria-hidden="true" />,
-                  title: "AI-Powered Analysis",
-                  description: "GPT-5 analyzes your website content and generates personalized strategies based on your unique business model and target audience.",
+                  title: "Deep Personalization",
+                  description: "Our AI crawls your homepage, pricing page, about page, and more — extracting your real product names, features, pricing tiers, and competitors to personalize every recommendation.",
                   span: "md:col-span-4 lg:col-span-7",
                   gradient: "from-indigo-500/10 to-violet-500/10",
                   borderGradient: "from-indigo-500/30 via-violet-500/20 to-transparent",
@@ -612,15 +635,39 @@ export default function LandingPage() {
                 {
                   icon: <BarChart3 className="h-8 w-8 text-emerald-500" aria-hidden="true" />,
                   title: "13 Channel Strategies",
-                  description: "Get tailored recommendations for SEO, paid ads, content, email, ABM, partnerships, outbound, and 6 more marketing channels.",
+                  description: "Get tailored recommendations for SEO, paid ads, content, email, ABM, partnerships, outbound, and 6 more — all personalized to your GTM motion.",
                   span: "md:col-span-2 lg:col-span-5",
                   gradient: "from-emerald-500/10 to-teal-500/10",
                   borderGradient: "from-emerald-500/30 via-teal-500/20 to-transparent",
                 },
                 {
+                  icon: <PenTool className="h-8 w-8 text-violet-500" aria-hidden="true" />,
+                  title: "AI Content Tools",
+                  description: "Generate ready-to-publish LinkedIn posts, full email campaigns, and long-form blog articles — all written in your brand voice using your actual product details.",
+                  span: "md:col-span-3 lg:col-span-5",
+                  gradient: "from-violet-500/10 to-purple-500/10",
+                  borderGradient: "from-violet-500/30 via-purple-500/20 to-transparent",
+                },
+                {
+                  icon: <Layers className="h-8 w-8 text-rose-500" aria-hidden="true" />,
+                  title: "GTM Funnel Tagging",
+                  description: "Every recommendation is automatically tagged as PLG, Sales-Led, or Both — so you always know which motion each tactic serves.",
+                  span: "md:col-span-3 lg:col-span-4",
+                  gradient: "from-rose-500/10 to-pink-500/10",
+                  borderGradient: "from-rose-500/30 via-pink-500/20 to-transparent",
+                },
+                {
+                  icon: <UserCheck className="h-8 w-8 text-cyan-500" aria-hidden="true" />,
+                  title: "ICP Detection & Editing",
+                  description: "Your Ideal Customer Profile is auto-detected from your site — persona, company size, industry, and pain points — and fully editable right on the dashboard.",
+                  span: "md:col-span-3 lg:col-span-3",
+                  gradient: "from-cyan-500/10 to-sky-500/10",
+                  borderGradient: "from-cyan-500/30 via-sky-500/20 to-transparent",
+                },
+                {
                   icon: <MessageSquare className="h-8 w-8 text-blue-500" aria-hidden="true" />,
                   title: "AI Q&A Assistant",
-                  description: "Ask questions about your GTM strategy and get personalized answers based on your company's context and marketing goals.",
+                  description: "Ask anything about your GTM strategy and get personalized answers grounded in your company's actual context, channels, and goals.",
                   span: "md:col-span-3 lg:col-span-4",
                   gradient: "from-blue-500/10 to-cyan-500/10",
                   borderGradient: "from-blue-500/30 via-cyan-500/20 to-transparent",
@@ -628,40 +675,48 @@ export default function LandingPage() {
                 {
                   icon: <Mail className="h-8 w-8 text-amber-500" aria-hidden="true" />,
                   title: "Weekly Email Sprints",
-                  description: "Receive fresh, actionable content ideas every Monday morning tailored to your business and ready to execute.",
+                  description: "Every Monday, a fresh batch of actionable content ideas lands in your inbox — personalized to your business and ready to execute that week.",
                   span: "md:col-span-3 lg:col-span-4",
                   gradient: "from-amber-500/10 to-orange-500/10",
                   borderGradient: "from-amber-500/30 via-orange-500/20 to-transparent",
                 },
                 {
-                  icon: <Target className="h-8 w-8 text-rose-500" aria-hidden="true" />,
-                  title: "Quick Wins",
-                  description: "Each channel includes low-effort, high-impact tactics you can implement this week to start seeing results fast.",
-                  span: "md:col-span-3 lg:col-span-4",
-                  gradient: "from-rose-500/10 to-pink-500/10",
-                  borderGradient: "from-rose-500/30 via-pink-500/20 to-transparent",
-                },
-                {
-                  icon: <TrendingUp className="h-8 w-8 text-cyan-500" aria-hidden="true" />,
-                  title: "KPIs & Metrics",
-                  description: "Know exactly what to measure with channel-specific KPIs and benchmarks based on 2025 B2B SaaS industry standards.",
-                  span: "md:col-span-3 lg:col-span-4",
-                  gradient: "from-cyan-500/10 to-sky-500/10",
-                  borderGradient: "from-cyan-500/30 via-sky-500/20 to-transparent",
-                },
-                {
-                  icon: <Globe className="h-8 w-8 text-purple-500" aria-hidden="true" />,
-                  title: "PageSpeed Insights",
-                  description: "Automatic performance audits with Core Web Vitals, loading scores, and optimization recommendations for your site.",
+                  icon: <Download className="h-8 w-8 text-purple-500" aria-hidden="true" />,
+                  title: "PDF & CSV Export",
+                  description: "Download your full GTM strategy as a professionally formatted PDF report or export all recommendations as a CSV — shareable with your whole team.",
                   span: "md:col-span-3 lg:col-span-4",
                   gradient: "from-purple-500/10 to-fuchsia-500/10",
                   borderGradient: "from-purple-500/30 via-fuchsia-500/20 to-transparent",
                 },
                 {
+                  icon: <Globe className="h-8 w-8 text-teal-500" aria-hidden="true" />,
+                  title: "PageSpeed Insights",
+                  description: "Automatic performance audits with Core Web Vitals, loading scores, and top optimization opportunities pulled directly from Google PageSpeed.",
+                  span: "md:col-span-3 lg:col-span-4",
+                  gradient: "from-teal-500/10 to-emerald-500/10",
+                  borderGradient: "from-teal-500/30 via-emerald-500/20 to-transparent",
+                },
+                {
+                  icon: <Wallet className="h-8 w-8 text-orange-500" aria-hidden="true" />,
+                  title: "A/B Budget Scenarios",
+                  description: "Model conservative, balanced, and aggressive budget allocations side-by-side to see exactly where your marketing dollars will have the most impact. (Pro)",
+                  span: "md:col-span-3 lg:col-span-4",
+                  gradient: "from-orange-500/10 to-amber-500/10",
+                  borderGradient: "from-orange-500/30 via-amber-500/20 to-transparent",
+                },
+                {
+                  icon: <History className="h-8 w-8 text-sky-500" aria-hidden="true" />,
+                  title: "12-Month Strategy History",
+                  description: "Re-analyze your website anytime and track how your GTM strategy evolves — every snapshot is saved so you can compare progress over time. (Pro)",
+                  span: "md:col-span-3 lg:col-span-4",
+                  gradient: "from-sky-500/10 to-blue-500/10",
+                  borderGradient: "from-sky-500/30 via-blue-500/20 to-transparent",
+                },
+                {
                   icon: <Sparkles className="h-8 w-8 text-primary" aria-hidden="true" />,
-                  title: "Strategic Pillars",
-                  description: "Get long-term strategic initiatives with specific tactics, objectives, and measurement criteria for each channel.",
-                  span: "md:col-span-3 lg:col-span-8",
+                  title: "Quick Wins + KPIs",
+                  description: "Each channel surfaces low-effort, high-impact tactics you can run this week, plus the exact KPIs and benchmarks to know if they're working.",
+                  span: "md:col-span-6 lg:col-span-4",
                   gradient: "from-indigo-500/10 to-purple-500/10",
                   borderGradient: "from-indigo-500/30 via-purple-500/20 to-transparent",
                 }
@@ -883,6 +938,126 @@ export default function LandingPage() {
                   </div>
                 </div>
               </motion.div>
+            </div>
+          </div>
+        </section>
+
+        <section className="py-16 md:py-36 relative overflow-hidden" aria-labelledby="content-tools-heading">
+          <div className="absolute top-10 left-0 w-72 h-72 bg-violet-500/5 rounded-full blur-3xl pointer-events-none" aria-hidden="true" />
+          <div className="absolute bottom-10 right-0 w-60 h-60 bg-indigo-500/5 rounded-full blur-3xl pointer-events-none" aria-hidden="true" />
+          <div className="container mx-auto px-4 md:px-8">
+            <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5 }}
+                className="relative order-2 lg:order-1"
+              >
+                <div className="absolute inset-0 bg-gradient-to-br from-violet-500/20 to-indigo-500/20 rounded-2xl blur-xl -m-2" aria-hidden="true" />
+                <div className="relative bg-background rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+                  <div className="flex items-center gap-3 px-5 py-4 border-b bg-gradient-to-r from-slate-50 to-violet-50/30 dark:from-slate-800/50 dark:to-violet-950/20">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-violet-500/20">
+                      <PenTool className="h-5 w-5 text-white" aria-hidden="true" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-sm">Content Tools</p>
+                      <p className="text-xs text-muted-foreground">Written in your brand voice</p>
+                    </div>
+                  </div>
+                  <div className="p-5 space-y-3">
+                    {[
+                      {
+                        label: "LinkedIn Post",
+                        color: "bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400",
+                        content: "Most B2B teams waste their biggest GTM asset: their customer success stories. Here's how we helped [Client] 3x their pipeline in 90 days using just two channels...",
+                      },
+                      {
+                        label: "Email Campaign",
+                        color: "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400",
+                        content: "Subject: The one GTM mistake costing SaaS teams $50K+\n\nHi [First Name], If you're splitting budget evenly across 13 channels, you're probably funding your 11 weakest ones...",
+                      },
+                      {
+                        label: "Blog Article",
+                        color: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400",
+                        content: "The 2025 B2B SaaS GTM Playbook: Why PLG and Sales-Led Motions Are Converging — and What It Means for Your Channel Mix...",
+                      },
+                    ].map((item) => (
+                      <div key={item.label} className="rounded-xl bg-slate-50 dark:bg-slate-800/50 p-3.5 border border-slate-100 dark:border-slate-700">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${item.color}`}>{item.label}</span>
+                          <div className="flex gap-1.5">
+                            <div className="h-5 w-12 rounded bg-slate-200 dark:bg-slate-700 text-[9px] flex items-center justify-center text-muted-foreground font-medium">Copy</div>
+                            <div className="h-5 w-16 rounded bg-slate-200 dark:bg-slate-700 text-[9px] flex items-center justify-center text-muted-foreground font-medium">Download</div>
+                          </div>
+                        </div>
+                        <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">{item.content}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </motion.div>
+
+              <div className="space-y-7 order-1 lg:order-2">
+                <motion.div
+                  initial={{ opacity: 0, y: 15 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.4 }}
+                >
+                  <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-violet-500/10 text-violet-600 dark:text-violet-400 text-sm font-semibold border border-violet-500/20">
+                    <PenTool className="h-3.5 w-3.5" aria-hidden="true" />
+                    AI Content Tools
+                  </span>
+                </motion.div>
+                <motion.h2
+                  initial={{ opacity: 0, y: 15 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: 0.1, duration: 0.4 }}
+                  id="content-tools-heading" className="text-3xl md:text-5xl font-display font-bold"
+                >
+                  Strategy Is Just the Start — <span className="gradient-text">We Write the Content Too</span>
+                </motion.h2>
+                <motion.p
+                  initial={{ opacity: 0, y: 15 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: 0.15, duration: 0.4 }}
+                  className="text-lg text-muted-foreground leading-relaxed"
+                >
+                  Most strategy tools stop at recommendations. GTM Champion goes further — generating publish-ready content using your actual brand voice, product names, and competitive positioning.
+                </motion.p>
+                <motion.ul
+                  className="space-y-3"
+                  initial={{ opacity: 0, y: 15 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: 0.2, duration: 0.4 }}
+                >
+                  {[
+                    "LinkedIn posts that sound like you wrote them",
+                    "Full email campaigns with subject lines and body copy",
+                    "Long-form blog articles optimized for SEO",
+                    "One-click copy or download as a file",
+                  ].map((item, idx) => (
+                    <li key={idx} className="flex items-start gap-3">
+                      <CheckCircle2 className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" aria-hidden="true" />
+                      <span className="text-muted-foreground">{item}</span>
+                    </li>
+                  ))}
+                </motion.ul>
+                <motion.div
+                  initial={{ opacity: 0, y: 15 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: 0.25, duration: 0.4 }}
+                >
+                  <Button size="lg" onClick={() => setLocation("/auth")} data-testid="button-try-content-tools" className="group shadow-lg shadow-primary/20">
+                    Try Content Tools Free <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" aria-hidden="true" />
+                  </Button>
+                </motion.div>
+              </div>
             </div>
           </div>
         </section>
