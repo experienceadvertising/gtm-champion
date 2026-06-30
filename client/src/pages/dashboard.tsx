@@ -2858,6 +2858,101 @@ export default function Dashboard() {
                       </motion.div>
                     )}
 
+                    {selectedChannel === "LLMs" && channelInsight && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.15 }}
+                        className="rounded-2xl border border-indigo-200/70 dark:border-indigo-800/50 bg-gradient-to-br from-indigo-50/80 via-violet-50/40 to-white dark:from-indigo-950/30 dark:via-violet-950/20 dark:to-transparent overflow-hidden shadow-sm"
+                      >
+                        <div className="px-6 py-5 border-b border-indigo-100 dark:border-indigo-800/40 flex items-center gap-3">
+                          <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-sm">
+                            <Brain className="h-4 w-4 text-white" />
+                          </div>
+                          <div>
+                            <h3 className="font-bold text-sm text-indigo-900 dark:text-indigo-100">How AI Search Actually Works: Query Fan-out</h3>
+                            <p className="text-xs text-indigo-600 dark:text-indigo-400 mt-0.5">The hidden process behind ChatGPT, Perplexity, Gemini & Google AI Mode</p>
+                          </div>
+                        </div>
+                        <div className="p-6 space-y-5">
+                          <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
+                            When a user asks AI one question, the AI secretly breaks it into <strong>8–20 sub-queries</strong> running in parallel — covering definitions, comparisons, pricing, implementation, troubleshooting, and reviews — before synthesizing one final answer. The user never sees these sub-queries.
+                          </p>
+
+                          <div className="rounded-xl bg-white/80 dark:bg-slate-800/50 border border-indigo-100 dark:border-indigo-800/30 p-4">
+                            <p className="text-xs font-semibold text-indigo-700 dark:text-indigo-300 mb-3 uppercase tracking-wide">Example: "What is the best CRM for SaaS startups?"</p>
+                            <p className="text-xs text-slate-500 dark:text-slate-400 mb-2 italic">The AI internally researches all of these at once:</p>
+                            <div className="grid grid-cols-2 gap-1.5">
+                              {[
+                                "What is CRM software?",
+                                "Best CRM for startups",
+                                "HubSpot vs Pipedrive vs Close",
+                                "CRM pricing comparison",
+                                "CRM implementation guide",
+                                "CRM automation features",
+                                "CRM integrations",
+                                "CRM migration best practices",
+                              ].map((q, i) => (
+                                <div key={i} className="flex items-start gap-1.5 text-xs text-slate-600 dark:text-slate-400">
+                                  <Search className="h-3 w-3 text-indigo-400 mt-0.5 shrink-0" />
+                                  <span>{q}</span>
+                                </div>
+                              ))}
+                            </div>
+                            <p className="text-xs text-slate-400 dark:text-slate-500 mt-3 italic">The user only sees the final synthesized answer.</p>
+                          </div>
+
+                          <div className="grid sm:grid-cols-2 gap-4">
+                            <div className="rounded-xl bg-white/80 dark:bg-slate-800/50 border border-slate-200/60 dark:border-slate-700/40 p-4">
+                              <div className="flex items-center gap-2 mb-2">
+                                <div className="h-5 w-5 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center">
+                                  <Search className="h-3 w-3 text-slate-500" />
+                                </div>
+                                <span className="text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wide">Traditional SEO</span>
+                              </div>
+                              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">Rank <strong>one page</strong> for <strong>one keyword</strong>. Win the top result and you're done.</p>
+                            </div>
+                            <div className="rounded-xl bg-indigo-50/80 dark:bg-indigo-950/30 border border-indigo-200/60 dark:border-indigo-800/40 p-4">
+                              <div className="flex items-center gap-2 mb-2">
+                                <div className="h-5 w-5 rounded-full bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center">
+                                  <Brain className="h-3 w-3 text-indigo-600 dark:text-indigo-400" />
+                                </div>
+                                <span className="text-xs font-semibold text-indigo-700 dark:text-indigo-300 uppercase tracking-wide">AEO / GEO</span>
+                              </div>
+                              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">Demonstrate expertise across an <strong>entire topic ecosystem</strong> so AI encounters your brand across multiple sub-queries — not just the commercial one.</p>
+                            </div>
+                          </div>
+
+                          <div className="rounded-xl bg-white/80 dark:bg-slate-800/50 border border-indigo-100 dark:border-indigo-800/30 p-4">
+                            <h4 className="text-xs font-semibold text-indigo-700 dark:text-indigo-300 mb-3 uppercase tracking-wide flex items-center gap-1.5">
+                              <Zap className="h-3.5 w-3.5" /> AI Topic Coverage Score
+                            </h4>
+                            <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed mb-3">
+                              Measures how consistently your brand appears across the full fan-out cluster — not just one commercial keyword.
+                            </p>
+                            <div className="bg-indigo-50/80 dark:bg-indigo-950/40 rounded-lg p-3 font-mono text-xs text-center space-y-1">
+                              <div className="text-indigo-700 dark:text-indigo-300 font-bold">Brand Mentions ÷ Total Fan-out Prompts × 100</div>
+                              <div className="text-slate-500 dark:text-slate-400">e.g. 6 mentions ÷ 8 prompts × 100 = <span className="font-bold text-indigo-600">Score: 75</span></div>
+                              <div className="text-xs text-slate-400 pt-1">Target: 60+ across the topic ecosystem</div>
+                            </div>
+                          </div>
+
+                          <div className="rounded-xl bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200/50 dark:border-amber-800/30 p-4">
+                            <h4 className="text-xs font-semibold text-amber-700 dark:text-amber-400 mb-2 flex items-center gap-1.5">
+                              <Lightbulb className="h-3.5 w-3.5" /> The Key Insight
+                            </h4>
+                            <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                              Many fan-out sub-queries have <strong>little or no measurable search volume</strong> in traditional keyword tools — yet AI systems execute them constantly behind the scenes. The most valuable AEO content opportunities won't show up in Google Search Console.
+                            </p>
+                          </div>
+
+                          <div className="text-xs text-slate-400 dark:text-slate-500 pt-1">
+                            Sources: iPullRank · Zyppy Signal · DataForSEO
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+
                     {((channelInsight?.strategicPillars && channelInsight.strategicPillars.length > 0) || (channelInsight?.quickWins && channelInsight.quickWins.length > 0)) && (
                     <div className="grid lg:grid-cols-2 gap-8">
                       {channelInsight?.strategicPillars && channelInsight.strategicPillars.length > 0 && (

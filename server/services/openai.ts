@@ -774,13 +774,13 @@ Provide your analysis in the following JSON format:
   ]
 }
 
-Generate 10-14 recommendations across ALL channels and 4 weekly content ideas. Make ALL content deeply specific to THIS company — generic advice is NOT acceptable.`;
+Generate exactly 1 recommendation per channel (13 total, covering ALL channels: SEO, LLMs, Paid Search, Paid Social, Organic Social, Retargeting, CRO, Email Marketing, Content, Community, ABM, Partnerships, Outbound) plus 3-5 additional High-impact recommendations for the channels that matter most to this company's GTM motion. Minimum 13 recommendations, maximum 18. EVERY channel must have at least 1. Also generate 4 weekly content ideas. Make ALL content deeply specific to THIS company — generic advice is NOT acceptable.`;
 
   const response = await openai.chat.completions.create({
     model: "gpt-4o",
     messages: [{ role: "user", content: prompt }],
     response_format: { type: "json_object" },
-    max_completion_tokens: 5000,
+    max_completion_tokens: 7000,
   });
 
   const content = response.choices[0]?.message?.content;
@@ -815,12 +815,33 @@ COMPANY PROFILE:
   const pricingRef = siteProfile?.pricingTiers?.map(t => `${t.name}: ${t.price}`).join(', ') || '';
   const painPointRef = siteProfile?.icpDetails?.painPoints?.slice(0, 3).join(', ') || '';
 
+  const llmsChannelContext = channels.includes('LLMs') ? `
+EXPERT CONTEXT FOR LLMs / AEO CHANNEL (apply only to the LLMs channelId):
+Modern AI search (ChatGPT, Perplexity, Gemini, Claude, Google AI Mode) uses "query fan-out" (also called query decomposition): when a user asks one question, the AI internally breaks it into 8–20 sub-queries covering definitions, comparisons, tutorials, implementation, troubleshooting, features, pricing, and best practices — running them in parallel before synthesizing a final answer. The user never sees these sub-queries.
+
+This fundamentally changes content strategy:
+- Traditional SEO: rank one page for one keyword
+- AEO/GEO: demonstrate expertise across an ENTIRE topic ecosystem so the AI encounters your brand across multiple sub-queries during its hidden research process
+- A brand that only appears for "best [category]" but has nothing on "[category] implementation", "[category] pricing", "[category] vs [competitor]", "[category] troubleshooting" has far fewer opportunities to be cited
+
+Key tactics for the LLMs channel:
+1. TOPICAL COVERAGE — build content clusters that answer every sub-query the AI might run: definitional ("What is X?"), comparison ("X vs Y"), how-to, troubleshooting, feature deep-dives, use cases, pricing pages, migration guides
+2. STRUCTURED DATA — implement FAQ schema, HowTo schema, Article schema so AI can parse and cite content easily
+3. ENTITY AUTHORITY — be cited by authoritative 3rd-party sources (G2, Capterra, analyst reports, press) so AI models trust the brand signal
+4. ANSWER-OPTIMIZED CONTENT — write in a format AI loves: clear H2/H3 hierarchy, direct answers in the first sentence of each section, numbered steps for processes, comparison tables for "vs" content
+5. AI TOPIC COVERAGE SCORE — track brand mentions across the full fan-out cluster (mentions ÷ total sub-queries × 100); goal is 60%+ across the topic ecosystem
+6. MONITOR AI CITATIONS — regularly test brand visibility in ChatGPT, Perplexity, Gemini, and Google AI Mode for key commercial and informational queries
+
+For ${companyName} specifically: identify 6–10 sub-query categories that AI engines research before recommending a ${categoryRef || 'product like this'}, then map existing content to those sub-queries and identify the gaps.
+` : '';
+
   const prompt = `You are a B2B SaaS marketing expert. Generate DEEPLY PERSONALIZED channel insights for ${companyName}.
 
 Company: ${companyName}
 Summary: ${companySummary}
 GTM Motion: ${gtmMotion}
 ${profileContext}
+${llmsChannelContext}
 Website Content:
 ${websiteContent.slice(0, 3500)}
 
