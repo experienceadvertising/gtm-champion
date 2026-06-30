@@ -36,78 +36,29 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { PricingSection } from "@/components/PricingSection";
+import { HERO, STEPS, CHANNELS, CHANNEL_GROUPS, FAQ_ITEMS } from "@shared/siteContent";
 import heroImage from "@assets/generated_images/diverse_marketing_team_collaborating-1200.webp";
 import heroImage800 from "@assets/generated_images/diverse_marketing_team_collaborating-800.webp";
 
-const CHANNELS = [
-  { id: "SEO", icon: Search, description: "Organic search optimization" },
-  { id: "LLMs", icon: Brain, description: "AI search visibility" },
-  { id: "Paid Search", icon: TrendingUp, description: "Google & Bing ads" },
-  { id: "Paid Social", icon: Megaphone, description: "LinkedIn & social ads" },
-  { id: "Organic Social", icon: Share2, description: "LinkedIn & Twitter growth" },
-  { id: "Retargeting", icon: RefreshCw, description: "Re-engage visitors" },
-  { id: "CRO", icon: Target, description: "Conversion optimization" },
-  { id: "Email", icon: Mail, description: "Nurture campaigns" },
-  { id: "Content", icon: PenTool, description: "Blogs, guides & webinars" },
-  { id: "Community", icon: Users, description: "Build your audience" },
-  { id: "ABM", icon: Target, description: "Account-based marketing" },
-  { id: "Partnerships", icon: Handshake, description: "Partner ecosystem" },
-  { id: "Outbound", icon: Phone, description: "Cold email & sales" },
-];
-
-const FAQ_ITEMS = [
-  {
-    question: "What is GTM Champion?",
-    answer: "GTM Champion is an AI-powered Go-To-Market strategy platform for B2B SaaS companies. It analyzes your website, detects your Ideal Customer Profile, and generates a personalized GTM playbook across 13 channels — complete with LinkedIn posts, email campaigns, blog articles, and weekly strategy updates."
-  },
-  {
-    question: "How does GTM Champion work?",
-    answer: "Enter your website URL and GTM Champion crawls your homepage, pricing page, about page, and more to extract your real product details, pricing tiers, competitors, and brand voice. It then builds a full strategy with channel-specific recommendations, quick wins, KPIs, and ready-to-publish content — all in about 2 minutes."
-  },
-  {
-    question: "What marketing channels does GTM Champion cover?",
-    answer: "GTM Champion provides strategies for 13 marketing channels: SEO, LLMs/AI Search, Paid Search, Paid Social, Organic Social, Retargeting, CRO (Conversion Rate Optimization), Email Marketing, Content Marketing, Community Building, ABM (Account-Based Marketing), Partnerships, and Outbound Sales."
-  },
-  {
-    question: "What are the AI Content Tools?",
-    answer: "Once your strategy is built, you can instantly generate publish-ready content: LinkedIn posts written in your brand voice, full email campaigns with subject lines and body copy, and long-form blog articles optimized for SEO — all referencing your actual product names, features, and competitive positioning. Every piece can be copied or downloaded in one click."
-  },
-  {
-    question: "What does 'GTM funnel tagging' mean?",
-    answer: "Every recommendation is automatically labeled as PLG (Product-Led Growth), Sales-Led, or Both — so you always know which motion a tactic serves. This helps you prioritize the right activities whether you're running a freemium self-serve model, a high-touch enterprise sales cycle, or a hybrid approach."
-  },
-  {
-    question: "What is ICP detection?",
-    answer: "GTM Champion automatically extracts your Ideal Customer Profile from your website — including the buyer persona, company size, industry, and pain points your product solves. You can view and edit this directly on the dashboard, and every recommendation is personalized around it."
-  },
-  {
-    question: "Is GTM Champion free to use?",
-    answer: "Yes — the free plan is generous. You get full GTM analysis across all 13 channels, AI chat, content tools, weekly strategy emails, PDF and CSV export, and one website re-analysis per week. No credit card required. GTM Champion Pro ($29/mo or $290/yr) unlocks 10x higher AI limits, branded multi-page PDF exports, unlimited re-analysis with 12-month strategy history, up to 8 buyer personas, and A/B budget scenarios."
-  },
-  {
-    question: "What are the weekly AI content sprints?",
-    answer: "Every Monday morning, GTM Champion sends a fresh batch of actionable content ideas and marketing tactics to your inbox — personalized to your business and designed to be executed within the week for maximum impact."
-  },
-  {
-    question: "Can I export my GTM strategy?",
-    answer: "Yes. Download your full strategy as a professionally formatted PDF report (cover page, executive summary, per-channel strategies, weekly ideas, and a recommendations summary) or export all recommendations as a CSV to share with your team. Pro users get branded multi-page PDFs with your company logo embedded."
-  }
-];
-
-const CHANNEL_GROUPS = {
-  organic: {
-    label: "Organic Growth",
-    channels: ["SEO", "LLMs", "Organic Social", "Content", "Community"],
-  },
-  paid: {
-    label: "Paid Acquisition",
-    channels: ["Paid Search", "Paid Social", "Retargeting"],
-  },
-  growth: {
-    label: "Growth & Outreach",
-    channels: ["CRO", "Email", "ABM", "Partnerships", "Outbound"],
-  },
+// Channel/step/FAQ copy lives in shared/siteContent.ts so the prerendered
+// (crawler-facing) HTML stays identical to what users see. Icons are mapped
+// here by channel id since they are React components (kept out of shared data).
+const CHANNEL_ICONS: Record<string, React.ElementType> = {
+  SEO: Search,
+  LLMs: Brain,
+  "Paid Search": TrendingUp,
+  "Paid Social": Megaphone,
+  "Organic Social": Share2,
+  Retargeting: RefreshCw,
+  CRO: Target,
+  Email: Mail,
+  Content: PenTool,
+  Community: Users,
+  ABM: Target,
+  Partnerships: Handshake,
+  Outbound: Phone,
 };
+
 
 function FloatingIcon({ icon: Icon, className, delay }: { icon: React.ElementType; className: string; delay: number }) {
   return (
@@ -798,7 +749,7 @@ export default function LandingPage() {
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
                       {group.channels.map((channelId, chIdx) => {
                         const channel = CHANNELS.find(c => c.id === channelId)!;
-                        const Icon = channel.icon;
+                        const Icon = CHANNEL_ICONS[channel.id] ?? Search;
                         return (
                           <motion.div
                             key={channel.id}

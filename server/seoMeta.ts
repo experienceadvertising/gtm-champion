@@ -23,6 +23,19 @@ interface ArticleMeta {
   ogImage?: string;
 }
 
+interface PrerenderArticle {
+  slug: string;
+  title: string;
+  excerpt: string;
+  author: string;
+  category: string;
+  readTime: string;
+  publishDate: string;
+  modifiedDate: string;
+  tags: string[];
+  contentHtml: string;
+}
+
 const STATIC_META: Record<string, RouteMeta> = {
   "/": {
     title: "GTM Champion - AI-Powered Go-To-Market Strategy for B2B SaaS",
@@ -70,18 +83,74 @@ const STATIC_META: Record<string, RouteMeta> = {
 
 const articleMetaMap = new Map<string, ArticleMeta>();
 
+const NOINDEX_PREFIXES = [
+  "/auth",
+  "/dashboard",
+  "/admin",
+  "/content-tools",
+  "/emails",
+  "/api",
+];
+
+interface PrerenderManifest {
+  articles: PrerenderArticle[];
+  pages: Record<string, string>;
+}
+
+const prerenderMap = new Map<string, PrerenderArticle>();
+const prerenderPages = new Map<string, string>();
+
 export function loadArticleMeta(distPath: string) {
   const filePath = path.join(distPath, "article-meta.json");
-  if (!fs.existsSync(filePath)) return;
-  try {
-    const data = JSON.parse(fs.readFileSync(filePath, "utf-8")) as ArticleMeta[];
-    for (const article of data) {
-      articleMetaMap.set(article.slug, article);
+  if (fs.existsSync(filePath)) {
+    try {
+      const data = JSON.parse(fs.readFileSync(filePath, "utf-8")) as ArticleMeta[];
+      for (const article of data) {
+        articleMetaMap.set(article.slug, article);
+      }
+      console.log(`[seo-meta] loaded ${articleMetaMap.size} article meta entries`);
+    } catch (err) {
+      console.error("[seo-meta] failed to load article-meta.json:", err);
     }
-    console.log(`[seo-meta] loaded ${articleMetaMap.size} article meta entries`);
-  } catch (err) {
-    console.error("[seo-meta] failed to load article-meta.json:", err);
   }
+
+  const prerenderPath = path.join(distPath, "prerender.json");
+  if (fs.existsSync(prerenderPath)) {
+    try {
+      const data = JSON.parse(fs.readFileSync(prerenderPath, "utf-8")) as PrerenderManifest;
+      for (const article of data.articles ?? []) {
+        prerenderMap.set(article.slug, article);
+      }
+      for (const [route, html] of Object.entries(data.pages ?? {})) {
+        prerenderPages.set(route, html);
+      }
+      console.log(
+        `[seo-meta] loaded ${prerenderMap.size} prerendered article bodies + ${prerenderPages.size} page bodies`,
+      );
+    } catch (err) {
+      console.error("[seo-meta] failed to load prerender.json:", err);
+    }
+  }
+}
+
+const BOT_UA_RE =
+  /googlebot|bingbot|duckduckbot|yandex|baiduspider|applebot|slurp|gptbot|oai-searchbot|chatgpt-user|claudebot|claude-web|anthropic-ai|perplexitybot|google-extended|ccbot|bytespider|amazonbot|meta-externalagent|facebookexternalhit|twitterbot|linkedinbot|slackbot|discordbot|whatsapp|telegrambot|embedly|redditbot|pinterest|petalbot/i;
+
+export function isBotUserAgent(userAgent: string | undefined): boolean {
+  if (!userAgent) return false;
+  return BOT_UA_RE.test(userAgent);
+}
+
+function isPrivateRoute(reqPath: string): boolean {
+  return NOINDEX_PREFIXES.some(
+    (p) => reqPath === p || reqPath.startsWith(`${p}/`),
+  );
+}
+
+function robotsForRoute(reqPath: string): string | null {
+  if (isPrivateRoute(reqPath)) return "noindex, nofollow";
+  if (metaForRoute(reqPath)) return null;
+  return "noindex, follow";
 }
 
 function escapeHtml(value: string): string {
@@ -114,7 +183,90 @@ function metaForRoute(reqPath: string): RouteMeta | null {
   return null;
 }
 
-export function injectMeta(html: string, reqPath: string): string {
+function applyRobots(html: string, reqPath: string): string {
+  const robots = robotsForRoute(reqPath);
+  if (!robots) return html;
+  return html.replace(
+    /<meta name="robots" content="[^"]*" \/>/,
+    `<meta name="robots" content="${robots}" />`,
+  );
+}
+
+function buildBotBody(reqPath: string): string | null {
+  const articleMatch = /^\/blog\/([^/]+)\/?$/.exec(reqPath);
+  if (articleMatch) {
+    const article = prerenderMap.get(articleMatch[1]);
+    if (article) {
+      const url = `${SITE_URL}/blog/${article.slug}`;
+      const date = escapeHtml(article.publishDate);
+      const tags = article.tags
+        .map((t) => `<li>${escapeHtml(t)}</li>`)
+        .join("");
+      return (
+        `<nav aria-label="Breadcrumb"><ol>` +
+        `<li><a href="/">Home</a></li>` +
+        `<li><a href="/blog">Blog</a></li>` +
+        `<li>${escapeHtml(article.title)}</li>` +
+        `</ol></nav>` +
+        `<main id="main-content"><article>` +
+        `<header>` +
+        `<p>${escapeHtml(article.category)}</p>` +
+        `<h1>${escapeHtml(article.title)}</h1>` +
+        `<p>${escapeHtml(article.excerpt)}</p>` +
+        `<p>By <span>${escapeHtml(article.author)}</span> · ` +
+        `<time datetime="${date}">${date}</time> · ${escapeHtml(article.readTime)}</p>` +
+        `</header>` +
+        article.contentHtml +
+        `<footer><ul>${tags}</ul>` +
+        `<p><a href="${url}">Read this guide on GTM Champion</a></p>` +
+        `<p><a href="/">Get your personalized GTM strategy free</a></p>` +
+        `</footer></article></main>`
+      );
+    }
+    return null;
+  }
+
+  const normalized = reqPath.length > 1 ? reqPath.replace(/\/$/, "") : reqPath;
+  const pageHtml = prerenderPages.get(normalized) ?? prerenderPages.get(reqPath);
+  if (pageHtml) return pageHtml;
+
+  const meta = metaForRoute(reqPath);
+  if (meta && !isPrivateRoute(reqPath)) {
+    return (
+      `<main id="main-content">` +
+      `<h1>${escapeHtml(meta.title)}</h1>` +
+      `<p>${escapeHtml(meta.description)}</p>` +
+      `<p><a href="/">GTM Champion home</a> · <a href="/blog">Blog</a></p>` +
+      `</main>`
+    );
+  }
+
+  return null;
+}
+
+function injectBotBody(html: string, reqPath: string): string {
+  const body = buildBotBody(reqPath);
+  if (!body) return html;
+  return html.replace(
+    '<div id="root"></div>',
+    `<div id="root">${body}</div>`,
+  );
+}
+
+export interface InjectOptions {
+  isBot?: boolean;
+}
+
+export function injectMeta(
+  html: string,
+  reqPath: string,
+  opts: InjectOptions = {},
+): string {
+  html = applyRobots(html, reqPath);
+  if (opts.isBot) {
+    html = injectBotBody(html, reqPath);
+  }
+
   const meta = metaForRoute(reqPath);
   if (!meta) return html;
 
