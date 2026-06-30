@@ -2984,6 +2984,7 @@ export default function Dashboard() {
                       />
                     </motion.div>
 
+                    {(filteredRecommendations.length > 0 || !channelInsight) && (
                     <motion.div 
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
@@ -3078,6 +3079,7 @@ export default function Dashboard() {
                         </div>
                       )}
                     </motion.div>
+                    )}
 
                     {channelInsight?.companyFitSummary && (
                       <motion.div 
