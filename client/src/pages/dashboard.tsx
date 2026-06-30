@@ -805,6 +805,8 @@ export default function Dashboard() {
   const isAnalysisStuck = isAnalyzingRaw && minutesSinceLastScrape > analysisStaleMinutes;
   const isAnalyzing = isAnalyzingRaw && !isAnalysisStuck;
   const analysisFailed = isAnalysisStuck || company.summary?.includes("couldn't analyze") || company.summary?.includes("temporarily unavailable");
+  const recentlyAnalyzedForInsights = lastScrapedTime > 0 && (Date.now() - lastScrapedTime) < 5 * 60 * 1000;
+  const isChannelInsightsLoading = !isAnalyzing && !analysisFailed && channelInsights.length < 13 && recentlyAnalyzedForInsights;
 
   if (isAnalyzing) {
     const estimatedRemaining = Math.max(Math.round(30 - (analysisProgress * 0.35)), 5);
@@ -1220,6 +1222,8 @@ export default function Dashboard() {
                         </span>
                       ) : hasInsight ? (
                         <span className={`w-2 h-2 rounded-full ${isActive ? 'bg-primary' : 'bg-emerald-400'}`} />
+                      ) : isChannelInsightsLoading ? (
+                        <Loader2 className="h-3 w-3 animate-spin text-muted-foreground/60" aria-label="Loading strategy" />
                       ) : null;
                     })()}
                   </button>
@@ -2832,6 +2836,56 @@ export default function Dashboard() {
                         })()}
                       </div>
                     </motion.div>
+
+                    {isChannelInsightsLoading && !channelInsight && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="space-y-8"
+                      >
+                        <div className="rounded-xl border border-primary/10 bg-primary/3 p-4 flex items-center gap-3">
+                          <Loader2 className="h-4 w-4 animate-spin text-primary shrink-0" />
+                          <p className="text-sm text-primary font-medium">Generating your personalized {CHANNELS.find(c => c.id === selectedChannel)?.label || selectedChannel} strategy — usually takes 15–30 seconds...</p>
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2 mb-4">
+                            <Skeleton className="h-5 w-5 rounded" />
+                            <Skeleton className="h-5 w-40 rounded" />
+                          </div>
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            {[...Array(4)].map((_, i) => (
+                              <Card key={i} className="border-slate-200/80">
+                                <CardContent className="p-4">
+                                  <div className="flex items-center gap-2.5">
+                                    <Skeleton className="h-2.5 w-2.5 rounded-full shrink-0" />
+                                    <Skeleton className="h-4 w-full rounded" />
+                                  </div>
+                                </CardContent>
+                              </Card>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="grid lg:grid-cols-2 gap-8">
+                          {[0, 1].map((col) => (
+                            <div key={col}>
+                              <Skeleton className="h-6 w-44 rounded mb-4" />
+                              <div className="space-y-4">
+                                {[...Array(2)].map((_, i) => (
+                                  <Card key={i} className="border-slate-200/80">
+                                    <CardContent className="p-5 space-y-3">
+                                      <Skeleton className="h-5 w-3/4 rounded" />
+                                      <Skeleton className="h-4 w-full rounded" />
+                                      <Skeleton className="h-4 w-5/6 rounded" />
+                                      <Skeleton className="h-4 w-2/3 rounded" />
+                                    </CardContent>
+                                  </Card>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </motion.div>
+                    )}
 
                     {channelInsight?.topKpis && channelInsight.topKpis.length > 0 && (
                       <motion.div 
