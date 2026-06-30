@@ -109,7 +109,7 @@ Write two short coaching messages (JSON only, no markdown):
 }`;
 
     const resp = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: "gpt-5-mini",
       messages: [{ role: "user", content: prompt }],
       max_tokens: 200,
       response_format: { type: "json_object" },
@@ -148,7 +148,7 @@ Write a coaching check-in (JSON only, no markdown):
 }`;
 
     const resp = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: "gpt-5-mini",
       messages: [{ role: "user", content: prompt }],
       max_tokens: 200,
       response_format: { type: "json_object" },
@@ -191,7 +191,7 @@ Write a focused weekly recommendation (JSON only, no markdown):
 }`;
 
     const resp = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: "gpt-5-mini",
       messages: [{ role: "user", content: prompt }],
       max_tokens: 200,
       response_format: { type: "json_object" },
@@ -238,7 +238,7 @@ Write one "what's next" recommendation (JSON only, no markdown):
 }`;
 
     const resp = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: "gpt-5-mini",
       messages: [{ role: "user", content: prompt }],
       max_tokens: 300,
       response_format: { type: "json_object" },
