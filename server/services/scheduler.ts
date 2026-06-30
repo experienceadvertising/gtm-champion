@@ -63,6 +63,10 @@ async function processWeeklyIdeasFor(user: User, company: Company): Promise<bool
     console.log(`Skipping user ${user.email} - company missing name`);
     return false;
   }
+  if (user.emailUnsubscribed) {
+    console.log(`Skipping user ${user.email} - unsubscribed from emails`);
+    return false;
+  }
 
   const freshIdeas = await generateWeeklyIdeas(
     company.name,
@@ -85,6 +89,7 @@ async function processWeeklyIdeasFor(user: User, company: Company): Promise<bool
     userName: user.fullName,
     companyName: company.name,
     ideas: freshIdeas,
+    unsubscribeToken: user.unsubscribeToken ?? undefined,
   });
 
   console.log(`Weekly email sent to ${user.email}`);
@@ -94,6 +99,10 @@ async function processWeeklyIdeasFor(user: User, company: Company): Promise<bool
 async function processChannelEmailFor(user: User, company: Company, weekNum: number): Promise<boolean> {
   if (!company.name) {
     console.log(`Skipping user ${user.email} - company missing name`);
+    return false;
+  }
+  if (user.emailUnsubscribed) {
+    console.log(`Skipping user ${user.email} - unsubscribed from emails`);
     return false;
   }
 
@@ -116,6 +125,7 @@ async function processChannelEmailFor(user: User, company: Company, weekNum: num
     companyFitSummary: insight.companyFitSummary || "",
     heroStat: insight.heroStat as { value: string; label: string },
     topKpis: insight.topKpis as string[],
+    unsubscribeToken: user.unsubscribeToken ?? undefined,
     strategicPillars: insight.strategicPillars as Array<{
       title: string;
       objective: string;

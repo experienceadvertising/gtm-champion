@@ -16,6 +16,8 @@ export const users = pgTable("users", {
   stripeCustomerId: text("stripe_customer_id"),
   stripeSubscriptionId: text("stripe_subscription_id"),
   logoUrl: text("logo_url"),
+  unsubscribeToken: text("unsubscribe_token").unique(),
+  emailUnsubscribed: boolean("email_unsubscribed").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

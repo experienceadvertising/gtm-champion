@@ -22,6 +22,7 @@ const AboutPage = lazy(() => import("@/pages/about"));
 const PrivacyPage = lazy(() => import("@/pages/privacy"));
 const TermsPage = lazy(() => import("@/pages/terms"));
 const ContactPage = lazy(() => import("@/pages/contact"));
+const UnsubscribePage = lazy(() => import("@/pages/unsubscribe"));
 
 function RouteFallback() {
   return (
@@ -61,6 +62,7 @@ function Router() {
           <Route path="/privacy" component={PrivacyPage} />
           <Route path="/terms" component={TermsPage} />
           <Route path="/contact" component={ContactPage} />
+          <Route path="/unsubscribe" component={UnsubscribePage} />
           <Route component={NotFound} />
         </Switch>
       </Suspense>

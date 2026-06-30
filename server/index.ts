@@ -212,6 +212,9 @@ function csrfProtection(req: Request, res: Response, next: NextFunction) {
   if (req.path.startsWith('/api/cron/')) {
     return next();
   }
+  if (req.path.startsWith('/api/email-preferences/unsubscribe') || req.path.startsWith('/api/email-preferences/resubscribe')) {
+    return next();
+  }
 
   const cookieToken = req.cookies['csrf-token'];
   const headerToken = req.headers['x-csrf-token'] as string | undefined;

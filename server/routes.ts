@@ -14,6 +14,7 @@ import personasRouter from "./routes/personas";
 import historyRouter from "./routes/history";
 import agentRouter from "./routes/agent";
 import cronRouter from "./routes/cron";
+import unsubscribeRouter from "./routes/unsubscribe";
 
 const ARTICLE_SLUGS = [
   "what-is-go-to-market-strategy-complete-guide",
@@ -186,6 +187,7 @@ ${ARTICLE_SLUGS.map(slug => `- [${slug.replace(/-/g, ' ')}](https://gtmchampion.
   app.use(historyRouter);
   app.use(agentRouter);
   app.use(cronRouter);
+  app.use("/api/email-preferences", unsubscribeRouter);
 
   return httpServer;
 }

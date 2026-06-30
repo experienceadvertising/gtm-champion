@@ -45,7 +45,7 @@ export function pgRateLimitStore(prefix: string, windowMs: number): Store {
       await ensureTable();
       const expiresAt = new Date(Date.now() + windowMs);
 
-      const result = await db.execute(sql`
+      await db.execute(sql`
         INSERT INTO rate_limit_store (key, prefix, hits, expires_at)
         VALUES (${key}, ${prefix}, 1, ${expiresAt})
         ON CONFLICT (key, prefix)
@@ -58,13 +58,17 @@ export function pgRateLimitStore(prefix: string, windowMs: number): Store {
             WHEN rate_limit_store.expires_at < NOW() THEN ${expiresAt}
             ELSE rate_limit_store.expires_at 
           END
-        RETURNING hits, expires_at
       `);
 
-      const row = result.rows[0] as { hits: number; expires_at: Date };
+      const selectResult = await db.execute(sql`
+        SELECT hits, expires_at FROM rate_limit_store
+        WHERE key = ${key} AND prefix = ${prefix}
+      `);
+
+      const row = selectResult.rows?.[0] as { hits: number; expires_at: Date } | undefined;
       return {
-        totalHits: row.hits,
-        resetTime: new Date(row.expires_at),
+        totalHits: row?.hits ?? 1,
+        resetTime: row ? new Date(row.expires_at) : new Date(Date.now() + windowMs),
       };
     },
 

@@ -423,18 +423,21 @@ export async function processCompanyAnalysis(
       }
     });
 
-    sendWelcomeEmail({
-      toEmail: email,
-      userName: fullName,
-      companyName: coreAnalysis.companyName || "Your Company",
-      summary: coreAnalysis.summary || "Your GTM strategy is ready!",
-      gtmMotion: coreAnalysis.gtmMotion || "Growth",
-      dashboardUrl: "https://gtmchampion.com/dashboard",
-      recommendations: (coreAnalysis.recommendations || []).map((r: { category?: string; title?: string; impact?: string }) => ({
-        category: r.category || "General",
-        title: r.title || "Recommendation",
-        impact: r.impact || "Medium",
-      })),
+    storage.getUserByEmail(email).then((sender) => {
+      return sendWelcomeEmail({
+        toEmail: email,
+        userName: fullName,
+        companyName: coreAnalysis.companyName || "Your Company",
+        summary: coreAnalysis.summary || "Your GTM strategy is ready!",
+        gtmMotion: coreAnalysis.gtmMotion || "Growth",
+        dashboardUrl: "https://gtmchampion.com/dashboard",
+        unsubscribeToken: sender?.unsubscribeToken ?? undefined,
+        recommendations: (coreAnalysis.recommendations || []).map((r: { category?: string; title?: string; impact?: string }) => ({
+          category: r.category || "General",
+          title: r.title || "Recommendation",
+          impact: r.impact || "Medium",
+        })),
+      });
     }).then(() => console.log(`Welcome email sent to ${email}`))
       .catch((err) => console.error("Failed to send welcome email:", err));
 

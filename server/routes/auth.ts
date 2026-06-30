@@ -76,9 +76,11 @@ router.post("/api/register", registerLimiter, async (req: Request, res: Response
 
     const hashedPassword = await bcrypt.hash(validatedData.password, 10);
 
+    const { randomUUID } = await import("crypto");
     const user = await storage.createUser({
       ...validatedData,
       password: hashedPassword,
+      unsubscribeToken: randomUUID(),
     });
 
     let company;

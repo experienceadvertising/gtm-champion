@@ -284,6 +284,7 @@ export async function fireMilestoneStart(userId: string, channelId: string, reco
       channelId,
       personalizedGoal: aiMsg.goal,
       personalizedWhy: aiMsg.why,
+      unsubscribeToken: ctx.user.unsubscribeToken ?? undefined,
     });
 
     if (ctx.user.slackWebhookUrl) {
@@ -348,7 +349,7 @@ export async function fireMilestoneStart(userId: string, channelId: string, reco
 export async function fireStallNudge(userId: string, channelId: string, nudgeId: number): Promise<void> {
   try {
     const user = await storage.getUser(userId);
-    if (!user?.isPremium || !user.agentEnabled) {
+    if (!user?.isPremium || !user.agentEnabled || user.emailUnsubscribed) {
       await storage.markScheduledNudgeSent(nudgeId);
       return;
     }
@@ -382,6 +383,7 @@ export async function fireStallNudge(userId: string, channelId: string, nudgeId:
       quickWin,
       personalizedNudge: aiMsg.nudge,
       personalizedAction: aiMsg.action,
+      unsubscribeToken: user.unsubscribeToken ?? undefined,
     });
 
     if (user.slackWebhookUrl) {
@@ -484,6 +486,7 @@ async function sendCompletionCongrats(userId: string, channelId: string, nudgeId
         userName: ctx.user.fullName,
         companyName: ctx.company.name!,
         channelId,
+        unsubscribeToken: ctx.user.unsubscribeToken ?? undefined,
       }),
       generateWhatsNextRecommendation(ctx),
     ]);
@@ -540,7 +543,7 @@ export async function sendWeeklyCoachingDigest(userId: string): Promise<void> {
   try {
     const company = await storage.getCompanyByUserId(userId);
     const user = await storage.getUser(userId);
-    if (!user?.isPremium || !user.agentEnabled || !company?.name) return;
+    if (!user?.isPremium || !user.agentEnabled || !company?.name || user.emailUnsubscribed) return;
 
     const recs = await storage.getRecommendationsByCompanyId(company.id);
 
@@ -579,6 +582,7 @@ export async function sendWeeklyCoachingDigest(userId: string): Promise<void> {
       topFocus,
       aiRecommendation: aiMsg.recommendation,
       aiReason: aiMsg.reason,
+      unsubscribeToken: user.unsubscribeToken ?? undefined,
     });
 
     if (user.slackWebhookUrl) {

@@ -4,6 +4,20 @@ function escapeHtml(str: string): string {
   return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
+function buildUnsubscribeUrl(token?: string): string {
+  const base = 'https://gtmchampion.com/unsubscribe';
+  return token ? `${base}?token=${encodeURIComponent(token)}` : base;
+}
+
+function unsubscribeFooterHtml(token?: string): string {
+  const url = buildUnsubscribeUrl(token);
+  return `<a href="${url}" style="color:#94a3b8;text-decoration:underline;font-size:11px;">Unsubscribe from emails</a>`;
+}
+
+function unsubscribeFooterText(token?: string): string {
+  return `Unsubscribe: ${buildUnsubscribeUrl(token)}`;
+}
+
 let postmarkClient: ServerClient | null = null;
 
 if (process.env.POSTMARK_SERVER_TOKEN) {
@@ -21,6 +35,7 @@ export interface WelcomeEmailData {
   summary: string;
   gtmMotion: string;
   dashboardUrl: string;
+  unsubscribeToken?: string;
   recommendations?: Array<{
     category: string;
     title: string;
@@ -32,6 +47,7 @@ export interface WeeklyEmailData {
   toEmail: string;
   userName: string;
   companyName: string;
+  unsubscribeToken?: string;
   ideas: Array<{
     title: string;
     description: string;
@@ -129,6 +145,7 @@ export async function sendWelcomeEmail(data: WelcomeEmailData): Promise<void> {
           <p style="color: #64748b; font-size: 13px; margin: 0 0 4px 0;">📬 You'll receive weekly GTM ideas every Monday to keep your strategy fresh.</p>
           <p style="color: #94a3b8; font-size: 12px; margin: 12px 0 0 0;">Questions? Just reply to this email — a real human will get back to you.</p>
           <p style="color: #cbd5e1; font-size: 11px; margin: 16px 0 0 0;">&copy; 2026 GTM Champion. All rights reserved.</p>
+          <p style="margin: 10px 0 0 0;">${unsubscribeFooterHtml(data.unsubscribeToken)}</p>
         </div>
       </div>
 
@@ -155,6 +172,8 @@ View your full dashboard: ${data.dashboardUrl}
 
 You'll receive weekly GTM ideas every Monday to keep your strategy fresh.
 Questions? Just reply to this email.
+
+${unsubscribeFooterText(data.unsubscribeToken)}
 
 © 2026 GTM Champion`;
 
@@ -268,7 +287,7 @@ export async function sendWeeklyEmail(data: WeeklyEmailData): Promise<void> {
       <div style="background: #f8fafc; padding: 24px 32px; text-align: center; border-top: 1px solid #e2e8f0;">
         <p style="color: #64748b; font-size: 14px; margin: 0 0 8px 0;">Keep shipping! We'll be back next Monday with fresh ideas.</p>
         <p style="color: #94a3b8; font-size: 12px; margin: 0;">&copy; 2026 GTM Champion. All rights reserved.</p>
-        <p style="margin: 12px 0 0 0;"><a href="{{{pm:unsubscribe}}}" style="color: #94a3b8; font-size: 11px; text-decoration: underline;">Unsubscribe from emails</a></p>
+        <p style="margin: 12px 0 0 0;">${unsubscribeFooterHtml(data.unsubscribeToken)}</p>
       </div>
     </div>
   </div>
@@ -291,7 +310,7 @@ View your dashboard: ${dashboardUrl}
 
 Keep shipping! We'll be back next Monday with fresh ideas.
 
-Unsubscribe: {{{pm:unsubscribe}}}
+${unsubscribeFooterText(data.unsubscribeToken)}
 
 © 2026 GTM Champion`;
 
@@ -636,6 +655,7 @@ export interface ChannelStrategyEmailData {
   companyFitSummary: string;
   heroStat: { value: string; label: string };
   topKpis: string[];
+  unsubscribeToken?: string;
   strategicPillars: Array<{
     title: string;
     objective: string;
@@ -770,7 +790,7 @@ export async function sendChannelStrategyEmail(data: ChannelStrategyEmailData): 
       <div style="border-top: 1px solid #e2e8f0; padding-top: 20px; margin-top: 12px;">
         <p style="font-size: 13px; color: #94a3b8; text-align: center; margin: 0 0 8px;">Next week we'll deep dive into another channel. Stay tuned!</p>
         <p style="font-size: 12px; color: #cbd5e1; text-align: center; margin: 0;">
-          <a href="{{{pm:unsubscribe}}}" style="color: #94a3b8;">Unsubscribe</a> · © 2026 GTM Champion
+          ${unsubscribeFooterHtml(data.unsubscribeToken)} · © 2026 GTM Champion
         </p>
       </div>
     </div>
@@ -803,7 +823,7 @@ ${data.topKpis.join(', ')}
 
 View full strategy: ${dashboardUrl}
 
-Unsubscribe: {{{pm:unsubscribe}}}
+${unsubscribeFooterText(data.unsubscribeToken)}
 
 © 2026 GTM Champion`;
 
@@ -827,6 +847,7 @@ Unsubscribe: {{{pm:unsubscribe}}}
 // GTM Agent Emails
 
 export interface AgentMilestoneEmailData {
+  unsubscribeToken?: string;
   toEmail: string;
   userName: string;
   companyName: string;
@@ -869,7 +890,7 @@ export async function sendAgentMilestoneEmail(data: AgentMilestoneEmailData): Pr
     </div>
   </div>
   <div style="background:#f8fafc;padding:20px 32px;border-top:1px solid #e2e8f0;text-align:center;">
-    <p style="color:#94a3b8;font-size:12px;margin:0;">© 2026 GTM Champion · <a href="{{{pm:unsubscribe}}}" style="color:#94a3b8;">Unsubscribe</a></p>
+    <p style="color:#94a3b8;font-size:12px;margin:0;">© 2026 GTM Champion · ${unsubscribeFooterHtml(data.unsubscribeToken)}</p>
   </div>
 </div></div></body></html>`;
 
@@ -879,7 +900,7 @@ export async function sendAgentMilestoneEmail(data: AgentMilestoneEmailData): Pr
       From: FROM_ADDRESS, To: data.toEmail,
       Subject: `GTM Agent: Great start on ${data.channelId}! Here's your first milestone`,
       HtmlBody: htmlBody,
-      TextBody: `Hi ${firstName},\n\nGreat start on your ${channelName} strategy!\n\nWhy this matters: ${data.personalizedWhy || why}\n\nYour first milestone: ${data.personalizedGoal || goal}\n\nView strategy: ${dashboardUrl}\n\n© 2026 GTM Champion`,
+      TextBody: `Hi ${firstName},\n\nGreat start on your ${channelName} strategy!\n\nWhy this matters: ${data.personalizedWhy || why}\n\nYour first milestone: ${data.personalizedGoal || goal}\n\nView strategy: ${dashboardUrl}\n\n${unsubscribeFooterText(data.unsubscribeToken)}\n\n© 2026 GTM Champion`,
       MessageStream: "outbound",
     });
     console.log(`Agent milestone email sent to ${data.toEmail} (${data.channelId})`);
@@ -891,6 +912,7 @@ export interface AgentStallEmailData {
   userName: string;
   companyName: string;
   channelId: string;
+  unsubscribeToken?: string;
   quickWin: { title: string; steps: string[]; effort: string } | null;
   personalizedNudge?: string;
   personalizedAction?: string;
@@ -934,7 +956,7 @@ export async function sendAgentStallEmail(data: AgentStallEmailData): Promise<vo
     </div>
   </div>
   <div style="background:#f8fafc;padding:20px 32px;border-top:1px solid #e2e8f0;text-align:center;">
-    <p style="color:#94a3b8;font-size:12px;margin:0;">© 2026 GTM Champion · <a href="{{{pm:unsubscribe}}}" style="color:#94a3b8;">Unsubscribe</a></p>
+    <p style="color:#94a3b8;font-size:12px;margin:0;">© 2026 GTM Champion · ${unsubscribeFooterHtml(data.unsubscribeToken)}</p>
   </div>
 </div></div></body></html>`;
 
@@ -944,7 +966,7 @@ export async function sendAgentStallEmail(data: AgentStallEmailData): Promise<vo
       From: FROM_ADDRESS, To: data.toEmail,
       Subject: `GTM Agent: Checking in on your ${data.channelId} strategy`,
       HtmlBody: htmlBody,
-      TextBody: `Hi ${firstName},\n\n${data.personalizedNudge || nudgeText}\n\nYour action for today: ${data.personalizedAction || actionText}\n\n${data.quickWin ? `Quick win: ${data.quickWin.title}\n${(data.quickWin.steps || []).join('\n')}` : ''}\n\nView strategy: ${dashboardUrl}\n\n© 2026 GTM Champion`,
+      TextBody: `Hi ${firstName},\n\n${data.personalizedNudge || nudgeText}\n\nYour action for today: ${data.personalizedAction || actionText}\n\n${data.quickWin ? `Quick win: ${data.quickWin.title}\n${(data.quickWin.steps || []).join('\n')}` : ''}\n\nView strategy: ${dashboardUrl}\n\n${unsubscribeFooterText(data.unsubscribeToken)}\n\n© 2026 GTM Champion`,
       MessageStream: "outbound",
     });
     console.log(`Agent stall email sent to ${data.toEmail} (${data.channelId})`);
@@ -956,6 +978,7 @@ export interface AgentCongratsEmailData {
   userName: string;
   companyName: string;
   channelId: string;
+  unsubscribeToken?: string;
 }
 
 export async function sendAgentCongratsEmail(data: AgentCongratsEmailData): Promise<void> {
@@ -986,7 +1009,7 @@ export async function sendAgentCongratsEmail(data: AgentCongratsEmailData): Prom
     </div>
   </div>
   <div style="background:#f8fafc;padding:20px 32px;border-top:1px solid #e2e8f0;text-align:center;">
-    <p style="color:#94a3b8;font-size:12px;margin:0;">© 2026 GTM Champion · <a href="{{{pm:unsubscribe}}}" style="color:#94a3b8;">Unsubscribe</a></p>
+    <p style="color:#94a3b8;font-size:12px;margin:0;">© 2026 GTM Champion · ${unsubscribeFooterHtml(data.unsubscribeToken)}</p>
   </div>
 </div></div></body></html>`;
 
@@ -996,7 +1019,7 @@ export async function sendAgentCongratsEmail(data: AgentCongratsEmailData): Prom
       From: FROM_ADDRESS, To: data.toEmail,
       Subject: `GTM Agent: You completed your ${data.channelId} strategy!`,
       HtmlBody: htmlBody,
-      TextBody: `Hi ${firstName},\n\nYou've completed all ${channelName} recommendations for ${data.companyName}. Excellent work!\n\nView your next priorities: ${dashboardUrl}\n\n© 2026 GTM Champion`,
+      TextBody: `Hi ${firstName},\n\nYou've completed all ${channelName} recommendations for ${data.companyName}. Excellent work!\n\nView your next priorities: ${dashboardUrl}\n\n${unsubscribeFooterText(data.unsubscribeToken)}\n\n© 2026 GTM Champion`,
       MessageStream: "outbound",
     });
     console.log(`Agent congrats email sent to ${data.toEmail} (${data.channelId})`);
@@ -1011,6 +1034,7 @@ export interface AgentWeeklyDigestEmailData {
   onTrack: string[];
   notStarted: string[];
   topFocus: string;
+  unsubscribeToken?: string;
   aiRecommendation?: string;
   aiReason?: string;
 }
@@ -1069,7 +1093,7 @@ export async function sendAgentWeeklyDigestEmail(data: AgentWeeklyDigestEmailDat
     </div>
   </div>
   <div style="background:#f8fafc;padding:20px 32px;border-top:1px solid #e2e8f0;text-align:center;">
-    <p style="color:#94a3b8;font-size:12px;margin:0;">GTM Agent checks in every week to keep your strategy on track. · © 2026 GTM Champion · <a href="{{{pm:unsubscribe}}}" style="color:#94a3b8;">Unsubscribe</a></p>
+    <p style="color:#94a3b8;font-size:12px;margin:0;">GTM Agent checks in every week to keep your strategy on track. · © 2026 GTM Champion · ${unsubscribeFooterHtml(data.unsubscribeToken)}</p>
   </div>
 </div></div></body></html>`;
 
@@ -1079,7 +1103,7 @@ export async function sendAgentWeeklyDigestEmail(data: AgentWeeklyDigestEmailDat
       From: FROM_ADDRESS, To: data.toEmail,
       Subject: `GTM Agent: Your weekly strategy report for ${data.companyName}`,
       HtmlBody: htmlBody,
-      TextBody: `Hi ${firstName},\n\nHere's your weekly GTM progress report.\n\nThis week's focus: ${data.topFocus || "Get started on your first channel"}\n\nStalled channels: ${data.stalled.join(", ") || "None"}\nOn track: ${data.onTrack.join(", ") || "None"}\nNot started: ${data.notStarted.join(", ") || "None"}\n\nOpen dashboard: ${dashboardUrl}\n\n© 2026 GTM Champion`,
+      TextBody: `Hi ${firstName},\n\nHere's your weekly GTM progress report.\n\nThis week's focus: ${data.topFocus || "Get started on your first channel"}\n\nStalled channels: ${data.stalled.join(", ") || "None"}\nOn track: ${data.onTrack.join(", ") || "None"}\nNot started: ${data.notStarted.join(", ") || "None"}\n\nOpen dashboard: ${dashboardUrl}\n\n${unsubscribeFooterText(data.unsubscribeToken)}\n\n© 2026 GTM Champion`,
       MessageStream: "broadcast",
     });
     console.log(`Agent weekly digest sent to ${data.toEmail}`);
@@ -1096,6 +1120,7 @@ export interface FeatureAnnouncementEmailData {
   benefits: Array<{ icon: string; title: string; description: string }>;
   ctaText: string;
   ctaUrl: string;
+  unsubscribeToken?: string;
 }
 
 export async function sendFeatureAnnouncementEmail(data: FeatureAnnouncementEmailData): Promise<void> {
@@ -1153,7 +1178,7 @@ export async function sendFeatureAnnouncementEmail(data: FeatureAnnouncementEmai
         <div style="text-align: center;">
           <p style="color: #94a3b8; font-size: 12px; margin: 0 0 4px 0;">Questions? Just reply to this email — a real human will get back to you.</p>
           <p style="color: #cbd5e1; font-size: 11px; margin: 12px 0 0 0;">&copy; 2026 GTM Champion. All rights reserved.</p>
-          <p style="margin: 12px 0 0 0;"><a href="{{{pm:unsubscribe}}}" style="color: #94a3b8; font-size: 11px; text-decoration: underline;">Unsubscribe from emails</a></p>
+          <p style="margin: 12px 0 0 0;">${unsubscribeFooterHtml(data.unsubscribeToken)}</p>
         </div>
       </div>
 
@@ -1179,7 +1204,7 @@ ${data.ctaText}: ${data.ctaUrl}
 
 Questions? Just reply to this email.
 
-Unsubscribe: {{{pm:unsubscribe}}}
+${unsubscribeFooterText(data.unsubscribeToken)}
 
 © 2026 GTM Champion`;
 
