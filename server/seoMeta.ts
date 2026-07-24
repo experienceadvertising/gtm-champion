@@ -40,7 +40,7 @@ const STATIC_META: Record<string, RouteMeta> = {
   "/": {
     title: "GTM Champion - AI-Powered Go-To-Market Strategy for B2B SaaS",
     description:
-      "AI-powered Go-To-Market strategy for B2B SaaS. Analyze your website and get personalized recommendations across 13 marketing channels in seconds.",
+      "Build a free, prioritized 90-day B2B SaaS GTM plan with channel scoring, evidence, budgets, risks, and roadmaps across 13 channels.",
     url: `${SITE_URL}/`,
     type: "website",
   },

@@ -9,9 +9,9 @@
  */
 
 export const HERO = {
-  headline: "AI-Powered Go-To-Market Strategy for B2B SaaS",
+  headline: "A Prioritized 90-Day GTM Plan for B2B SaaS",
   subhead:
-    "Paste your URL. Our AI scrapes your site, analyzes your business, and builds a custom GTM strategy across 13 channels with weekly updates every Monday. The kind of strategy agencies charge $5,000+ to create. Free to start, Pro from $29/mo.",
+    "Paste your URL. GTM Champion analyzes your positioning and ICP, scores the fit and readiness of 13 marketing channels, and turns your top opportunities into an evidence-aware 30, 60, and 90-day execution plan. Free to start with no credit card required.",
 };
 
 export interface HowItWorksStep {
@@ -29,15 +29,15 @@ export const STEPS: HowItWorksStep[] = [
   },
   {
     step: "2",
-    title: "AI Builds Your Strategy",
+    title: "AI Prioritizes Your Channels",
     description:
-      "GPT-5 classifies your GTM motion, generates personalized recommendations across 13 channels, and identifies your highest-impact quick wins.",
+      "GTM Champion scores channel fit, confidence, quality, readiness, and economics, then identifies the three channels that deserve your focus first.",
   },
   {
     step: "3",
-    title: "Execute & Get Weekly Updates",
+    title: "Execute Your 90-Day Plan",
     description:
-      "Track recommendations, generate content with built-in writing tools, and receive fresh strategy ideas in your inbox every Monday morning.",
+      "Follow channel-specific prerequisites, budgets, risks, quick wins, KPIs, and 30, 60, and 90-day roadmaps. Track progress and generate content from the same dashboard.",
   },
 ];
 
@@ -86,12 +86,12 @@ export const FAQ_ITEMS: FaqItem[] = [
   {
     question: "What is GTM Champion?",
     answer:
-      "GTM Champion is an AI-powered Go-To-Market strategy platform for B2B SaaS companies. It analyzes your website, understands your product and target audience, and generates personalized marketing recommendations across 13 channels including SEO, paid search, content marketing, ABM, and partnerships.",
+      "GTM Champion is an AI-powered Go-To-Market strategy platform for B2B SaaS companies. It analyzes your website, understands your product and target audience, prioritizes your strongest opportunities, and builds an actionable 90-day plan across 13 marketing channels.",
   },
   {
     question: "How does GTM Champion work?",
     answer:
-      "Simply enter your website URL and GTM Champion's AI will scrape and analyze your site content. Within seconds, you'll receive a comprehensive GTM strategy with channel-specific recommendations, quick wins, KPIs to track, and weekly content ideas tailored to your business.",
+      "Enter your website URL and GTM Champion analyzes your positioning, ICP, product details, GTM motion, and current marketing foundation. Your dashboard begins filling in progressively with channel-specific strategies, evidence, confidence, readiness requirements, budget guidance, risks, KPIs, quick wins, and 30, 60, and 90-day roadmaps.",
   },
   {
     question: "What marketing channels does GTM Champion cover?",
@@ -112,5 +112,10 @@ export const FAQ_ITEMS: FaqItem[] = [
     question: "Can I ask questions about my GTM strategy?",
     answer:
       "Yes! GTM Champion includes an AI assistant that answers your marketing questions with personalized advice based on your company's specific context, business model, and GTM motion. Ask about any channel and get actionable recommendations.",
+  },
+  {
+    question: "How does GTM Champion decide which channels to prioritize?",
+    answer:
+      "Each channel receives a fit score based on your GTM motion, buyer intent, execution readiness, channel economics, available evidence, and prerequisites. GTM Champion then highlights your top three channels and combines them into a focused 90-day plan.",
   },
 ];

@@ -128,28 +128,31 @@ Allow: /
   app.get("/llms.txt", (_req, res) => {
     const llmsTxt = `# GTM Champion
 
-> AI-powered Go-To-Market strategy platform for B2B SaaS companies. Analyzes your website and generates personalized marketing recommendations across 13 channels.
+> AI-powered Go-To-Market strategy platform for B2B SaaS companies. Analyzes your website, prioritizes your top three channel opportunities, and builds an evidence-aware 90-day execution plan.
 
 ## What is GTM Champion?
 
-GTM Champion is a free AI-powered platform that helps B2B SaaS companies build and execute Go-To-Market strategies. Enter your website URL, and our AI analyzes your product, audience, and competitive landscape to generate actionable marketing recommendations across 13 channels.
+GTM Champion is a free AI-powered platform that helps B2B SaaS companies build and execute focused Go-To-Market strategies. Enter your website URL, and the platform analyzes your product, audience, positioning, and current foundation to prioritize opportunities across 13 channels.
 
 ## Key Features
 
 - AI Website Analysis: Automatically scrapes and understands your product, ICP, and positioning
-- 13 Channel Strategies: SEO, LLMs/AI Search, Paid Search, Paid Social, Organic Social, Retargeting, CRO, Email Marketing, Content Marketing, Community Building, ABM, Partnerships, Outbound Sales
+- Top-Three Channel Focus: Ranks the channels that deserve attention first and combines them into a 90-day plan
+- Channel Readiness and Evidence: Fit, confidence, quality, evidence, assumptions, prerequisites, budgets, and risks
+- 13 Deep Channel Playbooks: SEO, LLMs/AI Search, Paid Search, Paid Social, Organic Social, Retargeting, CRO, Email Marketing, Content Marketing, Community Building, ABM, Partnerships, Outbound Sales
+- 30, 60, and 90-Day Roadmaps: Sequenced actions, KPIs, quick wins, resources, and operating cadence for every channel
 - Weekly AI Content Sprints: Fresh marketing tactics delivered every Monday
 - AI Q&A Assistant: Ask questions about your GTM strategy and get personalized answers
 - Content Generation Tools: LinkedIn posts, email campaigns, blog articles
-- CRM Integrations: Connect with HubSpot, Salesforce, and other tools
+- PDF and CSV Exports: Share channel scores, evidence, prerequisites, budgets, risks, and roadmaps
 
 ## How It Works
 
 1. Enter your website URL
 2. AI scrapes and analyzes your site content
-3. Receive personalized GTM strategy with channel-specific recommendations
-4. Get weekly content ideas and actionable quick wins
-5. Ask the AI assistant follow-up questions about any channel
+3. Review your top three channels and cross-channel 90-day focus
+4. Execute channel-specific prerequisites, quick wins, budgets, KPIs, and roadmaps
+5. Track progress, create content, and ask the AI assistant follow-up questions
 
 ## Pricing
 

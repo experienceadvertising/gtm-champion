@@ -11,7 +11,9 @@ import { createCheckoutSession, getStripeProducts, getSession, type StripeProduc
 
 const FREE_FEATURES = [
   "AI-powered GTM analysis",
-  "All 13 channel strategies",
+  "All 13 deep channel strategies",
+  "Top-three channel focus and 90-day plan",
+  "Readiness, evidence, budgets, risks, and roadmaps",
   "AI chat (20 messages / min)",
   "Content tools (10 generations / min)",
   "Weekly strategy emails",

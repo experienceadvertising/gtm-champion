@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import { Helmet } from "react-helmet-async";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { 
   ArrowRight, 
   CheckCircle2, 
@@ -127,9 +127,9 @@ function DashboardPreview() {
       <div className="rounded-b-xl overflow-hidden bg-slate-800/80 p-4">
         <div className="grid grid-cols-3 gap-3 mb-4">
           {[
-            { label: "Channels", value: "13", color: "from-indigo-500 to-violet-500" },
-            { label: "Quick Wins", value: "47", color: "from-emerald-500 to-teal-500" },
-            { label: "Score", value: "92", color: "from-amber-500 to-orange-500" },
+            { label: "Top Priorities", value: "3", color: "from-indigo-500 to-violet-500" },
+            { label: "Roadmap", value: "90d", color: "from-emerald-500 to-teal-500" },
+            { label: "Confidence", value: "88", color: "from-amber-500 to-orange-500" },
           ].map((stat) => (
             <div key={stat.label} className="rounded-lg bg-slate-700/50 p-3 border border-slate-600/30">
               <p className="text-[10px] text-slate-400 mb-1">{stat.label}</p>
@@ -138,7 +138,7 @@ function DashboardPreview() {
           ))}
         </div>
         <div className="space-y-2 mb-3">
-          {["SEO Strategy", "Content Marketing", "Paid Social"].map((ch, i) => (
+          {["1  Paid Search", "2  Retargeting", "3  SEO"].map((ch, i) => (
             <motion.div 
               key={ch} 
               className="flex items-center gap-3 rounded-lg bg-slate-700/30 p-2.5 border border-slate-600/20"
@@ -190,13 +190,6 @@ function DashboardPreview() {
   );
 }
 
-const HERO_ROTATING_WORDS = [
-  "in 2 Minutes, Not Months",
-  "Across 13 Channels",
-  "With AI That Knows Your Brand",
-  "Free to Start Today",
-];
-
 function AnimatedCounter({ target, suffix = "", duration = 2000 }: { target: number; suffix?: string; duration?: number }) {
   const [count, setCount] = useState(0);
   const [hasAnimated, setHasAnimated] = useState(false);
@@ -245,14 +238,6 @@ function AnimatedCounter({ target, suffix = "", duration = 2000 }: { target: num
 export default function LandingPage() {
   const [, setLocation] = useLocation();
   const [openFaq, setOpenFaq] = useState<number | null>(null);
-  const [heroWordIndex, setHeroWordIndex] = useState(0);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setHeroWordIndex((prev) => (prev + 1) % HERO_ROTATING_WORDS.length);
-    }, 3000);
-    return () => clearInterval(interval);
-  }, []);
 
   const containerVariants = {
     hidden: { opacity: 1 },
@@ -286,9 +271,9 @@ export default function LandingPage() {
           "name": "GTM Champion",
           "applicationCategory": "BusinessApplication",
           "operatingSystem": "Web",
-          "description": "AI-powered Go-To-Market strategy generator that analyzes your website and provides personalized marketing recommendations across 13 channels including SEO, paid search, content marketing, ABM, and partnerships.",
+          "description": "AI-powered Go-To-Market strategy platform that analyzes a B2B SaaS website, prioritizes the strongest channel opportunities, and builds an evidence-aware 90-day execution plan across 13 channels.",
           "offers": [
-            { "@type": "Offer", "name": "Free", "price": "0", "priceCurrency": "USD", "description": "Free GTM analysis across all 13 channels, AI chat (20 messages/min), content tools (10 generations/min), weekly strategy emails, and 1 website re-analysis per week. No credit card required." },
+            { "@type": "Offer", "name": "Free", "price": "0", "priceCurrency": "USD", "description": "Free GTM analysis with 13 deep channel strategies, top-three prioritization, a 90-day plan, readiness, evidence, budgets, risks, roadmaps, AI chat, content tools, weekly emails, and 1 website re-analysis per week. No credit card required." },
             { "@type": "Offer", "name": "Pro Monthly", "price": "29", "priceCurrency": "USD", "description": "10x higher AI limits, branded multi-page PDF exports, unlimited re-analysis with 12-month strategy history, up to 8 buyer personas, and A/B budget scenarios. $29 per month." },
             { "@type": "Offer", "name": "Pro Annual", "price": "290", "priceCurrency": "USD", "description": "All Pro features billed annually. $290 per year (save ~17% vs monthly)." }
           ],
@@ -296,6 +281,11 @@ export default function LandingPage() {
             "Deep website personalization with multi-page scraping",
             "ICP detection and editing",
             "13 marketing channel strategies",
+            "Top-three channel prioritization",
+            "Channel fit, confidence, and quality scoring",
+            "Evidence and assumption tracking",
+            "Prerequisites, budget guidance, and risk guardrails",
+            "30, 60, and 90-day execution roadmaps",
             "GTM funnel tagging (PLG, Sales-Led, Both)",
             "AI LinkedIn post, email campaign, and blog article generator",
             "AI Q&A assistant",
@@ -310,14 +300,11 @@ export default function LandingPage() {
         <script type="application/ld+json">{JSON.stringify({
           "@context": "https://schema.org",
           "@type": "FAQPage",
-          "mainEntity": [
-            { "@type": "Question", "name": "What is GTM Champion?", "acceptedAnswer": { "@type": "Answer", "text": "GTM Champion is an AI-powered Go-To-Market strategy platform for B2B SaaS companies. It analyzes your website, understands your product and target audience, and generates personalized marketing recommendations across 13 channels including SEO, paid search, content marketing, ABM, and partnerships." } },
-            { "@type": "Question", "name": "How does GTM Champion work?", "acceptedAnswer": { "@type": "Answer", "text": "Simply enter your website URL and GTM Champion's AI will scrape and analyze your site content. Within seconds, you'll receive a comprehensive GTM strategy with channel-specific recommendations, quick wins, KPIs to track, and weekly content ideas tailored to your business." } },
-            { "@type": "Question", "name": "What marketing channels does GTM Champion cover?", "acceptedAnswer": { "@type": "Answer", "text": "GTM Champion provides strategies for 13 marketing channels: SEO, LLMs/AI Search, Paid Search, Paid Social, Organic Social, Retargeting, CRO (Conversion Rate Optimization), Email Marketing, Content Marketing, Community Building, ABM (Account-Based Marketing), Partnerships, and Outbound Sales." } },
-            { "@type": "Question", "name": "Is GTM Champion free to use?", "acceptedAnswer": { "@type": "Answer", "text": "Yes — the free plan is generous. You get full GTM analysis across all 13 channels, AI chat (20 messages/min), content tools (10 generations/min), weekly strategy emails, and one website re-analysis per week. No credit card required to start. GTM Champion Pro ($29/mo or $290/yr) unlocks 10x higher AI limits, branded multi-page PDF exports, unlimited re-analysis with 12-month strategy history, and up to 8 buyer personas with A/B budget scenarios." } },
-            { "@type": "Question", "name": "What are the weekly AI content sprints?", "acceptedAnswer": { "@type": "Answer", "text": "Every Monday morning, GTM Champion sends you a fresh batch of actionable content ideas and marketing tactics via email. These are personalized to your business and designed to be executed within the week for maximum impact." } },
-            { "@type": "Question", "name": "Can I ask questions about my GTM strategy?", "acceptedAnswer": { "@type": "Answer", "text": "Yes! GTM Champion includes an AI assistant that answers your marketing questions with personalized advice based on your company's specific context, business model, and GTM motion. Ask about any channel and get actionable recommendations." } }
-          ]
+          "mainEntity": FAQ_ITEMS.map((item) => ({
+            "@type": "Question",
+            "name": item.question,
+            "acceptedAnswer": { "@type": "Answer", "text": item.answer },
+          })),
         })}</script>
       </Helmet>
       <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 bg-primary text-white px-4 py-2 rounded z-50">
@@ -346,7 +333,7 @@ export default function LandingPage() {
       </nav>
 
       <main id="main-content">
-        <section className="relative pt-16 pb-16 md:pt-40 md:pb-48 overflow-hidden" aria-labelledby="hero-heading">
+        <section className="relative pt-16 pb-16 md:pt-24 md:pb-12 overflow-hidden" aria-labelledby="hero-heading">
           <div className="hero-gradient-bg absolute inset-0 pointer-events-none" aria-hidden="true" />
           <div className="hero-grid-pattern absolute inset-0 pointer-events-none opacity-30" aria-hidden="true" />
           <div className="absolute top-20 left-10 w-72 h-72 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none animate-float-slow" aria-hidden="true" />
@@ -373,30 +360,15 @@ export default function LandingPage() {
                 <motion.div variants={itemVariants}>
                   <span className="inline-flex items-center gap-2 px-3 py-1 md:px-4 md:py-1.5 rounded-full bg-primary/10 text-primary text-xs md:text-sm font-semibold tracking-wide mb-3 md:mb-5 border border-primary/20">
                     <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
-                    AI-Powered Go-To-Market Strategy
+                    Free AI-Powered Go-To-Market Strategy
                   </span>
                   <h1 id="hero-heading" className="text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-display font-bold tracking-tight leading-[1.08] text-foreground">
-                    Stop Guessing.<br className="hidden sm:block" />
-                    <span className="gradient-text">Get a Full GTM Strategy</span>
-                    <span className="block text-2xl sm:text-3xl md:text-5xl lg:text-5xl mt-2">
-                      <AnimatePresence mode="wait">
-                        <motion.span
-                          key={heroWordIndex}
-                          initial={{ y: 20, opacity: 0 }}
-                          animate={{ y: 0, opacity: 1 }}
-                          exit={{ y: -20, opacity: 0 }}
-                          transition={{ duration: 0.35, ease: "easeInOut" }}
-                          className="inline-block gradient-text"
-                        >
-                          {HERO_ROTATING_WORDS[heroWordIndex]}
-                        </motion.span>
-                      </AnimatePresence>
-                    </span>
+                    <span className="gradient-text">{HERO.headline}</span>
                   </h1>
                 </motion.div>
                 
                 <motion.p variants={itemVariants} className="text-sm md:text-xl text-muted-foreground max-w-xl leading-relaxed">
-                  Paste your URL. Our AI reads your site, detects your ICP, and delivers a <strong className="text-foreground">complete GTM playbook across 13 channels</strong> — with ready-to-publish LinkedIn posts, email campaigns, blog articles, and fresh ideas every Monday. The work of a $5,000 consultant, free to start.
+                  {HERO.subhead}
                 </motion.p>
                 
                 <motion.div variants={itemVariants} className="flex flex-col sm:flex-row gap-3">
@@ -419,11 +391,11 @@ export default function LandingPage() {
                   </div>
                   <div className="flex items-center gap-1.5">
                     <Clock className="h-4 w-4 md:h-5 md:w-5 text-green-500" aria-hidden="true" />
-                    <span>Results in ~2 minutes</span>
+                    <span>Dashboard starts in 30-60 seconds</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <Shield className="h-4 w-4 md:h-5 md:w-5 text-green-500" aria-hidden="true" />
-                    <span>13 channel strategies</span>
+                    <span>Top-three channel focus</span>
                   </div>
                 </motion.div>
               </div>
@@ -445,9 +417,9 @@ export default function LandingPage() {
             <div className="grid grid-cols-2 md:flex md:flex-wrap md:justify-center items-center gap-4 md:gap-14 lg:gap-24">
               {[
                 { value: <AnimatedCounter target={13} />, label: "Marketing Channels", icon: BarChart3 },
-                { value: <AnimatedCounter target={500} suffix="+" />, label: "Companies Analyzed", icon: Users },
+                { value: <AnimatedCounter target={3} />, label: "Priority Channels", icon: Target },
                 { value: "$0", label: "Free Forever", icon: Shield },
-                { value: "GPT-5", label: "AI Engine", icon: Brain },
+                { value: "90d", label: "Execution Roadmap", icon: Clock },
               ].map((metric, i) => {
                 const Icon = metric.icon;
                 return (
@@ -487,10 +459,10 @@ export default function LandingPage() {
                 Simple 3-Step Process
               </motion.span>
               <h2 id="how-it-works-heading" className="text-3xl md:text-5xl font-display font-bold mb-5">
-                From URL to Full Strategy <span className="gradient-text">in 3 Steps</span>
+                From Website to Focused Plan <span className="gradient-text">in 3 Steps</span>
               </h2>
               <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                No forms, no meetings, no sales calls. Just paste your URL and let AI do the heavy lifting.
+                Start with your website, see your strongest opportunities, and leave with a sequenced plan your team can execute.
               </p>
             </div>
 
@@ -500,29 +472,19 @@ export default function LandingPage() {
                 <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/40 via-violet-500/30 to-indigo-500/40 rounded-full blur-md" />
               </div>
               <div className="grid md:grid-cols-3 gap-8 md:gap-10">
-                {[
-                  {
-                    step: "1",
-                    title: "Enter Your Website URL",
-                    description: "Paste your company URL. Our AI scrapes your site content, captures a screenshot, and runs a PageSpeed audit, all in parallel.",
-                    gradient: "from-indigo-500 to-blue-600",
-                    shadow: "shadow-indigo-500/30",
-                  },
-                  {
-                    step: "2",
-                    title: "AI Builds Your Strategy",
-                    description: "GPT-5 classifies your GTM motion, generates personalized recommendations across 13 channels, and identifies your highest-impact quick wins.",
-                    gradient: "from-violet-500 to-purple-600",
-                    shadow: "shadow-violet-500/30",
-                  },
-                  {
-                    step: "3",
-                    title: "Write, Execute & Stay Current",
-                    description: "Generate LinkedIn posts, email campaigns, and blog articles in one click. Track recommendations on the dashboard, and get fresh strategy ideas every Monday morning.",
-                    gradient: "from-indigo-500 to-violet-600",
-                    shadow: "shadow-indigo-500/30",
-                  }
-                ].map((item, idx) => (
+                {STEPS.map((step, idx) => ({
+                  ...step,
+                  gradient: [
+                    "from-indigo-500 to-blue-600",
+                    "from-violet-500 to-purple-600",
+                    "from-indigo-500 to-violet-600",
+                  ][idx],
+                  shadow: [
+                    "shadow-indigo-500/30",
+                    "shadow-violet-500/30",
+                    "shadow-indigo-500/30",
+                  ][idx],
+                })).map((item, idx) => (
                   <motion.div
                     key={idx}
                     initial={{ opacity: 0, y: 15 }}
@@ -566,10 +528,10 @@ export default function LandingPage() {
                 Full Feature Suite
               </motion.span>
               <h2 id="features-heading" className="text-3xl md:text-5xl font-display font-bold mb-5">
-                The <span className="gradient-text">$5,000 Strategy</span> You Get for Free
+                Strategy You Can <span className="gradient-text">Defend and Execute</span>
               </h2>
               <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                Everything a marketing consultant would deliver, AI-generated in minutes, not weeks
+                Move from a long list of channel ideas to a focused plan with evidence, readiness gates, economics, and clear next actions.
               </p>
             </div>
 
@@ -578,15 +540,15 @@ export default function LandingPage() {
                 {
                   icon: <Brain className="h-8 w-8 text-indigo-500" aria-hidden="true" />,
                   title: "Deep Personalization",
-                  description: "Our AI crawls your homepage, pricing page, about page, and more — extracting your real product names, features, pricing tiers, and competitors to personalize every recommendation.",
+                  description: "GTM Champion crawls your key pages and extracts verified product names, features, pricing, competitors, positioning, and ICP signals without filling missing inputs with invented details.",
                   span: "md:col-span-4 lg:col-span-7",
                   gradient: "from-indigo-500/10 to-violet-500/10",
                   borderGradient: "from-indigo-500/30 via-violet-500/20 to-transparent",
                 },
                 {
                   icon: <BarChart3 className="h-8 w-8 text-emerald-500" aria-hidden="true" />,
-                  title: "13 Channel Strategies",
-                  description: "Get tailored recommendations for SEO, paid ads, content, email, ABM, partnerships, outbound, and 6 more — all personalized to your GTM motion.",
+                  title: "13 Deep Channel Playbooks",
+                  description: "Each channel gets distinct strategic pillars, KPIs, quick wins, tools, prerequisites, budget guidance, operating cadence, risks, and a 30, 60, and 90-day roadmap.",
                   span: "md:col-span-2 lg:col-span-5",
                   gradient: "from-emerald-500/10 to-teal-500/10",
                   borderGradient: "from-emerald-500/30 via-teal-500/20 to-transparent",
@@ -601,8 +563,8 @@ export default function LandingPage() {
                 },
                 {
                   icon: <Layers className="h-8 w-8 text-rose-500" aria-hidden="true" />,
-                  title: "GTM Funnel Tagging",
-                  description: "Every recommendation is automatically tagged as PLG, Sales-Led, or Both — so you always know which motion each tactic serves.",
+                  title: "Top-Three Channel Focus",
+                  description: "Channel-fit scoring turns 13 possible directions into three priorities and one cross-channel 90-day plan, so your team knows what to do first.",
                   span: "md:col-span-3 lg:col-span-4",
                   gradient: "from-rose-500/10 to-pink-500/10",
                   borderGradient: "from-rose-500/30 via-pink-500/20 to-transparent",
@@ -633,8 +595,8 @@ export default function LandingPage() {
                 },
                 {
                   icon: <Download className="h-8 w-8 text-purple-500" aria-hidden="true" />,
-                  title: "PDF & CSV Export",
-                  description: "Download your full GTM strategy as a professionally formatted PDF report or export all recommendations as a CSV — shareable with your whole team.",
+                  title: "Evidence-Rich PDF & CSV Export",
+                  description: "Share the complete reasoning behind the plan, including scores, evidence, assumptions, prerequisites, budgets, risks, and roadmaps.",
                   span: "md:col-span-3 lg:col-span-4",
                   gradient: "from-purple-500/10 to-fuchsia-500/10",
                   borderGradient: "from-purple-500/30 via-fuchsia-500/20 to-transparent",
@@ -665,8 +627,8 @@ export default function LandingPage() {
                 },
                 {
                   icon: <Sparkles className="h-8 w-8 text-primary" aria-hidden="true" />,
-                  title: "Quick Wins + KPIs",
-                  description: "Each channel surfaces low-effort, high-impact tactics you can run this week, plus the exact KPIs and benchmarks to know if they're working.",
+                  title: "Readiness, Evidence & Guardrails",
+                  description: "See confidence and quality scores, the evidence behind each recommendation, what must be true before launch, and the risks that should stop premature scaling.",
                   span: "md:col-span-6 lg:col-span-4",
                   gradient: "from-indigo-500/10 to-purple-500/10",
                   borderGradient: "from-indigo-500/30 via-purple-500/20 to-transparent",
@@ -716,7 +678,7 @@ export default function LandingPage() {
                 Strategies for Every Marketing Channel
               </h2>
               <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                Each channel includes strategic pillars, quick wins, KPIs, and personalized recommendations based on your GTM motion
+                Every channel includes fit and confidence scoring, evidence, prerequisites, budget guidance, risks, strategic pillars, quick wins, KPIs, and a 90-day roadmap.
               </p>
             </div>
 
@@ -1082,10 +1044,10 @@ export default function LandingPage() {
               className="max-w-3xl mx-auto"
             >
               <h2 id="cta-heading" className="text-3xl md:text-5xl font-display font-bold mb-6 text-white">
-                Ready to Supercharge Your GTM Strategy?
+                Ready to Focus Your Next 90 Days?
               </h2>
               <p className="text-base md:text-lg text-white/80 max-w-2xl mx-auto mb-10">
-                Join hundreds of B2B SaaS marketers using AI to build smarter Go-To-Market strategies. Get your personalized recommendations in 30 seconds.
+                Start free with no credit card. Turn your website into a prioritized B2B SaaS growth plan with clear channel choices, readiness gates, budgets, risks, and execution roadmaps.
               </p>
               <Button 
                 size="lg" 
