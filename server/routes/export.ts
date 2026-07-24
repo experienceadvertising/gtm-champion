@@ -5,6 +5,7 @@ import type {
   ChannelInsightHeroStat,
   ChannelInsightStrategicPillar,
   ChannelInsightQuickWin,
+  ChannelInsightStrategyMeta,
 } from "@shared/schema";
 import { requireAuth } from "./middleware";
 import { generateStrategyPDF, fetchLogoBuffer } from "../services/pdfExport";
@@ -102,6 +103,8 @@ router.get("/api/export/pdf", requireAuth, async (req: Request, res: Response) =
       channelInsights: channelInsights.map(ci => ({
         channelId: ci.channelId,
         priority: ci.priority,
+        generationStatus: ci.generationStatus,
+        strategyMeta: ci.strategyMeta as ChannelInsightStrategyMeta | null,
         whyItMatters: ci.whyItMatters,
         companyFitSummary: ci.companyFitSummary,
         heroStat: ci.heroStat as ChannelInsightHeroStat,

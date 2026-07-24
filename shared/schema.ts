@@ -35,6 +35,58 @@ export interface SiteProfile {
   keyDifferentiators: string[];
 }
 
+export type ChannelInsightGenerationStatus = "generated" | "fallback" | "pending" | "failed";
+export type ChannelInsightSourceType = "website" | "benchmark" | "best-practice" | "assumption";
+
+export interface ChannelInsightEvidence {
+  claim: string;
+  source: string;
+  sourceType: ChannelInsightSourceType;
+  confidence: number;
+  url?: string;
+}
+
+export interface ChannelInsightStrategyMeta {
+  confidence: number;
+  qualityScore: number;
+  priorityScore: number;
+  priorityRationale: string;
+  isTopChannel: boolean;
+  evidence: ChannelInsightEvidence[];
+  prerequisites: string[];
+  budgetGuidance: {
+    minimumMonthly: number | null;
+    recommendedMonthly: number | null;
+    currency: string;
+    rationale: string;
+  };
+  cadence: {
+    daily: string[];
+    weekly: string[];
+  };
+  risks: string[];
+  roadmap: {
+    first30Days: string[];
+    days31To60: string[];
+    days61To90: string[];
+  };
+  qualityIssues: string[];
+  fallbackReason?: string;
+  model?: string;
+}
+
+export interface CrossChannelStrategyPlan {
+  topChannelIds: string[];
+  executiveSummary: string;
+  firstPriority: string;
+  prerequisites: string[];
+  roadmap: {
+    first30Days: string[];
+    days31To60: string[];
+    days61To90: string[];
+  };
+}
+
 export const companies = pgTable(
   "companies",
   {
@@ -153,6 +205,8 @@ export const channelInsights = pgTable(
       duration: string;
     }>>(),
     resources: jsonb("resources").notNull().$type<string[]>(),
+    generationStatus: text("generation_status").default("generated").notNull().$type<ChannelInsightGenerationStatus>(),
+    strategyMeta: jsonb("strategy_meta").$type<ChannelInsightStrategyMeta>(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (table) => ({

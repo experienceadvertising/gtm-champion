@@ -72,6 +72,7 @@ export interface Company {
   summary: string | null;
   gtmMotion: string | null;
   icpScore: number | null;
+  icpStatus?: "detected" | "missing";
   screenshotUrl: string | null;
   visualAnalysis: string | null;
   pageSpeedData: PageSpeedData | null;
@@ -123,6 +124,41 @@ export interface ChannelInsight {
     duration: string;
   }>;
   resources: string[];
+  generationStatus?: "generated" | "fallback" | "pending" | "failed";
+  strategyMeta?: {
+    confidence: number;
+    qualityScore: number;
+    priorityScore: number;
+    priorityRationale: string;
+    isTopChannel: boolean;
+    evidence: Array<{
+      claim: string;
+      source: string;
+      sourceType: "website" | "benchmark" | "best-practice" | "assumption";
+      confidence: number;
+      url?: string;
+    }>;
+    prerequisites: string[];
+    budgetGuidance: {
+      minimumMonthly: number | null;
+      recommendedMonthly: number | null;
+      currency: string;
+      rationale: string;
+    };
+    cadence: {
+      daily: string[];
+      weekly: string[];
+    };
+    risks: string[];
+    roadmap: {
+      first30Days: string[];
+      days31To60: string[];
+      days61To90: string[];
+    };
+    qualityIssues: string[];
+    fallbackReason?: string;
+    model?: string;
+  };
   isFallback?: boolean;
   createdAt: string;
 }
@@ -139,6 +175,17 @@ export interface DashboardData {
   recommendations: Recommendation[];
   weeklyIdeas: WeeklyIdea[];
   channelInsights: ChannelInsight[];
+  strategyPlan?: {
+    topChannelIds: string[];
+    executiveSummary: string;
+    firstPriority: string;
+    prerequisites: string[];
+    roadmap: {
+      first30Days: string[];
+      days31To60: string[];
+      days61To90: string[];
+    };
+  };
 }
 
 const SESSION_KEY = "gtm_session";

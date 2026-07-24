@@ -1,3 +1,14 @@
+import { z } from "zod";
+import type { ChannelInsightStrategyMeta } from "@shared/schema";
+import {
+  CHANNEL_IDS,
+  buildFallbackChannelInsight,
+  enrichGeneratedChannelInsight,
+  getChannelExpertGuidance,
+  markTopChannels,
+  type ChannelInsightDraft,
+} from "./channelStrategy";
+
 // Dynamic imports to handle ESM modules in CJS bundle
 let OpenAI: any;
 let cheerioLoad: any;
@@ -61,6 +72,8 @@ export interface ChannelInsight {
     duration: string;
   }>;
   resources: string[];
+  generationStatus: "generated" | "fallback" | "pending" | "failed";
+  strategyMeta: ChannelInsightStrategyMeta;
 }
 
 export interface CompanyAnalysis {
@@ -740,14 +753,21 @@ ${visualBlock}${profileBlock}
 Based on this company's business model, target audience, and current positioning, provide strategic recommendations.
 
 PERSONALIZATION RULES (CRITICAL):
-${siteProfile?.primaryCategory ? `- This company is a ${siteProfile.primaryCategory} product. ALL competitor comparisons and "vs" content MUST reference other ${siteProfile.primaryCategory} tools (${siteProfile?.competitors?.join(', ') || 'competitors'}), NOT tools from adjacent categories.` : ''}
-- Reference the company's ACTUAL product names and features in every recommendation (e.g., "Create a comparison page: ${siteProfile?.productNames?.[0] || 'YourProduct'} vs ${siteProfile?.competitors?.[0] || 'Competitor'}")
-- Use REAL pricing in strategies (e.g., "Highlight your ${siteProfile?.pricingTiers?.[0]?.price || '$X/mo'} starting price in ad copy")
-- Reference SPECIFIC direct competitors by name — only companies in the same ${siteProfile?.primaryCategory || 'product'} category
+${siteProfile?.primaryCategory ? `- This company is a ${siteProfile.primaryCategory} product. Keep all category positioning within that category.` : '- The product category was not verified. Treat category positioning as an assumption to validate.'}
+${siteProfile?.productNames?.length ? `- Use only these verified product names: ${siteProfile.productNames.join(', ')}.` : '- No product name was verified. Use the company name and recommend validating product naming.'}
+${siteProfile?.features?.length ? `- Use only these verified features: ${siteProfile.features.slice(0, 8).join(', ')}.` : '- No features were verified. Do not invent capabilities; recommend a feature and proof inventory where relevant.'}
+${siteProfile?.pricingTiers?.length ? `- Use only this verified pricing: ${siteProfile.pricingTiers.map(tier => `${tier.name}: ${tier.price}`).join(', ')}.` : '- Pricing was not verified. Do not include a placeholder or assumed price.'}
+${siteProfile?.competitors?.length ? `- Use only these verified direct competitors: ${siteProfile.competitors.join(', ')}.` : '- No direct competitors were verified. Do not name a competitor; recommend a category and competitor validation step instead.'}
 - If existing channels were detected, acknowledge them and recommend improvements rather than starting from scratch
 - Address detected content gaps specifically
 - For each recommendation, indicate whether it serves a PLG self-serve funnel, a sales-assisted motion, or both (gtmFunnel field)
 - Every recommendation description must include at least one specific product name, feature, or competitor — zero generic filler allowed
+- NEVER substitute placeholder prices, competitors, customer outcomes, testimonials, target segments, company sizes, or capabilities when the website did not provide them.
+- If the ICP is not detected, say the segment is an assumption that must be validated. Do not invent enterprise, Fortune 1000, SMB, or industry targeting.
+- Do not recommend using case studies, customer quotes, or performance statistics unless those assets were detected. Recommend creating or validating the proof instead.
+- Tie expected outcomes to qualified pipeline, activation, conversion quality, CAC, opportunity creation, or revenue. Avoid promising unsupported performance lifts.
+- Keep the output internally consistent: ICP clarity, ICP score, content gaps, GTM motion, recommendations, and weekly ideas must not contradict each other.
+- Treat all playbook benchmarks as planning context, not facts about this company.
 
 Provide your analysis in the following JSON format:
 {
@@ -759,7 +779,7 @@ Provide your analysis in the following JSON format:
     {
       "category": "One of: SEO, LLMs, Paid Search, Paid Social, Organic Social, Retargeting, CRO, Email Marketing, Content, Community, ABM, Partnerships, Outbound",
       "title": "A specific, actionable recommendation referencing THIS company's products",
-      "description": "Detailed description using the company's actual product names, features, pricing, and competitors. Include specific tactics and expected outcomes.",
+      "description": "Detailed description using only verified company details. Include specific tactics, validation steps for missing inputs, and measurable business outcomes.",
       "impact": "High, Medium, or Low",
       "effort": "High, Medium, or Low",
       "gtmFunnel": "plg, sales, or both — which go-to-market motion does this serve?"
@@ -768,7 +788,7 @@ Provide your analysis in the following JSON format:
   "weeklyIdeas": [
     {
       "title": "Specific content idea title referencing this company",
-      "description": "Step-by-step execution guide for this week using the company's real product details, customer quotes, and competitive positioning",
+      "description": "Step-by-step execution guide for this week using only verified product details, proof, and competitive positioning",
       "type": "One of: Blog Post, LinkedIn Post, Email Campaign, Webinar, Case Study, Partner Content"
     }
   ]
@@ -790,8 +810,72 @@ Generate exactly 1 recommendation per channel (13 total, covering ALL channels: 
   if (!result.companyName || !result.summary || !result.recommendations) {
     throw new Error("Invalid AI response structure (core)");
   }
+  const detectedIcp = Boolean(
+    siteProfile?.icpDetails?.persona?.trim()
+    || siteProfile?.icpDetails?.companySize?.trim()
+    || siteProfile?.icpDetails?.industry?.trim()
+    || siteProfile?.icpDetails?.painPoints?.some(point => point.trim()),
+  );
+  const rawIcpScore = Number(result.icpScore);
+  result.icpScore = Number.isFinite(rawIcpScore)
+    ? Math.max(1, Math.min(siteProfile && !detectedIcp ? 40 : 100, Math.round(rawIcpScore)))
+    : siteProfile && !detectedIcp ? 20 : 50;
   return result;
 }
+
+const generatedChannelInsightSchema = z.object({
+  channelId: z.string().min(1),
+  priority: z.enum(["High", "Medium", "Low"]),
+  whyItMatters: z.string().min(80),
+  companyFitSummary: z.string().min(40),
+  heroStat: z.object({
+    value: z.string().min(1),
+    label: z.string().min(1),
+  }),
+  topKpis: z.array(z.string().min(2)).min(3).max(6),
+  strategicPillars: z.array(z.object({
+    title: z.string().min(4),
+    objective: z.string().min(20),
+    tactics: z.array(z.string().min(20)).min(3).max(5),
+    measurement: z.string().min(15),
+  })).min(2).max(3),
+  quickWins: z.array(z.object({
+    title: z.string().min(4),
+    steps: z.array(z.string().min(10)).min(3).max(5),
+    effort: z.enum(["Low", "Medium"]),
+    duration: z.string().min(2),
+  })).min(2).max(3),
+  resources: z.array(z.string().min(2)).min(3).max(8),
+  strategyMeta: z.object({
+    confidence: z.number().min(0).max(100).optional(),
+    priorityScore: z.number().min(0).max(100).optional(),
+    priorityRationale: z.string().min(20).optional(),
+    evidence: z.array(z.object({
+      claim: z.string().min(10),
+      source: z.string().min(2),
+      sourceType: z.enum(["website", "benchmark", "best-practice", "assumption"]),
+      confidence: z.number().min(0).max(100),
+      url: z.string().url().optional(),
+    })).max(6).optional(),
+    prerequisites: z.array(z.string().min(3)).min(2).max(8).optional(),
+    budgetGuidance: z.object({
+      minimumMonthly: z.number().nonnegative().nullable(),
+      recommendedMonthly: z.number().nonnegative().nullable(),
+      currency: z.string().min(3).max(3),
+      rationale: z.string().min(20),
+    }).optional(),
+    cadence: z.object({
+      daily: z.array(z.string().min(3)).max(5),
+      weekly: z.array(z.string().min(3)).min(1).max(6),
+    }).optional(),
+    risks: z.array(z.string().min(5)).min(2).max(6).optional(),
+    roadmap: z.object({
+      first30Days: z.array(z.string().min(3)).min(1).max(6),
+      days31To60: z.array(z.string().min(3)).min(1).max(6),
+      days61To90: z.array(z.string().min(3)).min(1).max(6),
+    }).optional(),
+  }).partial().optional(),
+});
 
 async function analyzeChannelBatch(openai: any, channels: string[], companyName: string, companySummary: string, gtmMotion: string, websiteContent: string, siteProfile?: SiteProfile): Promise<ChannelInsight[]> {
   const categoryRef = siteProfile?.primaryCategory || '';
@@ -808,7 +892,7 @@ COMPANY PROFILE:
 ` : '';
 
   const productRef = siteProfile?.productNames?.[0] || companyName;
-  const competitorRef = siteProfile?.competitors?.slice(0, 3).join(', ') || 'competitors';
+  const competitorRef = siteProfile?.competitors?.slice(0, 3).join(', ') || '';
   const channelList = channels.join(', ');
 
   const featureRef = siteProfile?.features?.slice(0, 3).join(', ') || '';
@@ -817,7 +901,7 @@ COMPANY PROFILE:
 
   const llmsChannelContext = channels.includes('LLMs') ? `
 EXPERT CONTEXT FOR LLMs / AEO CHANNEL (apply only to the LLMs channelId):
-Modern AI search (ChatGPT, Perplexity, Gemini, Claude, Google AI Mode) uses "query fan-out" (also called query decomposition): when a user asks one question, the AI internally breaks it into 8–20 sub-queries covering definitions, comparisons, tutorials, implementation, troubleshooting, features, pricing, and best practices — running them in parallel before synthesizing a final answer. The user never sees these sub-queries.
+Some AI search experiences use query fan-out or decomposition, issuing multiple related searches across definitions, comparisons, tutorials, implementation, troubleshooting, features, pricing, and best practices before synthesizing an answer. Exact behavior varies by engine and query, so do not claim a universal number of sub-queries.
 
 This fundamentally changes content strategy:
 - Traditional SEO: rank one page for one keyword
@@ -826,16 +910,17 @@ This fundamentally changes content strategy:
 
 Key tactics for the LLMs channel:
 1. TOPICAL COVERAGE — build content clusters that answer every sub-query the AI might run: definitional ("What is X?"), comparison ("X vs Y"), how-to, troubleshooting, feature deep-dives, use cases, pricing pages, migration guides
-2. STRUCTURED DATA — implement FAQ schema, HowTo schema, Article schema so AI can parse and cite content easily
+2. MACHINE READABILITY — use appropriate structured data and clear page structure where supported, while stating clearly that schema does not guarantee inclusion or citation
 3. ENTITY AUTHORITY — be cited by authoritative 3rd-party sources (G2, Capterra, analyst reports, press) so AI models trust the brand signal
 4. ANSWER-OPTIMIZED CONTENT — write in a format AI loves: clear H2/H3 hierarchy, direct answers in the first sentence of each section, numbered steps for processes, comparison tables for "vs" content
-5. AI TOPIC COVERAGE SCORE — track brand mentions across the full fan-out cluster (mentions ÷ total sub-queries × 100); goal is 60%+ across the topic ecosystem
+5. AI TOPIC COVERAGE SCORE — track brand mentions across a fixed prompt benchmark (mentions ÷ tested prompts × 100); use the first run as the company baseline because there is no universal target
 6. MONITOR AI CITATIONS — regularly test brand visibility in ChatGPT, Perplexity, Gemini, and Google AI Mode for key commercial and informational queries
 
 For ${companyName} specifically: identify 6–10 sub-query categories that AI engines research before recommending a ${categoryRef || 'product like this'}, then map existing content to those sub-queries and identify the gaps.
 ` : '';
 
-  const prompt = `You are a B2B SaaS marketing expert. Generate DEEPLY PERSONALIZED channel insights for ${companyName}.
+  const channelExpertGuidance = getChannelExpertGuidance(channels);
+  const prompt = `You are a senior B2B SaaS growth operator. Generate DEEPLY PERSONALIZED, commercially responsible channel insights for ${companyName}.
 
 Company: ${companyName}
 Summary: ${companySummary}
@@ -846,15 +931,23 @@ Website Content:
 ${websiteContent.slice(0, 3500)}
 
 PERSONALIZATION RULES (CRITICAL — generic advice is REJECTED):
-${categoryRef ? `0. ${companyName} is a ${categoryRef} product. ALL competitor comparisons, "vs" pages, and positioning tactics MUST reference other ${categoryRef} tools (${competitorRef}). Do NOT compare against tools from adjacent categories.` : ''}
+${categoryRef ? `0. ${companyName} is a ${categoryRef} product. Keep positioning and comparisons within that category.` : '0. The category was not verified. Label category assumptions and recommend validation before category-specific execution.'}
 1. Every tactic MUST name "${productRef}" specifically — never say "the product" or "your tool"
-2. Reference competitors (${competitorRef}) BY NAME in comparison tactics, ad copy, and content ideas — these are direct ${categoryRef || 'category'} competitors
-3. Use REAL features (${featureRef}) in tactical descriptions, not vague capabilities
+${competitorRef ? `2. When a comparison is useful, reference only these verified competitors: ${competitorRef}.` : '2. No competitor was verified. Do not name one; include a competitor-validation step before comparison execution.'}
+${featureRef ? `3. Use only these verified features in tactical descriptions: ${featureRef}.` : '3. No feature was verified. Do not invent capabilities; use positioning-validation or feature-inventory steps.'}
 ${pricingRef ? `4. Reference actual pricing (${pricingRef}) in conversion and ad tactics` : ''}
 ${painPointRef ? `5. Address customer pain points (${painPointRef}) in messaging tactics` : ''}
 6. Quick win steps must be actionable THIS WEEK with ${companyName}'s actual assets, not hypothetical
 7. Strategic pillar titles must reference ${companyName}'s specific ${categoryRef || 'market'} position
-8. Comparison pages/content must be "${productRef} vs [direct ${categoryRef || 'category'} competitor]" format — e.g., "${productRef} vs ${siteProfile?.competitors?.[0] || 'Competitor'}"
+${competitorRef ? `8. Comparison content may use "${productRef} vs [verified direct competitor]" format, with factual claims validated before publication.` : '8. Do not propose a named comparison page until a direct competitor has been verified.'}
+9. NEVER invent target segments, customers, testimonials, prices, competitor facts, performance numbers, or current capabilities. Label uncertain inputs as assumptions.
+10. Tie recommendations to qualified pipeline, CAC, opportunity creation, revenue, activation, or conversion quality instead of vanity metrics.
+11. Paid-channel plans MUST address tracking and CRO prerequisites before recommending scale.
+12. Numeric benchmarks must be identified as a website fact, sourced benchmark, best-practice planning range, or assumption. Do not invent source URLs.
+13. Make each channel operationally distinct. Do not reuse the same KPIs, pillars, quick wins, test windows, or resources across channels.
+
+CHANNEL-SPECIFIC REQUIREMENTS:
+${channelExpertGuidance}
 
 Generate insights for ONLY these channels: ${channelList}
 channelId MUST be one of EXACTLY: ${channelList}
@@ -870,20 +963,38 @@ JSON format:
       "heroStat": { "value": "Stat", "label": "Label" },
       "topKpis": ["3-4 KPIs"],
       "strategicPillars": [
-        { "title": "Initiative name referencing ${productRef}", "objective": "Goal tied to ${companyName}", "tactics": ["3-4 tactics naming ${productRef} and competitors"], "measurement": "Specific metric" }
+        { "title": "Initiative name referencing ${productRef}", "objective": "Goal tied to ${companyName}", "tactics": ["3-4 tactics using verified company details and explicit validation steps"], "measurement": "Specific metric" }
       ],
       "quickWins": [
         { "title": "Quick win naming ${productRef}", "steps": ["Concrete steps using ${companyName}'s real assets"], "effort": "Low/Medium", "duration": "Timeframe" }
       ],
-      "resources": ["Relevant tools"]
+      "resources": ["Relevant tools"],
+      "strategyMeta": {
+        "confidence": 0,
+        "priorityScore": 0,
+        "priorityRationale": "Explain the score using fit, intent, speed, cost, capability, and available evidence",
+        "evidence": [
+          { "claim": "A strategy claim", "source": "Company website, named public benchmark, GTM best practice, or explicit assumption", "sourceType": "website/benchmark/best-practice/assumption", "confidence": 0 }
+        ],
+        "prerequisites": ["What must be true before execution or scale"],
+        "budgetGuidance": { "minimumMonthly": null, "recommendedMonthly": null, "currency": "USD", "rationale": "Planning range and assumptions" },
+        "cadence": { "daily": ["Only when operationally necessary"], "weekly": ["Concrete optimization actions"] },
+        "risks": ["At least two channel-specific watchouts"],
+        "roadmap": {
+          "first30Days": ["Foundation and first test"],
+          "days31To60": ["Optimization and expansion"],
+          "days61To90": ["Scale or stop decision"]
+        }
+      }
     }
   ]
 }
 
-Include ALL ${channels.length} channels: ${channelList}. Each needs 2 strategicPillars and 2 quickWins. Every single tactic must name ${productRef} or ${competitorRef} — zero generic filler.`;
+Include ALL ${channels.length} channels: ${channelList}. Each needs 2 strategicPillars and 2 quickWins. Every tactic must name ${productRef}, ${companyName}, a verified competitor, a verified buyer/use-case detail, or the exact missing input to validate. Zero generic filler.`;
 
+  const channelModel = process.env.CHANNEL_INSIGHTS_MODEL || "gpt-4o-mini";
   const response = await openai.chat.completions.create({
-    model: process.env.CHANNEL_INSIGHTS_MODEL || "gpt-4o-mini",
+    model: channelModel,
     messages: [{ role: "user", content: prompt }],
     response_format: { type: "json_object" },
     max_tokens: 6000,
@@ -892,68 +1003,33 @@ Include ALL ${channels.length} channels: ${channelList}. Each needs 2 strategicP
   const content = response.choices[0]?.message?.content;
   if (!content) throw new Error(`No response from AI (channels: ${channelList})`);
 
-  const result = JSON.parse(content);
-  return result.channelInsights || [];
+  const result = z.object({
+    channelInsights: z.array(generatedChannelInsightSchema),
+  }).parse(JSON.parse(content));
+
+  return result.channelInsights.map((insight) =>
+    enrichGeneratedChannelInsight(
+      insight as Omit<ChannelInsightDraft, "generationStatus" | "strategyMeta"> & {
+        strategyMeta?: Partial<ChannelInsightStrategyMeta>;
+      },
+      companyName,
+      companySummary,
+      gtmMotion,
+      siteProfile,
+      channelModel,
+    )
+  );
 }
 
-export function fallbackChannelInsight(channelId: string, companyName: string, companySummary: string, gtmMotion: string): ChannelInsight {
-  const company = companyName || "your company";
-  const summary = companySummary || "the product and audience identified during analysis";
-  const motion = gtmMotion || "your current GTM motion";
-
-  return {
-    channelId,
-    priority: "Medium",
-    whyItMatters: `${channelId} is part of the GTM mix for ${company} because it can turn the positioning from your website into repeatable pipeline activity. The first pass should validate whether this channel supports ${motion} before adding budget or headcount.`,
-    companyFitSummary: `Use this channel to test the clearest promise from ${company}: ${summary.slice(0, 180)}${summary.length > 180 ? "..." : ""}`,
-    heroStat: { value: "2 weeks", label: "Initial test window" },
-    topKpis: ["Qualified pipeline", "Conversion rate", "Cost per opportunity", "Message engagement"],
-    strategicPillars: [
-      {
-        title: `${company} positioning test`,
-        objective: `Find the ${channelId} message that best connects ${company}'s product promise to buyer intent.`,
-        tactics: [
-          `Turn ${company}'s strongest homepage claim into three ${channelId} message variants.`,
-          `Match each variant to one buying trigger from the ${motion} motion.`,
-          `Route engaged prospects to the most relevant proof point, demo, or conversion page.`,
-        ],
-        measurement: "Compare engagement and qualified conversion rate by message variant.",
-      },
-      {
-        title: `${channelId} proof loop`,
-        objective: `Use real proof from ${company} to make this channel more credible and easier to scale.`,
-        tactics: [
-          `Pull customer language, feature names, and outcomes from ${company}'s website into channel copy.`,
-          `Create one lightweight proof asset that answers the most common buyer objection.`,
-          `Feed the winning proof point back into ads, content, email, and sales follow-up.`,
-        ],
-        measurement: "Track proof-asset clicks, replies, demo starts, and influenced opportunities.",
-      },
-    ],
-    quickWins: [
-      {
-        title: `Launch a focused ${channelId} test for ${company}`,
-        steps: [
-          "Pick one ICP segment from the analysis.",
-          "Write three message variants using actual product language from the website.",
-          "Run the test for two weeks and keep the winner only if it creates qualified engagement.",
-        ],
-        effort: "Low",
-        duration: "1-2 days",
-      },
-      {
-        title: `Create a ${channelId} proof asset`,
-        steps: [
-          "Choose one objection buyers have before they convert.",
-          "Answer it with a short page, post, sequence, or landing section.",
-          "Use the same proof point in follow-up so the channel and sales motion reinforce each other.",
-        ],
-        effort: "Medium",
-        duration: "3-5 days",
-      },
-    ],
-    resources: ["Analytics dashboard", "CRM campaign tracking", "Website conversion events"],
-  };
+export function fallbackChannelInsight(
+  channelId: string,
+  companyName: string,
+  companySummary: string,
+  gtmMotion: string,
+  siteProfile?: SiteProfile | null,
+  fallbackReason?: string,
+): ChannelInsight {
+  return buildFallbackChannelInsight(channelId, companyName, companySummary, gtmMotion, siteProfile, fallbackReason);
 }
 
 function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): Promise<T> {
@@ -967,12 +1043,36 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): 
   });
 }
 
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  concurrency: number,
+  worker: (item: T, index: number) => Promise<R>,
+): Promise<Array<PromiseSettledResult<R>>> {
+  const results: Array<PromiseSettledResult<R>> = new Array(items.length);
+  let nextIndex = 0;
+
+  const runners = Array.from({ length: Math.min(concurrency, items.length) }, async () => {
+    while (nextIndex < items.length) {
+      const index = nextIndex++;
+      try {
+        results[index] = { status: "fulfilled", value: await worker(items[index], index) };
+      } catch (reason) {
+        results[index] = { status: "rejected", reason };
+      }
+    }
+  });
+
+  await Promise.all(runners);
+  return results;
+}
+
 function completeChannelInsights(
   insights: ChannelInsight[],
   validChannelIds: string[],
   companyName: string,
   companySummary: string,
   gtmMotion: string,
+  siteProfile?: SiteProfile | null,
 ): ChannelInsight[] {
   const byChannel = new Map<string, ChannelInsight>();
   for (const insight of insights) {
@@ -983,7 +1083,14 @@ function completeChannelInsights(
 
   for (const channelId of validChannelIds) {
     if (!byChannel.has(channelId)) {
-      byChannel.set(channelId, fallbackChannelInsight(channelId, companyName, companySummary, gtmMotion));
+      byChannel.set(channelId, fallbackChannelInsight(
+        channelId,
+        companyName,
+        companySummary,
+        gtmMotion,
+        siteProfile,
+        "The personalized channel job timed out, failed validation, or returned no usable strategy.",
+      ));
     }
   }
 
@@ -991,29 +1098,36 @@ function completeChannelInsights(
 }
 
 async function analyzeChannels(openai: any, companyName: string, companySummary: string, gtmMotion: string, websiteContent: string, siteProfile?: SiteProfile, onBatchReady?: (insights: ChannelInsight[]) => Promise<void>): Promise<ChannelInsight[]> {
-  const validChannelIds = ['SEO', 'Content', 'LLMs', 'CRO', 'Email Marketing', 'Paid Search', 'Paid Social', 'Organic Social', 'Retargeting', 'Community', 'ABM', 'Partnerships', 'Outbound'];
-  const batches = [
-    ['SEO', 'Content', 'LLMs', 'CRO', 'Email Marketing'],
-    ['Paid Search', 'Paid Social', 'Organic Social', 'Retargeting'],
-    ['Community', 'ABM', 'Partnerships', 'Outbound'],
-  ];
+  const validChannelIds = [...CHANNEL_IDS];
+  const batches: string[][] = [];
+  for (let index = 0; index < validChannelIds.length; index += 2) {
+    batches.push(validChannelIds.slice(index, index + 2));
+  }
 
-  console.log(`Calling AI for channel insights in ${batches.length} parallel batches...`);
+  console.log(`Calling AI for channel insights in ${batches.length} small jobs (max 3 concurrent)...`);
   const startTime = Date.now();
-  const batchTimeoutMs = Number(process.env.CHANNEL_INSIGHTS_BATCH_TIMEOUT_MS || 30000);
+  const batchTimeoutMs = Number(process.env.CHANNEL_INSIGHTS_BATCH_TIMEOUT_MS || 45000);
 
   const allInsights: ChannelInsight[] = [];
-  const failedBatches: { batch: string[]; index: number }[] = [];
 
   const normalizeBatch = (insights: ChannelInsight[]) => {
     return insights.map(insight => {
       const match = validChannelIds.find(id => id.toLowerCase() === insight.channelId?.toLowerCase());
       return match ? { ...insight, channelId: match } : insight;
-    }).filter(insight => validChannelIds.includes(insight.channelId));
+    }).filter((insight) => {
+      const validChannel = validChannelIds.includes(insight.channelId as (typeof validChannelIds)[number]);
+      const passesQuality = insight.strategyMeta?.qualityScore >= 70;
+      if (validChannel && !passesQuality) {
+        console.warn(`  Rejected low-quality ${insight.channelId} insight (${insight.strategyMeta?.qualityScore || 0}/100)`);
+      }
+      return validChannel && passesQuality;
+    });
   };
 
-  const results = await Promise.allSettled(
-    batches.map((batch, i) =>
+  const results = await mapWithConcurrency(
+    batches,
+    3,
+    async (batch, i) =>
       withTimeout(
         analyzeChannelBatch(openai, batch, companyName, companySummary, gtmMotion, websiteContent, siteProfile),
         batchTimeoutMs,
@@ -1028,39 +1142,43 @@ async function analyzeChannels(openai: any, companyName: string, companySummary:
           }
           return { insights: normalized, index: i };
         })
-    )
   );
 
   for (const r of results) {
     if (r.status === 'rejected') {
       const idx = results.indexOf(r);
       console.error(`  Batch ${idx + 1} failed:`, r.reason?.message || r.reason);
-      failedBatches.push({ batch: batches[idx], index: idx });
     }
   }
 
-  if (failedBatches.length > 0) {
-    console.log(`Retrying ${failedBatches.length} failed batch(es)...`);
-    await Promise.allSettled(failedBatches.map(async ({ batch, index }) => {
+  const retryChannels = validChannelIds.filter(
+    (channelId) => !allInsights.some((insight) => insight.channelId === channelId),
+  );
+  if (retryChannels.length > 0) {
+    console.log(`Retrying ${retryChannels.length} missing channel(s) as individual jobs...`);
+    await mapWithConcurrency(retryChannels, 3, async (channelId, retryIndex) => {
       try {
         const retryInsights = await withTimeout(
-          analyzeChannelBatch(openai, batch, companyName, companySummary, gtmMotion, websiteContent, siteProfile),
+          analyzeChannelBatch(openai, [channelId], companyName, companySummary, gtmMotion, websiteContent, siteProfile),
           batchTimeoutMs,
-          `Channel insight retry batch ${index + 1}`,
+          `Channel insight retry ${channelId}`,
         );
         const normalized = normalizeBatch(retryInsights);
-        console.log(`  Retry batch ${index + 1} done: ${normalized.length} channels`);
+        console.log(`  Retry ${channelId} done: ${normalized.length} channel`);
         allInsights.push(...normalized);
         if (onBatchReady && normalized.length > 0) {
-          await onBatchReady(normalized).catch(err => console.error(`  Failed to save retry batch ${index + 1}:`, err));
+          await onBatchReady(normalized).catch(err => console.error(`  Failed to save retry ${channelId}:`, err));
         }
       } catch (err: any) {
-        console.error(`  Retry batch ${index + 1} also failed:`, err?.message || err);
+        console.error(`  Retry ${channelId} also failed:`, err?.message || err);
       }
-    }));
+      return retryIndex;
+    });
   }
 
-  const completedInsights = completeChannelInsights(allInsights, validChannelIds, companyName, companySummary, gtmMotion);
+  const completedInsights = markTopChannels(
+    completeChannelInsights(allInsights, validChannelIds, companyName, companySummary, gtmMotion, siteProfile),
+  );
   const generatedFallbacks = completedInsights.filter((insight) =>
     !allInsights.some((existing) => existing.channelId === insight.channelId)
   );
@@ -1198,10 +1316,10 @@ GTM Motion: ${gtmMotion}
 
 Use these proven B2B SaaS content strategies:
 - ToFu content: SEO-optimized blogs, guides, thought-leadership articles
-- MoFu content: Webinars (73% of B2B marketers rate as best lead source), case studies, whitepapers
-- LinkedIn content: Short-form video delivers highest ROI; authentic founder content outperforms polished productions
+- MoFu content: Webinars, validated customer proof, implementation guides, and evaluation assets
+- LinkedIn content: Native educational video and authentic expert-led content
 - Community content: Partner cross-promotion, influencer collaborations with genuine experts
-- Email campaigns: Segmented, personalized nurture sequences (26% higher engagement)
+- Email campaigns: Consent-based, segmented nurture sequences measured on downstream conversion
 - AEO content: Structured answers for AI-powered search engines
 
 Provide your ideas in the following JSON format:
@@ -1215,7 +1333,7 @@ Provide your ideas in the following JSON format:
   ]
 }
 
-Focus on timely, trend-aware ideas that align with their GTM motion and can drive measurable engagement this week.`;
+Do not invent customer proof, performance benchmarks, audience details, or product capabilities. Label assumptions that require validation. Focus on timely ideas that align with their GTM motion and can drive a measurable business outcome this week.`;
 
         const response = await openai.chat.completions.create({
           model: "gpt-5",
