@@ -1100,13 +1100,17 @@ function completeChannelInsights(
 async function analyzeChannels(openai: any, companyName: string, companySummary: string, gtmMotion: string, websiteContent: string, siteProfile?: SiteProfile, onBatchReady?: (insights: ChannelInsight[]) => Promise<void>): Promise<ChannelInsight[]> {
   const validChannelIds = [...CHANNEL_IDS];
   const batches: string[][] = [];
-  for (let index = 0; index < validChannelIds.length; index += 2) {
-    batches.push(validChannelIds.slice(index, index + 2));
+  const batchSize = Math.max(1, Number(process.env.CHANNEL_INSIGHTS_BATCH_SIZE || 1));
+  const concurrency = Math.max(1, Number(process.env.CHANNEL_INSIGHTS_CONCURRENCY || 6));
+  const retryMissing = process.env.CHANNEL_INSIGHTS_RETRY_MISSING === "true";
+
+  for (let index = 0; index < validChannelIds.length; index += batchSize) {
+    batches.push(validChannelIds.slice(index, index + batchSize));
   }
 
-  console.log(`Calling AI for channel insights in ${batches.length} small jobs (max 3 concurrent)...`);
+  console.log(`Calling AI for channel insights in ${batches.length} small jobs (max ${concurrency} concurrent)...`);
   const startTime = Date.now();
-  const batchTimeoutMs = Number(process.env.CHANNEL_INSIGHTS_BATCH_TIMEOUT_MS || 45000);
+  const batchTimeoutMs = Number(process.env.CHANNEL_INSIGHTS_BATCH_TIMEOUT_MS || 30000);
 
   const allInsights: ChannelInsight[] = [];
 
@@ -1126,7 +1130,7 @@ async function analyzeChannels(openai: any, companyName: string, companySummary:
 
   const results = await mapWithConcurrency(
     batches,
-    3,
+    concurrency,
     async (batch, i) =>
       withTimeout(
         analyzeChannelBatch(openai, batch, companyName, companySummary, gtmMotion, websiteContent, siteProfile),
@@ -1154,9 +1158,9 @@ async function analyzeChannels(openai: any, companyName: string, companySummary:
   const retryChannels = validChannelIds.filter(
     (channelId) => !allInsights.some((insight) => insight.channelId === channelId),
   );
-  if (retryChannels.length > 0) {
+  if (retryMissing && retryChannels.length > 0) {
     console.log(`Retrying ${retryChannels.length} missing channel(s) as individual jobs...`);
-    await mapWithConcurrency(retryChannels, 3, async (channelId, retryIndex) => {
+    await mapWithConcurrency(retryChannels, concurrency, async (channelId, retryIndex) => {
       try {
         const retryInsights = await withTimeout(
           analyzeChannelBatch(openai, [channelId], companyName, companySummary, gtmMotion, websiteContent, siteProfile),
@@ -1174,6 +1178,8 @@ async function analyzeChannels(openai: any, companyName: string, companySummary:
       }
       return retryIndex;
     });
+  } else if (retryChannels.length > 0) {
+    console.warn(`Skipping ${retryChannels.length} missing channel retry job(s); filling with channel playbook fallbacks for faster completion`);
   }
 
   const completedInsights = markTopChannels(
