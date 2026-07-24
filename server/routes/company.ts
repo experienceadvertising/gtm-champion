@@ -140,6 +140,8 @@ router.get("/api/dashboard", requireAuth, async (req: Request, res: Response) =>
       ? company.icpScore
       : Math.min(company.icpScore || 0, 40);
 
+    const hasCompleteChannelPlan = completedChannelInsights.length >= CHANNEL_IDS.length;
+
     res.json({
       user: {
         id: user.id,
@@ -166,10 +168,12 @@ router.get("/api/dashboard", requireAuth, async (req: Request, res: Response) =>
       recommendations,
       weeklyIdeas,
       channelInsights: completedChannelInsights,
-      strategyPlan: buildCrossChannelStrategyPlan(
-        completedChannelInsights,
-        company.name || "Your Company",
-      ),
+      strategyPlan: hasCompleteChannelPlan
+        ? buildCrossChannelStrategyPlan(
+            completedChannelInsights,
+            company.name || "Your Company",
+          )
+        : null,
     });
   } catch (error: unknown) {
     console.error("Dashboard error:", error);
