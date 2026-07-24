@@ -7,6 +7,7 @@ import {
   type ChannelInsightHeroStat,
   type ChannelInsightStrategicPillar,
   type ChannelInsightQuickWin,
+  type ChannelInsightStrategyMeta,
 } from "@shared/schema";
 import { requireAuth, requireAdmin } from "./middleware";
 import { sendInviteFriendEmail, sendShareStrategyEmail, sendWeeklyEmail, sendChannelStrategyEmail } from "../services/email";
@@ -46,6 +47,11 @@ router.post("/api/share-strategy", requireAuth, async (req: Request, res: Respon
     const insights = await storage.getChannelInsightsByCompanyId(company.id);
     const channelInsight = insights.find(i => i.channelId === validatedData.channelId);
     if (!channelInsight) return res.status(404).json({ error: "Channel strategy not found" });
+    if (channelInsight.generationStatus === "fallback") {
+      return res.status(409).json({
+        error: "Personalized strategy is not ready yet. Retry the analysis before sharing.",
+      });
+    }
 
     const recommendations = await storage.getRecommendationsByCompanyId(company.id);
     const channelRecs = recommendations.filter(r => r.category === validatedData.channelId);
@@ -57,6 +63,8 @@ router.post("/api/share-strategy", requireAuth, async (req: Request, res: Respon
       insight: {
         channelId: validatedData.channelId,
         priority: channelInsight.priority,
+        generationStatus: channelInsight.generationStatus,
+        strategyMeta: channelInsight.strategyMeta as ChannelInsightStrategyMeta | null,
         whyItMatters: channelInsight.whyItMatters || "",
         companyFitSummary: channelInsight.companyFitSummary || "",
         heroStat: (channelInsight.heroStat as ChannelInsightHeroStat) || { value: "", label: "" },

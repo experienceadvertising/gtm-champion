@@ -7,8 +7,10 @@ import {
   emailCampaignRequestSchema,
   blogArticleRequestSchema,
   type ChannelInsightHeroStat,
+  type ChannelInsightStrategyMeta,
 } from "@shared/schema";
 import type { ChannelInsight as OpenAIChannelInsight } from "../services/openai";
+import { buildStrategyMeta } from "../services/channelStrategy";
 import { requireAuth } from "./middleware";
 import { answerQuestion, generateLinkedInPost, generateEmailCampaign, generateBlogArticle, type ChatContext } from "../services/openai";
 import { pgRateLimitStore } from "./rateLimitStore";
@@ -97,6 +99,15 @@ router.post("/api/chat", requireAuth, aiLimiter, async (req: Request, res: Respo
           strategicPillars: insight.strategicPillars as OpenAIChannelInsight['strategicPillars'],
           quickWins: insight.quickWins as unknown as OpenAIChannelInsight['quickWins'],
           resources: insight.resources as string[],
+          generationStatus: insight.generationStatus || "generated",
+          strategyMeta: (insight.strategyMeta as ChannelInsightStrategyMeta | null) || buildStrategyMeta(
+            insight.channelId,
+            company.name || "Your Company",
+            company.summary || "",
+            company.gtmMotion || "",
+            company.siteProfile,
+            "generated",
+          ),
         };
       }
     }

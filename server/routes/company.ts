@@ -1,10 +1,16 @@
 import { Router, type Request, type Response } from "express";
 import { storage } from "../storage";
 import { icpUpdateSchema, recommendationStatusSchema } from "@shared/schema";
-import type { SiteProfile } from "@shared/schema";
+import type { ChannelInsightStrategyMeta, SiteProfile } from "@shared/schema";
 import { requireAuth } from "./middleware";
 import { scrapeWebsiteDeep, extractCompanyProfile, analyzeCompanyFast, analyzeCompanyChannels, captureScreenshot, analyzeScreenshot, fetchPageSpeedInsights, fallbackChannelInsight } from "../services/openai";
 import { sendWelcomeEmail } from "../services/email";
+import {
+  buildCrossChannelStrategyPlan,
+  buildStrategyMeta,
+  markTopChannels,
+  scoreChannelInsightQuality,
+} from "../services/channelStrategy";
 
 const router = Router();
 
@@ -15,11 +21,58 @@ const ANALYSIS_CLEANUP_INTERVAL_MS = 5 * 60 * 1000;
 const activeAnalysisRuns = new Map<number, { runId: string; startedAt: number }>();
 
 function withFallbackChannelInsights(
-  company: { id: number; name: string | null; summary: string | null; gtmMotion: string | null },
+  company: { id: number; name: string | null; summary: string | null; gtmMotion: string | null; siteProfile?: SiteProfile | null },
   channelInsights: Awaited<ReturnType<typeof storage.getChannelInsightsByCompanyId>>,
 ) {
-  const byChannel = new Map(channelInsights.map((insight) => [insight.channelId, insight]));
-  const completed: Array<(typeof channelInsights)[number] & { isFallback?: boolean }> = [...channelInsights];
+  type ResponseInsight = (typeof channelInsights)[number] & {
+    isFallback?: boolean;
+    strategyMeta: ChannelInsightStrategyMeta;
+  };
+
+  const normalized: ResponseInsight[] = channelInsights.map((insight) => {
+    const isLegacyFallback = insight.whyItMatters.includes("is part of the GTM mix")
+      && insight.heroStat?.value === "2 weeks";
+    if (isLegacyFallback) {
+      const fallback = fallbackChannelInsight(
+        insight.channelId,
+        company.name || "Your Company",
+        company.summary || "",
+        company.gtmMotion || "",
+        company.siteProfile,
+        "This legacy recovery strategy was upgraded to the channel-specific playbook.",
+      );
+      return {
+        ...insight,
+        ...fallback,
+        isFallback: true,
+      } as ResponseInsight;
+    }
+
+    const strategyMeta = insight.strategyMeta || buildStrategyMeta(
+      insight.channelId,
+      company.name || "Your Company",
+      company.summary || "",
+      company.gtmMotion || "",
+      company.siteProfile,
+      insight.generationStatus || "generated",
+    );
+    const quality = scoreChannelInsightQuality({
+      ...insight,
+      strategyMeta,
+    }, company.name || "Your Company");
+    return {
+      ...insight,
+      generationStatus: insight.generationStatus || "generated",
+      strategyMeta: {
+        ...strategyMeta,
+        qualityScore: strategyMeta.qualityScore || quality.score,
+        qualityIssues: strategyMeta.qualityIssues?.length ? strategyMeta.qualityIssues : quality.issues,
+      },
+      isFallback: insight.generationStatus === "fallback",
+    } as ResponseInsight;
+  });
+  const byChannel = new Map(normalized.map((insight) => [insight.channelId, insight]));
+  const completed: ResponseInsight[] = [...normalized];
 
   for (const channelId of CHANNEL_IDS) {
     if (byChannel.has(channelId)) continue;
@@ -28,6 +81,7 @@ function withFallbackChannelInsights(
       company.name || "Your Company",
       company.summary || "",
       company.gtmMotion || "",
+      company.siteProfile,
     );
     completed.push({
       id: -completed.length - 1,
@@ -35,10 +89,10 @@ function withFallbackChannelInsights(
       createdAt: new Date(),
       isFallback: true,
       ...fallback,
-    });
+    } as ResponseInsight);
   }
 
-  return completed;
+  return markTopChannels(completed);
 }
 
 setInterval(() => {
@@ -72,6 +126,20 @@ router.get("/api/dashboard", requireAuth, async (req: Request, res: Response) =>
       storage.getChannelInsightsByCompanyId(company.id),
     ]);
 
+    const completedChannelInsights = company.name && !activeAnalysisRuns.has(company.id)
+      ? withFallbackChannelInsights(company, channelInsights)
+      : channelInsights;
+    const icpDetails = company.siteProfile?.icpDetails;
+    const hasDetectedIcp = Boolean(
+      icpDetails?.persona?.trim()
+      || icpDetails?.industry?.trim()
+      || icpDetails?.companySize?.trim()
+      || icpDetails?.painPoints?.some((pain) => pain.trim()),
+    );
+    const displayIcpScore = hasDetectedIcp
+      ? company.icpScore
+      : Math.min(company.icpScore || 0, 40);
+
     res.json({
       user: {
         id: user.id,
@@ -87,7 +155,8 @@ router.get("/api/dashboard", requireAuth, async (req: Request, res: Response) =>
         url: company.url,
         summary: company.summary,
         gtmMotion: company.gtmMotion,
-        icpScore: company.icpScore,
+        icpScore: displayIcpScore,
+        icpStatus: hasDetectedIcp ? "detected" : "missing",
         screenshotUrl: company.screenshotUrl,
         visualAnalysis: company.visualAnalysis,
         pageSpeedData: company.pageSpeedData,
@@ -96,9 +165,11 @@ router.get("/api/dashboard", requireAuth, async (req: Request, res: Response) =>
       },
       recommendations,
       weeklyIdeas,
-      channelInsights: company.name && !activeAnalysisRuns.has(company.id)
-        ? withFallbackChannelInsights(company, channelInsights)
-        : channelInsights,
+      channelInsights: completedChannelInsights,
+      strategyPlan: buildCrossChannelStrategyPlan(
+        completedChannelInsights,
+        company.name || "Your Company",
+      ),
     });
   } catch (error: unknown) {
     console.error("Dashboard error:", error);
@@ -413,6 +484,8 @@ export async function processCompanyAnalysis(
       strategicPillars?: Array<{ title: string; objective: string; tactics: string[]; measurement: string }>;
       quickWins?: Array<{ title: string; steps: string[]; effort: string; duration: string }>;
       resources?: string[];
+      generationStatus?: "generated" | "fallback" | "pending" | "failed";
+      strategyMeta?: ChannelInsightStrategyMeta;
     }>) => {
       const entry = activeAnalysisRuns.get(companyId);
       if (!entry || entry.runId !== currentRunId) {
@@ -431,6 +504,8 @@ export async function processCompanyAnalysis(
           strategicPillars: insight.strategicPillars || [],
           quickWins: insight.quickWins || [],
           resources: insight.resources || [],
+          generationStatus: insight.generationStatus || "generated",
+          strategyMeta: insight.strategyMeta || null,
         }).catch((err) => console.error("Failed to save channel insight:", err))
       ));
       console.log(`  Saved ${insights.length} channel insights to DB (progressive)`);

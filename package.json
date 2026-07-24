@@ -10,6 +10,7 @@
     "optimize:images": "tsx scripts/optimize-images.ts",
     "start": "NODE_ENV=production node dist/index.cjs",
     "check": "tsc",
+    "test": "tsx --test tests/**/*.test.ts",
     "db:push": "drizzle-kit push"
   },
   "dependencies": {

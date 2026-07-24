@@ -170,6 +170,25 @@ async function ensureSessionTable() {
   }
 }
 
+async function ensureChannelInsightStrategyColumns() {
+  if (!process.env.DATABASE_URL) return;
+  try {
+    const { Pool } = await import("pg");
+    const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+    await pool.query(`
+      ALTER TABLE IF EXISTS "channel_insights"
+        ADD COLUMN IF NOT EXISTS "generation_status" text NOT NULL DEFAULT 'generated';
+      ALTER TABLE IF EXISTS "channel_insights"
+        ADD COLUMN IF NOT EXISTS "strategy_meta" jsonb;
+    `);
+    await pool.end();
+    console.log("Channel insight strategy columns verified/created");
+  } catch (err) {
+    console.error("Failed to ensure channel insight strategy columns:", err);
+    throw err;
+  }
+}
+
 const PgSession = connectPgSimple(session);
 app.use(
   session({
@@ -295,6 +314,7 @@ app.use((req, res, next) => {
 
 (async () => {
   await ensureSessionTable();
+  await ensureChannelInsightStrategyColumns();
   await initStripe();
   await registerRoutes(httpServer, app);
 

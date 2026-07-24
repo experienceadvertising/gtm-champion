@@ -164,6 +164,15 @@ function formatStrategyDescription(desc: string, compact = false) {
   );
 }
 
+function formatMonthlyBudget(value: number | null | undefined, currency = "USD") {
+  if (value == null) return "Validate before budgeting";
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency,
+    maximumFractionDigits: 0,
+  }).format(value);
+}
+
 function SlackConnectSection({
   slackConnected,
   onDisconnected,
@@ -803,7 +812,7 @@ export default function Dashboard() {
     );
   }
 
-  const { user, company, recommendations = [], weeklyIdeas = [], channelInsights = [] } = data;
+  const { user, company, recommendations = [], weeklyIdeas = [], channelInsights = [], strategyPlan } = data;
   
   const isAnalyzingRaw = !company.name && company.summary === "Analyzing your website...";
   const analysisStaleMinutes = 10;
@@ -833,7 +842,7 @@ export default function Dashboard() {
           <div>
             <h2 className="text-2xl font-bold font-display">Building Your GTM Strategy</h2>
             <p className="text-muted-foreground mt-2">
-              Our AI is analyzing your website and generating personalized strategies across 13 channels. This typically takes 30-60 seconds.
+              Your dashboard starts filling in within 30-60 seconds. Channel strategies continue appearing progressively and can take 1-2 minutes.
             </p>
           </div>
 
@@ -954,8 +963,36 @@ export default function Dashboard() {
     lines.push('');
     if (insight) {
       lines.push(`Priority,${escapeCSV(insight.priority)}`);
+      lines.push(`Generation Status,${escapeCSV(insight.generationStatus || (insight.isFallback ? "fallback" : "generated"))}`);
       if (insight.heroStat) lines.push(`Key Stat,${escapeCSV(insight.heroStat.value)} - ${escapeCSV(insight.heroStat.label)}`);
       if (insight.whyItMatters) lines.push(`Why It Matters,${escapeCSV(insight.whyItMatters)}`);
+      if (insight.strategyMeta) {
+        lines.push(`Channel Fit Score,${insight.strategyMeta.priorityScore}`);
+        lines.push(`Confidence Score,${insight.strategyMeta.confidence}`);
+        lines.push(`Quality Score,${insight.strategyMeta.qualityScore}`);
+        lines.push(`Budget Guidance,${escapeCSV(insight.strategyMeta.budgetGuidance.rationale)}`);
+        lines.push('');
+        lines.push('Prerequisites');
+        insight.strategyMeta.prerequisites.forEach((item) => lines.push(`,${escapeCSV(item)}`));
+        lines.push('');
+        lines.push('Evidence and Assumptions');
+        lines.push('Claim,Source,Type,Confidence');
+        insight.strategyMeta.evidence.forEach((item) => {
+          lines.push([
+            escapeCSV(item.claim),
+            escapeCSV(item.source),
+            escapeCSV(item.sourceType),
+            String(item.confidence),
+          ].join(','));
+        });
+        lines.push('');
+        lines.push('30/60/90-Day Roadmap');
+        lines.push('Phase,Actions');
+        lines.push(`First 30 Days,${escapeCSV(insight.strategyMeta.roadmap.first30Days.join('; '))}`);
+        lines.push(`Days 31-60,${escapeCSV(insight.strategyMeta.roadmap.days31To60.join('; '))}`);
+        lines.push(`Days 61-90,${escapeCSV(insight.strategyMeta.roadmap.days61To90.join('; '))}`);
+        lines.push('');
+      }
       lines.push('');
       if (insight.topKpis?.length) {
         lines.push('Key Metrics to Track');
@@ -1034,12 +1071,19 @@ export default function Dashboard() {
     </style></head><body>`;
 
     html += `<h1>${channelLabel} Strategy</h1>`;
-    html += `<p class="subtitle">Personalized ${channelLabel} strategy for ${companyName}</p>`;
+    html += `<p class="subtitle">${insight?.isFallback || insight?.generationStatus === "fallback" ? "Channel-specific recovery playbook" : "Personalized strategy"} for ${companyName}</p>`;
 
     if (insight) {
       if (insight.priority) html += `<p><span class="badge ${insight.priority.toLowerCase()}">${insight.priority} Priority</span></p>`;
       if (insight.heroStat) html += `<div class="stat-box"><div class="stat-value">${insight.heroStat.value}</div><div class="stat-label">${insight.heroStat.label}</div></div>`;
       if (insight.whyItMatters) html += `<div class="callout"><strong>Why This Matters For You</strong><br>${insight.whyItMatters}</div>`;
+      if (insight.strategyMeta) {
+        html += `<h2>Readiness & Evidence</h2><table><tr><th>Channel Fit</th><th>Confidence</th><th>Quality</th><th>Monthly Test Budget</th></tr>`;
+        html += `<tr><td>${insight.strategyMeta.priorityScore}/100</td><td>${insight.strategyMeta.confidence}/100</td><td>${insight.strategyMeta.qualityScore}/100</td><td>${formatMonthlyBudget(insight.strategyMeta.budgetGuidance.recommendedMonthly, insight.strategyMeta.budgetGuidance.currency)}</td></tr></table>`;
+        html += `<p>${insight.strategyMeta.priorityRationale}</p>`;
+        html += `<h3>Prerequisites</h3><ul>${insight.strategyMeta.prerequisites.map(item => `<li>${item}</li>`).join('')}</ul>`;
+        html += `<h3>Evidence & Assumptions</h3><ul>${insight.strategyMeta.evidence.map(item => `<li><strong>${item.sourceType} · ${item.confidence}%:</strong> ${item.claim} <em>(${item.source})</em></li>`).join('')}</ul>`;
+      }
 
       if (insight.topKpis?.length) {
         html += `<h2>Key Metrics to Track</h2><ul>`;
@@ -1069,6 +1113,13 @@ export default function Dashboard() {
         html += `<h2>Recommended Resources & Tools</h2><ul>`;
         insight.resources.forEach(r => { html += `<li>${r}</li>`; });
         html += `</ul>`;
+      }
+      if (insight.strategyMeta) {
+        html += `<h2>30/60/90-Day Operating Plan</h2>`;
+        html += `<div class="pillar"><h3>First 30 Days</h3><ul>${insight.strategyMeta.roadmap.first30Days.map(item => `<li>${item}</li>`).join('')}</ul></div>`;
+        html += `<div class="pillar"><h3>Days 31-60</h3><ul>${insight.strategyMeta.roadmap.days31To60.map(item => `<li>${item}</li>`).join('')}</ul></div>`;
+        html += `<div class="pillar"><h3>Days 61-90</h3><ul>${insight.strategyMeta.roadmap.days61To90.map(item => `<li>${item}</li>`).join('')}</ul></div>`;
+        html += `<h3>Risks & Watchouts</h3><ul>${insight.strategyMeta.risks.map(item => `<li>${item}</li>`).join('')}</ul>`;
       }
     }
 
@@ -1586,7 +1637,9 @@ export default function Dashboard() {
                         </div>
                         <div>
                           <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">ICP Score</p>
-                          <p className="font-semibold text-sm" data-testid="text-icp-score">{company.icpScore ?? "—"}/100</p>
+                          <p className="font-semibold text-sm" data-testid="text-icp-score">
+                            {company.icpStatus === "missing" ? "Needs input" : `${company.icpScore ?? "—"}/100`}
+                          </p>
                         </div>
                       </div>
                     </div>
@@ -1643,6 +1696,58 @@ export default function Dashboard() {
                   </CardContent>
                 </Card>
               </div>
+
+              {strategyPlan && strategyPlan.topChannelIds.length > 0 && (
+                <motion.section
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.05 }}
+                  className="border-y border-slate-200/80 py-6"
+                  aria-labelledby="strategy-plan-heading"
+                  data-testid="section-cross-channel-plan"
+                >
+                  <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-5">
+                    <div className="max-w-2xl">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Target className="h-5 w-5 text-primary" />
+                        <h2 id="strategy-plan-heading" className="text-xl font-bold font-display">Your 90-Day Focus</h2>
+                      </div>
+                      <p className="text-sm text-muted-foreground leading-relaxed">{strategyPlan.executiveSummary}</p>
+                      <p className="text-sm font-medium text-slate-700 mt-3">{strategyPlan.firstPriority}</p>
+                    </div>
+                    <div className="flex flex-wrap gap-2 lg:justify-end">
+                      {strategyPlan.topChannelIds.map((channelId, index) => (
+                        <Button
+                          key={channelId}
+                          variant={index === 0 ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => handleChannelSelect(channelId)}
+                          data-testid={`button-priority-channel-${channelId}`}
+                        >
+                          <span className="font-mono text-xs mr-2">{index + 1}</span>
+                          {CHANNELS.find((channel) => channel.id === channelId)?.label || channelId}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="grid md:grid-cols-3 gap-5 mt-6">
+                    {[
+                      { label: "First 30 days", items: strategyPlan.roadmap.first30Days },
+                      { label: "Days 31-60", items: strategyPlan.roadmap.days31To60 },
+                      { label: "Days 61-90", items: strategyPlan.roadmap.days61To90 },
+                    ].map((phase) => (
+                      <div key={phase.label} className="border-l-2 border-primary/25 pl-4">
+                        <h3 className="text-sm font-semibold mb-2">{phase.label}</h3>
+                        <ul className="space-y-1.5">
+                          {phase.items.slice(0, 3).map((item) => (
+                            <li key={item} className="text-xs text-muted-foreground leading-relaxed">{item}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
+                  </div>
+                </motion.section>
+              )}
 
               <motion.div
                 initial={{ opacity: 0, y: 15 }}
@@ -2073,7 +2178,7 @@ export default function Dashboard() {
                             ))}
                           </div>
                         ) : (
-                          <p className="text-sm text-muted-foreground italic">No content gaps detected. Re-analyze to refresh.</p>
+                          <p className="text-sm text-muted-foreground italic">No explicit gaps were detected in the crawl. The channel plans may still recommend new proof or buyer-enablement assets.</p>
                         )}
                         {company.siteProfile.keyDifferentiators && company.siteProfile.keyDifferentiators.length > 0 && (
                           <div className="mt-4 pt-4 border-t border-slate-100">
@@ -2730,8 +2835,8 @@ export default function Dashboard() {
                       <Button variant="ghost" size="sm" onClick={() => setSelectedChannel("all")} className="hover:bg-slate-100">
                         <ArrowUpRight className="mr-2 h-4 w-4 rotate-[225deg]" /> Back
                       </Button>
-                      <Separator orientation="vertical" className="h-5" />
-                      <h1 className="font-display font-bold text-lg tracking-tight">{channelData?.label || selectedChannel}</h1>
+                      <Separator orientation="vertical" className="h-5 hidden sm:block" />
+                      <h1 className="font-display font-bold text-lg tracking-tight hidden sm:block">{channelData?.label || selectedChannel}</h1>
                     </div>
                     <div className="flex items-center gap-2">
                       <DropdownMenu>
@@ -2749,7 +2854,10 @@ export default function Dashboard() {
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
-                      {channelInsight && !channelInsight.isFallback && (
+                      {channelInsight
+                        && channelInsight.generationStatus !== "fallback"
+                        && !channelInsight.isFallback
+                        && (
                         <Button
                           variant="outline"
                           size="sm"
@@ -2758,7 +2866,7 @@ export default function Dashboard() {
                         >
                           <Send className="mr-2 h-4 w-4" /> <span className="hidden sm:inline">Share Strategy</span>
                         </Button>
-                      )}
+                        )}
                       <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isFetching}>
                         <RefreshCw className={`mr-2 h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} /> <span className="hidden sm:inline">{isFetching ? 'Refreshing...' : 'Refresh'}</span>
                       </Button>
@@ -2791,10 +2899,22 @@ export default function Dashboard() {
                                   {channelInsight.priority} Priority
                                 </Badge>
                               )}
+                              {channelInsight?.strategyMeta?.isTopChannel && (
+                                <Badge className="bg-primary/10 text-primary border-primary/20">
+                                  Top 3 Focus
+                                </Badge>
+                              )}
+                              {(channelInsight?.isFallback || channelInsight?.generationStatus === "fallback") && (
+                                <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
+                                  Recovery Playbook
+                                </Badge>
+                              )}
                             </div>
                             <p className="text-sm text-muted-foreground mt-0.5">
                               {channelInsight 
-                                ? `Personalized ${selectedChannel} strategy for ${company.name || 'your company'}`
+                                ? (channelInsight.isFallback || channelInsight.generationStatus === "fallback"
+                                  ? `Channel-specific best-practice plan for ${company.name || 'your company'} while personalized generation is retried`
+                                  : `Personalized ${selectedChannel} strategy for ${company.name || 'your company'}`)
                                 : `${filteredRecommendations.length} tailored ${filteredRecommendations.length === 1 ? 'recommendation' : 'recommendations'} for ${company.name || 'your company'}`
                               }
                             </p>
@@ -2810,6 +2930,30 @@ export default function Dashboard() {
                           <div className="bg-white/70 backdrop-blur-sm rounded-lg p-3 border border-primary/10 shadow-sm">
                             <h3 className="font-semibold text-xs text-primary mb-1">Why This Matters For You</h3>
                             <p className="text-sm text-slate-700 leading-relaxed">{channelInsight.whyItMatters}</p>
+                          </div>
+                        )}
+                        {(channelInsight?.isFallback || channelInsight?.generationStatus === "fallback") && (
+                          <div className="mt-3 bg-amber-50/90 rounded-lg p-3 border border-amber-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                            <div className="flex items-start gap-2.5">
+                              <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+                              <div>
+                                <p className="text-sm font-medium text-amber-900">Personalized generation was unavailable</p>
+                                <p className="text-xs text-amber-700 mt-0.5">
+                                  {channelInsight.strategyMeta?.fallbackReason || "This channel-specific recovery playbook is ready to use, but assumptions should be validated before scaling."}
+                                </p>
+                              </div>
+                            </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="border-amber-300 text-amber-800 hover:bg-amber-100 shrink-0"
+                              onClick={() => retryMutation.mutate()}
+                              disabled={retryMutation.isPending}
+                              data-testid="button-retry-personalized-channel"
+                            >
+                              <RefreshCw className={`mr-1.5 h-3.5 w-3.5 ${retryMutation.isPending ? "animate-spin" : ""}`} />
+                              {retryMutation.isPending ? "Retrying..." : "Retry personalized analysis"}
+                            </Button>
                           </div>
                         )}
                         {channelInsight?.heroStat && (
@@ -2856,7 +3000,7 @@ export default function Dashboard() {
                       >
                         <div className="rounded-xl border border-primary/10 bg-primary/3 p-4 flex items-center gap-3">
                           <Loader2 className="h-4 w-4 animate-spin text-primary shrink-0" />
-                          <p className="text-sm text-primary font-medium">Generating your personalized {CHANNELS.find(c => c.id === selectedChannel)?.label || selectedChannel} strategy — usually takes under a minute...</p>
+                          <p className="text-sm text-primary font-medium">Generating your personalized {CHANNELS.find(c => c.id === selectedChannel)?.label || selectedChannel} strategy. Completed channels appear progressively, usually within 1-2 minutes.</p>
                         </div>
                         <div>
                           <div className="flex items-center gap-2 mb-4">
@@ -2923,6 +3067,134 @@ export default function Dashboard() {
                       </motion.div>
                     )}
 
+                    {channelInsight?.strategyMeta && (
+                      <motion.section
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.12 }}
+                        className="border-y border-slate-200/80 py-6 space-y-6"
+                        aria-labelledby="strategy-readiness-heading"
+                        data-testid="section-strategy-readiness"
+                      >
+                        <div>
+                          <div className="flex items-center gap-2 mb-4">
+                            <Gauge className="h-5 w-5 text-primary" />
+                            <h2 id="strategy-readiness-heading" className="text-lg font-bold">Readiness & Evidence</h2>
+                          </div>
+                          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                            {[
+                              { label: "Channel fit", value: `${channelInsight.strategyMeta.priorityScore}/100` },
+                              { label: "Confidence", value: `${channelInsight.strategyMeta.confidence}/100` },
+                              { label: "Quality check", value: `${channelInsight.strategyMeta.qualityScore}/100` },
+                              {
+                                label: "Recommended monthly test",
+                                value: formatMonthlyBudget(
+                                  channelInsight.strategyMeta.budgetGuidance.recommendedMonthly,
+                                  channelInsight.strategyMeta.budgetGuidance.currency,
+                                ),
+                              },
+                            ].map((metric) => (
+                              <div key={metric.label} className="border border-slate-200/80 bg-slate-50/60 px-4 py-3 min-w-0">
+                                <p className="text-[10px] uppercase text-muted-foreground font-medium">{metric.label}</p>
+                                <p className="text-sm font-semibold mt-1 break-words">{metric.value}</p>
+                              </div>
+                            ))}
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-3">{channelInsight.strategyMeta.priorityRationale}</p>
+                        </div>
+
+                        <div className="grid lg:grid-cols-3 gap-6">
+                          <div>
+                            <h3 className="text-sm font-semibold flex items-center gap-2 mb-3">
+                              <CheckSquare className="h-4 w-4 text-primary" /> Prerequisites
+                            </h3>
+                            <ul className="space-y-2">
+                              {channelInsight.strategyMeta.prerequisites.map((item) => (
+                                <li key={item} className="text-xs text-slate-600 flex items-start gap-2">
+                                  <Circle className="h-3 w-3 mt-0.5 text-slate-400 shrink-0" /> {item}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                          <div>
+                            <h3 className="text-sm font-semibold flex items-center gap-2 mb-3">
+                              <Shield className="h-4 w-4 text-primary" /> Evidence & Assumptions
+                            </h3>
+                            <div className="space-y-3">
+                              {channelInsight.strategyMeta.evidence.map((item, index) => (
+                                <div key={`${item.claim}-${index}`} className="text-xs">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <Badge variant="outline" className="text-[10px] px-1.5 py-0">{item.sourceType}</Badge>
+                                    <span className="text-muted-foreground">{item.confidence}% confidence</span>
+                                  </div>
+                                  <p className="text-slate-700 leading-relaxed">{item.claim}</p>
+                                  {item.url ? (
+                                    <a href={item.url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline mt-1 inline-block">
+                                      {item.source}
+                                    </a>
+                                  ) : (
+                                    <p className="text-muted-foreground mt-1">{item.source}</p>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                          <div>
+                            <h3 className="text-sm font-semibold flex items-center gap-2 mb-3">
+                              <AlertTriangle className="h-4 w-4 text-amber-600" /> Risks & Watchouts
+                            </h3>
+                            <ul className="space-y-2">
+                              {channelInsight.strategyMeta.risks.map((risk) => (
+                                <li key={risk} className="text-xs text-slate-600 leading-relaxed">{risk}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        </div>
+
+                        <div className="grid lg:grid-cols-[2fr_1fr] gap-6">
+                          <div>
+                            <h3 className="text-sm font-semibold mb-3">30/60/90-Day Operating Plan</h3>
+                            <div className="grid sm:grid-cols-3 gap-4">
+                              {[
+                                { label: "First 30 days", items: channelInsight.strategyMeta.roadmap.first30Days },
+                                { label: "Days 31-60", items: channelInsight.strategyMeta.roadmap.days31To60 },
+                                { label: "Days 61-90", items: channelInsight.strategyMeta.roadmap.days61To90 },
+                              ].map((phase) => (
+                                <div key={phase.label} className="border-l-2 border-primary/25 pl-3">
+                                  <p className="text-xs font-semibold mb-2">{phase.label}</p>
+                                  <ul className="space-y-1.5">
+                                    {phase.items.map((item) => (
+                                      <li key={item} className="text-xs text-muted-foreground leading-relaxed">{item}</li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                          <div>
+                            <h3 className="text-sm font-semibold mb-3">Optimization Cadence</h3>
+                            {channelInsight.strategyMeta.cadence.daily.length > 0 && (
+                              <div className="mb-3">
+                                <p className="text-[10px] uppercase text-muted-foreground font-medium mb-1">Daily</p>
+                                {channelInsight.strategyMeta.cadence.daily.map((item) => (
+                                  <p key={item} className="text-xs text-slate-600 mb-1">{item}</p>
+                                ))}
+                              </div>
+                            )}
+                            <div>
+                              <p className="text-[10px] uppercase text-muted-foreground font-medium mb-1">Weekly</p>
+                              {channelInsight.strategyMeta.cadence.weekly.map((item) => (
+                                <p key={item} className="text-xs text-slate-600 mb-1">{item}</p>
+                              ))}
+                            </div>
+                            <p className="text-xs text-muted-foreground leading-relaxed mt-3 border-t border-slate-200 pt-3">
+                              {channelInsight.strategyMeta.budgetGuidance.rationale}
+                            </p>
+                          </div>
+                        </div>
+                      </motion.section>
+                    )}
+
                     {selectedChannel === "LLMs" && channelInsight && (
                       <motion.div
                         initial={{ opacity: 0, y: 10 }}
@@ -2941,7 +3213,7 @@ export default function Dashboard() {
                         </div>
                         <div className="p-6 space-y-5">
                           <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
-                            When a user asks AI one question, the AI secretly breaks it into <strong>8–20 sub-queries</strong> running in parallel — covering definitions, comparisons, pricing, implementation, troubleshooting, and reviews — before synthesizing one final answer. The user never sees these sub-queries.
+                            Some AI search experiences may decompose a question into <strong>multiple related searches</strong> across definitions, comparisons, pricing, implementation, troubleshooting, and reviews. The exact behavior varies by engine and query.
                           </p>
 
                           <div className="rounded-xl bg-white/80 dark:bg-slate-800/50 border border-indigo-100 dark:border-indigo-800/30 p-4">
@@ -2975,7 +3247,7 @@ export default function Dashboard() {
                                 </div>
                                 <span className="text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wide">Traditional SEO</span>
                               </div>
-                              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">Rank <strong>one page</strong> for <strong>one keyword</strong>. Win the top result and you're done.</p>
+                              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">Build useful pages that satisfy search intent, earn visibility, and convert qualified visitors across related queries.</p>
                             </div>
                             <div className="rounded-xl bg-indigo-50/80 dark:bg-indigo-950/30 border border-indigo-200/60 dark:border-indigo-800/40 p-4">
                               <div className="flex items-center gap-2 mb-2">
@@ -2998,7 +3270,7 @@ export default function Dashboard() {
                             <div className="bg-indigo-50/80 dark:bg-indigo-950/40 rounded-lg p-3 font-mono text-xs text-center space-y-1">
                               <div className="text-indigo-700 dark:text-indigo-300 font-bold">Brand Mentions ÷ Total Fan-out Prompts × 100</div>
                               <div className="text-slate-500 dark:text-slate-400">e.g. 6 mentions ÷ 8 prompts × 100 = <span className="font-bold text-indigo-600">Score: 75</span></div>
-                              <div className="text-xs text-slate-400 pt-1">Target: 60+ across the topic ecosystem</div>
+                              <div className="text-xs text-slate-400 pt-1">Use a fixed prompt set to establish your own baseline; there is no universal target.</div>
                             </div>
                           </div>
 
@@ -3007,12 +3279,14 @@ export default function Dashboard() {
                               <Lightbulb className="h-3.5 w-3.5" /> The Key Insight
                             </h4>
                             <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                              Many fan-out sub-queries have <strong>little or no measurable search volume</strong> in traditional keyword tools — yet AI systems execute them constantly behind the scenes. The most valuable AEO content opportunities won't show up in Google Search Console.
+                              AI visibility should be measured directly with a repeatable prompt set because related searches and citations may not appear as individual queries in traditional keyword reporting.
                             </p>
                           </div>
 
-                          <div className="text-xs text-slate-400 dark:text-slate-500 pt-1">
-                            Sources: iPullRank · Zyppy Signal · DataForSEO
+                          <div className="text-xs text-slate-400 dark:text-slate-500 pt-1 flex flex-wrap gap-x-3 gap-y-1">
+                            <span>Further reading:</span>
+                            <a href="https://blog.google/products-and-platforms/products/search/google-search-ai-mode-update/" target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:underline">Google AI Mode query fan-out</a>
+                            <a href="https://developers.google.com/search/docs/appearance/ai-features" target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:underline">Google Search AI guidance</a>
                           </div>
                         </div>
                       </motion.div>

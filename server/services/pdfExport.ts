@@ -1,5 +1,9 @@
 import PDFDocument from "pdfkit";
 import type { PassThrough } from "stream";
+import type {
+  ChannelInsightGenerationStatus,
+  ChannelInsightStrategyMeta,
+} from "@shared/schema";
 
 interface ExportCompany {
   name: string | null;
@@ -22,6 +26,8 @@ interface ExportRecommendation {
 interface ExportChannelInsight {
   channelId: string;
   priority: string;
+  generationStatus?: ChannelInsightGenerationStatus;
+  strategyMeta?: ChannelInsightStrategyMeta | null;
   whyItMatters: string;
   companyFitSummary: string;
   heroStat: { value: string; label: string };
@@ -166,6 +172,77 @@ function addBullet(doc: PDFKit.PDFDocument, text: string, indent = 62) {
   }
   doc.fontSize(9).fillColor(COLORS.muted).text("•", indent - 10, doc.y, { continued: true });
   doc.fillColor(COLORS.text).text(` ${text}`, { lineGap: 1.5 });
+}
+
+function formatMonthlyBudget(amount: number | null, currency: string): string {
+  if (amount === null) return "Not set";
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: currency || "USD",
+    maximumFractionDigits: 0,
+  }).format(amount);
+}
+
+function addStrategyContext(
+  doc: PDFKit.PDFDocument,
+  insight: ExportChannelInsight,
+  companyName: string,
+) {
+  const meta = insight.strategyMeta;
+  if (!meta) return;
+
+  addSubsectionTitle(doc, "Readiness & Evidence", companyName);
+  const statusLabel = insight.generationStatus === "fallback"
+    ? "Recovery playbook"
+    : "Personalized strategy";
+  addBodyText(
+    doc,
+    `${statusLabel} | Confidence ${meta.confidence}% | Quality ${meta.qualityScore}/100 | Priority ${meta.priorityScore}/100`,
+  );
+  if (meta.priorityRationale) addBodyText(doc, meta.priorityRationale);
+
+  const budget = meta.budgetGuidance;
+  if (budget) {
+    const minimum = formatMonthlyBudget(budget.minimumMonthly, budget.currency);
+    const recommended = formatMonthlyBudget(budget.recommendedMonthly, budget.currency);
+    addBodyText(doc, `Monthly budget guidance: ${minimum} minimum; ${recommended} recommended. ${budget.rationale}`);
+  }
+
+  if (meta.prerequisites.length) {
+    addSubsectionTitle(doc, "Prerequisites", companyName);
+    meta.prerequisites.forEach(item => addBullet(doc, item));
+  }
+
+  if (meta.evidence.length) {
+    addSubsectionTitle(doc, "Evidence & Assumptions", companyName);
+    meta.evidence.forEach(item => {
+      addBullet(doc, `${item.claim} — ${item.source} (${item.sourceType}, ${item.confidence}% confidence)`);
+    });
+  }
+
+  const roadmapSections = [
+    ["First 30 Days", meta.roadmap.first30Days],
+    ["Days 31-60", meta.roadmap.days31To60],
+    ["Days 61-90", meta.roadmap.days61To90],
+  ] as const;
+  addSubsectionTitle(doc, "90-Day Roadmap", companyName);
+  roadmapSections.forEach(([label, items]) => {
+    if (!items.length) return;
+    checkPageBreak(doc, companyName);
+    doc.fontSize(9).fillColor(COLORS.dark).text(label, 62);
+    items.forEach(item => addBullet(doc, item, 72));
+  });
+
+  if (meta.risks.length) {
+    addSubsectionTitle(doc, "Risks & Guardrails", companyName);
+    meta.risks.forEach(item => addBullet(doc, item));
+  }
+
+  if (meta.cadence.daily.length || meta.cadence.weekly.length) {
+    addSubsectionTitle(doc, "Operating Cadence", companyName);
+    meta.cadence.daily.forEach(item => addBullet(doc, `Daily: ${item}`));
+    meta.cadence.weekly.forEach(item => addBullet(doc, `Weekly: ${item}`));
+  }
 }
 
 function addTag(doc: PDFKit.PDFDocument, label: string, color: string, x: number, y: number): number {
@@ -349,6 +426,8 @@ export function generateStrategyPDF(data: ExportData, stream: PassThrough, optio
       addSubsectionTitle(doc, "Company Fit", companyName);
       addBodyText(doc, insight.companyFitSummary);
     }
+
+    addStrategyContext(doc, insight, companyName);
 
     if (insight.topKpis?.length) {
       addSubsectionTitle(doc, "Key KPIs", companyName);
@@ -557,6 +636,8 @@ export function generateChannelPDF(data: ChannelPDFData, options: PDFExportOptio
       addSubsectionTitle(doc, "Company Fit", companyName);
       addBodyText(doc, insight.companyFitSummary);
     }
+
+    addStrategyContext(doc, insight, companyName);
 
     if (insight.topKpis?.length) {
       addSubsectionTitle(doc, "Key KPIs", companyName);
