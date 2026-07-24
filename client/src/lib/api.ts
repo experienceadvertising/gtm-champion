@@ -123,6 +123,7 @@ export interface ChannelInsight {
     duration: string;
   }>;
   resources: string[];
+  isFallback?: boolean;
   createdAt: string;
 }
 

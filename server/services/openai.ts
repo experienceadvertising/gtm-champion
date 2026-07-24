@@ -883,10 +883,10 @@ JSON format:
 Include ALL ${channels.length} channels: ${channelList}. Each needs 2 strategicPillars and 2 quickWins. Every single tactic must name ${productRef} or ${competitorRef} — zero generic filler.`;
 
   const response = await openai.chat.completions.create({
-    model: "gpt-5-mini",
+    model: process.env.CHANNEL_INSIGHTS_MODEL || "gpt-4o-mini",
     messages: [{ role: "user", content: prompt }],
     response_format: { type: "json_object" },
-    max_completion_tokens: 6000,
+    max_tokens: 6000,
   });
 
   const content = response.choices[0]?.message?.content;
@@ -894,6 +894,100 @@ Include ALL ${channels.length} channels: ${channelList}. Each needs 2 strategicP
 
   const result = JSON.parse(content);
   return result.channelInsights || [];
+}
+
+export function fallbackChannelInsight(channelId: string, companyName: string, companySummary: string, gtmMotion: string): ChannelInsight {
+  const company = companyName || "your company";
+  const summary = companySummary || "the product and audience identified during analysis";
+  const motion = gtmMotion || "your current GTM motion";
+
+  return {
+    channelId,
+    priority: "Medium",
+    whyItMatters: `${channelId} is part of the GTM mix for ${company} because it can turn the positioning from your website into repeatable pipeline activity. The first pass should validate whether this channel supports ${motion} before adding budget or headcount.`,
+    companyFitSummary: `Use this channel to test the clearest promise from ${company}: ${summary.slice(0, 180)}${summary.length > 180 ? "..." : ""}`,
+    heroStat: { value: "2 weeks", label: "Initial test window" },
+    topKpis: ["Qualified pipeline", "Conversion rate", "Cost per opportunity", "Message engagement"],
+    strategicPillars: [
+      {
+        title: `${company} positioning test`,
+        objective: `Find the ${channelId} message that best connects ${company}'s product promise to buyer intent.`,
+        tactics: [
+          `Turn ${company}'s strongest homepage claim into three ${channelId} message variants.`,
+          `Match each variant to one buying trigger from the ${motion} motion.`,
+          `Route engaged prospects to the most relevant proof point, demo, or conversion page.`,
+        ],
+        measurement: "Compare engagement and qualified conversion rate by message variant.",
+      },
+      {
+        title: `${channelId} proof loop`,
+        objective: `Use real proof from ${company} to make this channel more credible and easier to scale.`,
+        tactics: [
+          `Pull customer language, feature names, and outcomes from ${company}'s website into channel copy.`,
+          `Create one lightweight proof asset that answers the most common buyer objection.`,
+          `Feed the winning proof point back into ads, content, email, and sales follow-up.`,
+        ],
+        measurement: "Track proof-asset clicks, replies, demo starts, and influenced opportunities.",
+      },
+    ],
+    quickWins: [
+      {
+        title: `Launch a focused ${channelId} test for ${company}`,
+        steps: [
+          "Pick one ICP segment from the analysis.",
+          "Write three message variants using actual product language from the website.",
+          "Run the test for two weeks and keep the winner only if it creates qualified engagement.",
+        ],
+        effort: "Low",
+        duration: "1-2 days",
+      },
+      {
+        title: `Create a ${channelId} proof asset`,
+        steps: [
+          "Choose one objection buyers have before they convert.",
+          "Answer it with a short page, post, sequence, or landing section.",
+          "Use the same proof point in follow-up so the channel and sales motion reinforce each other.",
+        ],
+        effort: "Medium",
+        duration: "3-5 days",
+      },
+    ],
+    resources: ["Analytics dashboard", "CRM campaign tracking", "Website conversion events"],
+  };
+}
+
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`${label} timed out after ${timeoutMs}ms`)), timeoutMs);
+  });
+
+  return Promise.race([promise, timeout]).finally(() => {
+    if (timer) clearTimeout(timer);
+  });
+}
+
+function completeChannelInsights(
+  insights: ChannelInsight[],
+  validChannelIds: string[],
+  companyName: string,
+  companySummary: string,
+  gtmMotion: string,
+): ChannelInsight[] {
+  const byChannel = new Map<string, ChannelInsight>();
+  for (const insight of insights) {
+    if (!byChannel.has(insight.channelId)) {
+      byChannel.set(insight.channelId, insight);
+    }
+  }
+
+  for (const channelId of validChannelIds) {
+    if (!byChannel.has(channelId)) {
+      byChannel.set(channelId, fallbackChannelInsight(channelId, companyName, companySummary, gtmMotion));
+    }
+  }
+
+  return validChannelIds.map(channelId => byChannel.get(channelId)!);
 }
 
 async function analyzeChannels(openai: any, companyName: string, companySummary: string, gtmMotion: string, websiteContent: string, siteProfile?: SiteProfile, onBatchReady?: (insights: ChannelInsight[]) => Promise<void>): Promise<ChannelInsight[]> {
@@ -906,6 +1000,7 @@ async function analyzeChannels(openai: any, companyName: string, companySummary:
 
   console.log(`Calling AI for channel insights in ${batches.length} parallel batches...`);
   const startTime = Date.now();
+  const batchTimeoutMs = Number(process.env.CHANNEL_INSIGHTS_BATCH_TIMEOUT_MS || 30000);
 
   const allInsights: ChannelInsight[] = [];
   const failedBatches: { batch: string[]; index: number }[] = [];
@@ -919,7 +1014,11 @@ async function analyzeChannels(openai: any, companyName: string, companySummary:
 
   const results = await Promise.allSettled(
     batches.map((batch, i) =>
-      analyzeChannelBatch(openai, batch, companyName, companySummary, gtmMotion, websiteContent, siteProfile)
+      withTimeout(
+        analyzeChannelBatch(openai, batch, companyName, companySummary, gtmMotion, websiteContent, siteProfile),
+        batchTimeoutMs,
+        `Channel insight batch ${i + 1}`,
+      )
         .then(async (insights) => {
           const normalized = normalizeBatch(insights);
           console.log(`  Batch ${i + 1} done: ${normalized.length} channels in ${Date.now() - startTime}ms`);
@@ -942,9 +1041,13 @@ async function analyzeChannels(openai: any, companyName: string, companySummary:
 
   if (failedBatches.length > 0) {
     console.log(`Retrying ${failedBatches.length} failed batch(es)...`);
-    for (const { batch, index } of failedBatches) {
+    await Promise.allSettled(failedBatches.map(async ({ batch, index }) => {
       try {
-        const retryInsights = await analyzeChannelBatch(openai, batch, companyName, companySummary, gtmMotion, websiteContent, siteProfile);
+        const retryInsights = await withTimeout(
+          analyzeChannelBatch(openai, batch, companyName, companySummary, gtmMotion, websiteContent, siteProfile),
+          batchTimeoutMs,
+          `Channel insight retry batch ${index + 1}`,
+        );
         const normalized = normalizeBatch(retryInsights);
         console.log(`  Retry batch ${index + 1} done: ${normalized.length} channels`);
         allInsights.push(...normalized);
@@ -954,14 +1057,21 @@ async function analyzeChannels(openai: any, companyName: string, companySummary:
       } catch (err: any) {
         console.error(`  Retry batch ${index + 1} also failed:`, err?.message || err);
       }
-    }
+    }));
   }
 
-  console.log(`All channel insights done: ${allInsights.length} channels in ${Date.now() - startTime}ms`);
-  if (allInsights.length === 0) {
-    throw new Error('All channel insight batches failed');
+  const completedInsights = completeChannelInsights(allInsights, validChannelIds, companyName, companySummary, gtmMotion);
+  const generatedFallbacks = completedInsights.filter((insight) =>
+    !allInsights.some((existing) => existing.channelId === insight.channelId)
+  );
+  if (generatedFallbacks.length > 0) {
+    console.warn(`Generated ${generatedFallbacks.length} fallback channel insight(s) after AI batch failures`);
+    if (onBatchReady && generatedFallbacks.length > 0) {
+      await onBatchReady(generatedFallbacks).catch(err => console.error("  Failed to save fallback channel insights:", err));
+    }
   }
-  return allInsights;
+  console.log(`All channel insights done: ${completedInsights.length} channels in ${Date.now() - startTime}ms`);
+  return completedInsights;
 }
 
 export async function analyzeCompany(websiteContent: string, companyUrl: string, visualInsights?: string): Promise<CompanyAnalysis> {
