@@ -18,6 +18,7 @@ import {
   RefreshCw,
   Search,
   Bot,
+  Brain,
   Share2,
   PenTool,
   MousePointerClick,
@@ -832,7 +833,7 @@ export default function Dashboard() {
           <div>
             <h2 className="text-2xl font-bold font-display">Building Your GTM Strategy</h2>
             <p className="text-muted-foreground mt-2">
-              Our AI is analyzing your website and generating personalized strategies across 13 channels. This typically takes 20-30 seconds.
+              Our AI is analyzing your website and generating personalized strategies across 13 channels. This typically takes 30-60 seconds.
             </p>
           </div>
 
@@ -2748,7 +2749,7 @@ export default function Dashboard() {
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
-                      {channelInsight && (
+                      {channelInsight && !channelInsight.isFallback && (
                         <Button
                           variant="outline"
                           size="sm"
@@ -2855,7 +2856,7 @@ export default function Dashboard() {
                       >
                         <div className="rounded-xl border border-primary/10 bg-primary/3 p-4 flex items-center gap-3">
                           <Loader2 className="h-4 w-4 animate-spin text-primary shrink-0" />
-                          <p className="text-sm text-primary font-medium">Generating your personalized {CHANNELS.find(c => c.id === selectedChannel)?.label || selectedChannel} strategy — usually takes 15–30 seconds...</p>
+                          <p className="text-sm text-primary font-medium">Generating your personalized {CHANNELS.find(c => c.id === selectedChannel)?.label || selectedChannel} strategy — usually takes under a minute...</p>
                         </div>
                         <div>
                           <div className="flex items-center gap-2 mb-4">

@@ -3,14 +3,43 @@ import { storage } from "../storage";
 import { icpUpdateSchema, recommendationStatusSchema } from "@shared/schema";
 import type { SiteProfile } from "@shared/schema";
 import { requireAuth } from "./middleware";
-import { scrapeWebsiteDeep, extractCompanyProfile, analyzeCompanyFast, analyzeCompanyChannels, captureScreenshot, analyzeScreenshot, fetchPageSpeedInsights } from "../services/openai";
+import { scrapeWebsiteDeep, extractCompanyProfile, analyzeCompanyFast, analyzeCompanyChannels, captureScreenshot, analyzeScreenshot, fetchPageSpeedInsights, fallbackChannelInsight } from "../services/openai";
 import { sendWelcomeEmail } from "../services/email";
 
 const router = Router();
 
+const CHANNEL_IDS = ['SEO', 'Content', 'LLMs', 'CRO', 'Email Marketing', 'Paid Search', 'Paid Social', 'Organic Social', 'Retargeting', 'Community', 'ABM', 'Partnerships', 'Outbound'];
+
 const ANALYSIS_TTL_MS = 10 * 60 * 1000;
 const ANALYSIS_CLEANUP_INTERVAL_MS = 5 * 60 * 1000;
 const activeAnalysisRuns = new Map<number, { runId: string; startedAt: number }>();
+
+function withFallbackChannelInsights(
+  company: { id: number; name: string | null; summary: string | null; gtmMotion: string | null },
+  channelInsights: Awaited<ReturnType<typeof storage.getChannelInsightsByCompanyId>>,
+) {
+  const byChannel = new Map(channelInsights.map((insight) => [insight.channelId, insight]));
+  const completed: Array<(typeof channelInsights)[number] & { isFallback?: boolean }> = [...channelInsights];
+
+  for (const channelId of CHANNEL_IDS) {
+    if (byChannel.has(channelId)) continue;
+    const fallback = fallbackChannelInsight(
+      channelId,
+      company.name || "Your Company",
+      company.summary || "",
+      company.gtmMotion || "",
+    );
+    completed.push({
+      id: -completed.length - 1,
+      companyId: company.id,
+      createdAt: new Date(),
+      isFallback: true,
+      ...fallback,
+    });
+  }
+
+  return completed;
+}
 
 setInterval(() => {
   const now = Date.now();
@@ -67,7 +96,9 @@ router.get("/api/dashboard", requireAuth, async (req: Request, res: Response) =>
       },
       recommendations,
       weeklyIdeas,
-      channelInsights,
+      channelInsights: company.name && !activeAnalysisRuns.has(company.id)
+        ? withFallbackChannelInsights(company, channelInsights)
+        : channelInsights,
     });
   } catch (error: unknown) {
     console.error("Dashboard error:", error);
