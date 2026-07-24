@@ -2905,15 +2905,15 @@ export default function Dashboard() {
                                 </Badge>
                               )}
                               {(channelInsight?.isFallback || channelInsight?.generationStatus === "fallback") && (
-                                <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
-                                  Recovery Playbook
+                                <Badge variant="outline" className="bg-slate-50 text-slate-600 border-slate-200">
+                                  Planning Playbook
                                 </Badge>
                               )}
                             </div>
                             <p className="text-sm text-muted-foreground mt-0.5">
                               {channelInsight 
                                 ? (channelInsight.isFallback || channelInsight.generationStatus === "fallback"
-                                  ? `Channel-specific best-practice plan for ${company.name || 'your company'} while personalized generation is retried`
+                                  ? `Channel-specific best-practice plan for ${company.name || 'your company'}`
                                   : `Personalized ${selectedChannel} strategy for ${company.name || 'your company'}`)
                                 : `${filteredRecommendations.length} tailored ${filteredRecommendations.length === 1 ? 'recommendation' : 'recommendations'} for ${company.name || 'your company'}`
                               }
@@ -2930,30 +2930,6 @@ export default function Dashboard() {
                           <div className="bg-white/70 backdrop-blur-sm rounded-lg p-3 border border-primary/10 shadow-sm">
                             <h3 className="font-semibold text-xs text-primary mb-1">Why This Matters For You</h3>
                             <p className="text-sm text-slate-700 leading-relaxed">{channelInsight.whyItMatters}</p>
-                          </div>
-                        )}
-                        {(channelInsight?.isFallback || channelInsight?.generationStatus === "fallback") && (
-                          <div className="mt-3 bg-amber-50/90 rounded-lg p-3 border border-amber-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                            <div className="flex items-start gap-2.5">
-                              <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
-                              <div>
-                                <p className="text-sm font-medium text-amber-900">Personalized generation was unavailable</p>
-                                <p className="text-xs text-amber-700 mt-0.5">
-                                  {channelInsight.strategyMeta?.fallbackReason || "This channel-specific recovery playbook is ready to use, but assumptions should be validated before scaling."}
-                                </p>
-                              </div>
-                            </div>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="border-amber-300 text-amber-800 hover:bg-amber-100 shrink-0"
-                              onClick={() => retryMutation.mutate()}
-                              disabled={retryMutation.isPending}
-                              data-testid="button-retry-personalized-channel"
-                            >
-                              <RefreshCw className={`mr-1.5 h-3.5 w-3.5 ${retryMutation.isPending ? "animate-spin" : ""}`} />
-                              {retryMutation.isPending ? "Retrying..." : "Retry personalized analysis"}
-                            </Button>
                           </div>
                         )}
                         {channelInsight?.heroStat && (
