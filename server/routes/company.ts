@@ -511,26 +511,36 @@ export async function processCompanyAnalysis(
       console.log(`  Saved ${insights.length} channel insights to DB (progressive)`);
     };
 
-    analyzeCompanyChannels(
-      coreAnalysis.companyName,
-      coreAnalysis.summary,
-      coreAnalysis.gtmMotion,
-      websiteContent,
-      siteProfile || undefined,
-      saveBatch
-    ).then((insights) => {
+    try {
+      const insights = await analyzeCompanyChannels(
+        coreAnalysis.companyName,
+        coreAnalysis.summary,
+        coreAnalysis.gtmMotion,
+        websiteContent,
+        siteProfile || undefined,
+        saveBatch
+      );
       console.log(`All channel insights complete: ${insights?.length || 0} channels in ${Date.now() - totalStart}ms`);
-    }).catch((err) => {
-      console.error("Channel insights failed:", err?.message || err);
-    }).finally(() => {
+    } catch (err: any) {
+      console.error("Channel insights failed, saving fallback channel playbooks:", err?.message || err);
+      await saveBatch(CHANNEL_IDS.map((channelId) => fallbackChannelInsight(
+        channelId,
+        coreAnalysis.companyName || "Your Company",
+        coreAnalysis.summary || "",
+        coreAnalysis.gtmMotion || "",
+        siteProfile,
+        "The channel strategy generation job failed before personalized strategies could be saved.",
+      )));
+    } finally {
       const entry = activeAnalysisRuns.get(companyId);
       if (entry && entry.runId === currentRunId) {
         activeAnalysisRuns.delete(companyId);
       }
-    });
+    }
 
-    storage.getUserByEmail(email).then((sender) => {
-      return sendWelcomeEmail({
+    try {
+      const sender = await storage.getUserByEmail(email);
+      await sendWelcomeEmail({
         toEmail: email,
         userName: fullName,
         companyName: coreAnalysis.companyName || "Your Company",
@@ -544,10 +554,12 @@ export async function processCompanyAnalysis(
           impact: r.impact || "Medium",
         })),
       });
-    }).then(() => console.log(`Welcome email sent to ${email}`))
-      .catch((err) => console.error("Failed to send welcome email:", err));
+      console.log(`Welcome email sent to ${email} after channel strategies completed`);
+    } catch (err) {
+      console.error("Failed to send welcome email:", err);
+    }
 
-    console.log(`Core analysis complete for ${coreAnalysis.companyName} in ${Date.now() - totalStart}ms — channel insights loading progressively`);
+    console.log(`Analysis complete for ${coreAnalysis.companyName} in ${Date.now() - totalStart}ms`);
   } catch (error) {
     console.error(`Failed to process company analysis for company ${companyId}:`, error);
   }
