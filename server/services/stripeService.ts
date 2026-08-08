@@ -88,6 +88,26 @@ export class StripeService {
     return result.rows[0] || null;
   }
 
+  async isEligiblePremiumPrice(priceId: string): Promise<boolean> {
+    const result = await db.execute(
+      sql`
+        SELECT 1
+        FROM stripe.prices pr
+        INNER JOIN stripe.products p ON p.id = pr.product
+        WHERE pr.id = ${priceId}
+          AND pr.active = true
+          AND p.active = true
+          AND pr.recurring IS NOT NULL
+          AND (
+            p.metadata->>'tier' = 'premium'
+            OR p.name = 'GTM Champion Pro'
+          )
+        LIMIT 1
+      `
+    );
+    return result.rows.length === 1;
+  }
+
   async listPrices(active = true, limit = 20, offset = 0) {
     const result = await db.execute(
       sql`SELECT * FROM stripe.prices WHERE active = ${active} LIMIT ${limit} OFFSET ${offset}`
@@ -104,7 +124,7 @@ export class StripeService {
 
   async getSubscriptionByCustomerId(customerId: string) {
     const result = await db.execute(
-      sql`SELECT * FROM stripe.subscriptions WHERE customer = ${customerId} AND status = 'active' ORDER BY created DESC LIMIT 1`
+      sql`SELECT * FROM stripe.subscriptions WHERE customer = ${customerId} AND status IN ('active', 'trialing') ORDER BY created DESC LIMIT 1`
     );
     return result.rows[0] || null;
   }

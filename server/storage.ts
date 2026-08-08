@@ -1,4 +1,4 @@
-import { eq, and, desc, lte, isNull, gte, sql, count } from "drizzle-orm";
+import { eq, and, desc, lte, isNull, gte, sql, count, or } from "drizzle-orm";
 import { db } from "../db/index";
 import {
   users,
@@ -54,6 +54,7 @@ export interface IStorage {
   getCompanyByUserId(userId: string): Promise<Company | undefined>;
   createCompany(company: InsertCompany): Promise<Company>;
   updateCompany(id: number, updates: Partial<Company>): Promise<void>;
+  claimFreeReanalysis(id: number, cutoff: Date, claimedAt: Date): Promise<boolean>;
 
   getAllRecommendations(): Promise<Recommendation[]>;
   getRecommendationsByCompanyId(companyId: number): Promise<Recommendation[]>;
@@ -190,6 +191,18 @@ export class DatabaseStorage implements IStorage {
 
   async updateCompany(id: number, updates: Partial<Company>): Promise<void> {
     await db.update(companies).set(updates).where(eq(companies.id, id));
+  }
+
+  async claimFreeReanalysis(id: number, cutoff: Date, claimedAt: Date): Promise<boolean> {
+    const rows = await db
+      .update(companies)
+      .set({ lastReanalyzedAt: claimedAt })
+      .where(and(
+        eq(companies.id, id),
+        or(isNull(companies.lastReanalyzedAt), lte(companies.lastReanalyzedAt, cutoff)),
+      ))
+      .returning({ id: companies.id });
+    return rows.length === 1;
   }
 
   async getAllRecommendations(): Promise<Recommendation[]> {

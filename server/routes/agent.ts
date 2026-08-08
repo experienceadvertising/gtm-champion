@@ -3,6 +3,7 @@ import { storage } from "../storage";
 import { agentSettingsSchema } from "@shared/schema";
 import { requireAuth, requirePremium } from "./middleware";
 import crypto from "crypto";
+import { getPublicAppUrl } from "../appUrl";
 
 const router = Router();
 
@@ -44,15 +45,14 @@ router.patch("/api/agent/settings", requireAuth, requirePremium, async (req: Req
 });
 
 // Always strip www. — this must match what's registered in Slack's redirect URIs
-function slackRedirectUri(req: Request): string {
-  const host = (req.get("host") || "").replace(/^www\./, "");
-  return `https://${host}/api/auth/slack/callback`;
+function slackRedirectUri(): string {
+  const baseUrl = getPublicAppUrl().replace("https://www.", "https://");
+  return `${baseUrl}/api/auth/slack/callback`;
 }
 
 // Origin used for the post-OAuth dashboard redirect (preserves www. vs non-www.)
-function originBase(req: Request): string {
-  const host = req.get("host") || "";
-  return `https://${host}`;
+function originBase(): string {
+  return getPublicAppUrl();
 }
 
 // Sign a state token: "{userId}:{ts}:{b64origin}:{sig}"
@@ -101,8 +101,8 @@ router.get("/api/auth/slack", requireAuth, requirePremium, (req: Request, res: R
     return res.status(500).json({ error: "Slack is not configured" });
   }
 
-  const state = signSlackState(req.session.userId!, originBase(req));
-  const redirectUri = slackRedirectUri(req);
+  const state = signSlackState(req.session.userId!, originBase());
+  const redirectUri = slackRedirectUri();
 
   const params = new URLSearchParams({
     client_id: clientId,
@@ -132,7 +132,7 @@ router.get("/api/auth/slack/callback", async (req: Request, res: Response) => {
   const clientSecret = process.env.SLACK_CLIENT_SECRET;
   if (!clientId || !clientSecret) return errRedirect("not_configured", origin);
 
-  const redirectUri = slackRedirectUri(req);
+  const redirectUri = slackRedirectUri();
 
   try {
     const tokenRes = await fetch("https://slack.com/api/oauth.v2.access", {

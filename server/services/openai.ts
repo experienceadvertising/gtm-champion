@@ -8,6 +8,7 @@ import {
   markTopChannels,
   type ChannelInsightDraft,
 } from "./channelStrategy";
+import { assertPublicHttpUrl, fetchPublicHttp } from "./publicHttp";
 
 // Dynamic imports to handle ESM modules in CJS bundle
 let OpenAI: any;
@@ -96,47 +97,6 @@ export interface CompanyAnalysis {
   channelInsights: ChannelInsight[];
 }
 
-function isPrivateIp(ip: string): boolean {
-  const parts = ip.split('.').map(Number);
-  if (parts.length === 4 && parts.every(n => !isNaN(n) && n >= 0 && n <= 255)) {
-    if (parts[0] === 10) return true;
-    if (parts[0] === 127) return true;
-    if (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) return true;
-    if (parts[0] === 192 && parts[1] === 168) return true;
-    if (parts[0] === 169 && parts[1] === 254) return true;
-    if (parts[0] === 0) return true;
-  }
-  if (ip === '::1' || ip === '::' || ip.startsWith('fe80:') || ip.startsWith('fc') || ip.startsWith('fd')) return true;
-  return false;
-}
-
-async function validateUrl(urlString: string): Promise<void> {
-  const parsed = new URL(urlString);
-  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
-    throw new Error("Only http and https protocols are allowed");
-  }
-  const hostname = parsed.hostname;
-  if (hostname === 'localhost' || hostname === '0.0.0.0' || hostname.endsWith('.local') || hostname.endsWith('.internal')) {
-    throw new Error("Invalid URL: private or internal addresses are not allowed");
-  }
-  if (isPrivateIp(hostname)) {
-    throw new Error("Invalid URL: private or internal addresses are not allowed");
-  }
-  const dns = await import('dns');
-  const { promisify } = await import('util');
-  const resolve4 = promisify(dns.resolve4);
-  try {
-    const addresses = await resolve4(hostname);
-    for (const addr of addresses) {
-      if (isPrivateIp(addr)) {
-        throw new Error("Invalid URL: resolves to a private or internal address");
-      }
-    }
-  } catch (err: any) {
-    if (err.message?.includes("Invalid URL")) throw err;
-  }
-}
-
 export interface ScrapedSite {
   combinedContent: string;
   pages: Record<string, string>;
@@ -173,12 +133,13 @@ async function fetchWithJinaReader(url: string): Promise<{ content: string; link
 }
 
 async function fetchAndParsePageDirect(url: string): Promise<{ content: string; links: string[] }> {
-  const response = await fetch(url, {
+  const response = await fetchPublicHttp(url, {
     headers: { 'User-Agent': 'Mozilla/5.0 (compatible; GTMChampionBot/1.0; +https://gtmchampion.com)' },
-    signal: AbortSignal.timeout(8000),
+    timeoutMs: 8000,
+    maxBytes: 5 * 1024 * 1024,
   });
   if (!response.ok) throw new Error(`HTTP ${response.status}`);
-  const html = await response.text();
+  const html = response.body.toString("utf8");
   const $ = cheerioLoad(html);
 
   const links = $('a[href]').map((_: any, el: any) => $(el).attr('href')).get() as string[];
@@ -294,8 +255,6 @@ export async function scrapeWebsiteDeep(url: string): Promise<ScrapedSite> {
 
   try {
     const normalizedUrl = url.startsWith("http") ? url : `https://${url}`;
-    await validateUrl(normalizedUrl);
-
     const homepageResult = await fetchAndParsePage(normalizedUrl);
     const pages: Record<string, string> = { homepage: homepageResult.content };
 
@@ -473,7 +432,7 @@ async function captureWithPageSpeed(normalizedUrl: string): Promise<string | nul
 export async function captureScreenshot(url: string): Promise<string | null> {
   try {
     const normalizedUrl = url.startsWith("http") ? url : `https://${url}`;
-    await validateUrl(normalizedUrl);
+    await assertPublicHttpUrl(normalizedUrl);
 
     console.log(`Capturing screenshot for ${normalizedUrl}...`);
     const startTime = Date.now();
@@ -525,7 +484,7 @@ function extractMetricRating(value: number, thresholds: [number, number]): strin
 export async function fetchPageSpeedInsights(url: string): Promise<PageSpeedData | null> {
   try {
     const normalizedUrl = url.startsWith("http") ? url : `https://${url}`;
-    await validateUrl(normalizedUrl);
+    await assertPublicHttpUrl(normalizedUrl);
 
     const apiUrl = `https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=${encodeURIComponent(normalizedUrl)}&category=PERFORMANCE&strategy=DESKTOP`;
 

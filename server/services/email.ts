@@ -343,6 +343,12 @@ export async function sendNewUserNotification(data: {
     return;
   }
 
+  const safeName = escapeHtml(data.userName);
+  const safeEmail = escapeHtml(data.email);
+  const safeCompanyUrl = escapeHtml(data.companyUrl);
+  const safeSubjectName = data.userName.replace(/[\r\n]+/g, " ");
+  const safeSubjectUrl = data.companyUrl.replace(/[\r\n]+/g, " ");
+
   const htmlBody = `
 <!DOCTYPE html>
 <html>
@@ -356,15 +362,15 @@ export async function sendNewUserNotification(data: {
       <table style="width: 100%; border-collapse: collapse;">
         <tr>
           <td style="padding: 8px 0; color: #64748b; font-size: 14px; width: 100px;">Name</td>
-          <td style="padding: 8px 0; font-size: 14px; font-weight: 600;">${data.userName}</td>
+          <td style="padding: 8px 0; font-size: 14px; font-weight: 600;">${safeName}</td>
         </tr>
         <tr>
           <td style="padding: 8px 0; color: #64748b; font-size: 14px;">Email</td>
-          <td style="padding: 8px 0; font-size: 14px;"><a href="mailto:${data.email}" style="color: #4f46e5;">${data.email}</a></td>
+          <td style="padding: 8px 0; font-size: 14px;"><a href="mailto:${safeEmail}" style="color: #4f46e5;">${safeEmail}</a></td>
         </tr>
         <tr>
           <td style="padding: 8px 0; color: #64748b; font-size: 14px;">Website</td>
-          <td style="padding: 8px 0; font-size: 14px;"><a href="${data.companyUrl}" style="color: #4f46e5;">${data.companyUrl}</a></td>
+          <td style="padding: 8px 0; font-size: 14px;"><a href="${safeCompanyUrl}" style="color: #4f46e5;">${safeCompanyUrl}</a></td>
         </tr>
         <tr>
           <td style="padding: 8px 0; color: #64748b; font-size: 14px;">Time</td>
@@ -380,7 +386,7 @@ export async function sendNewUserNotification(data: {
     await postmarkClient.sendEmail({
       From: FROM_ADDRESS,
       To: ADMIN_EMAIL,
-      Subject: `New signup: ${data.userName} (${data.companyUrl})`,
+      Subject: `New signup: ${safeSubjectName} (${safeSubjectUrl})`,
       HtmlBody: htmlBody,
       TextBody: `New user signed up:\n\nName: ${data.userName}\nEmail: ${data.email}\nWebsite: ${data.companyUrl}\nTime: ${new Date().toLocaleString("en-US", { timeZone: "America/New_York" })} ET`,
       MessageStream: "outbound",

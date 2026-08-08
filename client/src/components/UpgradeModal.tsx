@@ -13,17 +13,18 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { createCheckoutSession, getStripeProducts, type StripeProduct } from "@/lib/api";
+import { trackEvent } from "@/lib/analytics";
 import {
   PREMIUM_REQUIRED_EVENT,
   type PremiumRequiredEventDetail,
 } from "@/lib/premiumInterceptor";
 
 const PRO_FEATURES = [
-  "🤖 GTM Agent — personal coaching nudges when you stall, celebrates wins, weekly digests",
-  "10x higher AI chat + content generation limits",
-  "Branded, multi-page PDF exports with your logo",
-  "Unlimited re-analysis + 12-month strategy history",
-  "Up to 8 buyer personas + scenario-based budget allocations",
+  "A proactive GTM Agent with weekly coaching and stall alerts",
+  "Unlimited re-analysis and 12-month strategy history",
+  "Branded client-ready PDF exports with your logo",
+  "Scenario-based budget allocations for smarter testing",
+  "Higher AI limits for ongoing marketing production",
 ];
 
 interface PriceRow {
@@ -82,12 +83,21 @@ export function UpgradeModal() {
       const detail = (event as CustomEvent<PremiumRequiredEventDetail>).detail;
       setTrigger(detail ?? null);
       setOpen(true);
+      trackEvent("paywall_viewed", {
+        source: "feature_gate",
+        reason: detail?.reason,
+      });
     };
     window.addEventListener(PREMIUM_REQUIRED_EVENT, handler);
     return () => window.removeEventListener(PREMIUM_REQUIRED_EVENT, handler);
   }, []);
 
   const handleCheckout = async () => {
+    trackEvent("upgrade_clicked", {
+      source: "upgrade_modal",
+      billing_interval: interval,
+      reason: trigger?.reason,
+    });
     if (!selectedPrice) {
       toast({
         title: "Pricing unavailable",
@@ -99,6 +109,11 @@ export function UpgradeModal() {
     setCheckoutLoading(true);
     try {
       const { url } = await createCheckoutSession(selectedPrice.id);
+      trackEvent("checkout_started", {
+        source: "upgrade_modal",
+        billing_interval: interval,
+        reason: trigger?.reason,
+      });
       window.location.assign(url);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to start checkout";
@@ -123,7 +138,7 @@ export function UpgradeModal() {
           <DialogDescription>
             {trigger?.message
               ? trigger.message
-              : "Unlock the full power of your Go-To-Market strategy."}
+              : "Turn your strategy into a proactive weekly marketing system."}
           </DialogDescription>
         </DialogHeader>
 

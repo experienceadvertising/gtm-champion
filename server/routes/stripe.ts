@@ -4,6 +4,7 @@ import { checkoutSchema } from "@shared/schema";
 import { requireAuth } from "./middleware";
 import { stripeService } from "../services/stripeService";
 import { getStripePublishableKey } from "../services/stripeClient";
+import { getPublicAppUrl } from "../appUrl";
 
 const router = Router();
 
@@ -91,6 +92,10 @@ router.post("/api/stripe/checkout", requireAuth, async (req: Request, res: Respo
       return res.status(404).json({ error: "User not found" });
     }
 
+    if (!(await stripeService.isEligiblePremiumPrice(validatedData.priceId))) {
+      return res.status(400).json({ error: "Selected plan is unavailable" });
+    }
+
     let customerId = user.stripeCustomerId;
     if (!customerId) {
       const customer = await stripeService.createCustomer(user.email, user.id, user.fullName);
@@ -98,7 +103,7 @@ router.post("/api/stripe/checkout", requireAuth, async (req: Request, res: Respo
       customerId = customer.id;
     }
 
-    const baseUrl = `https://${process.env.REPLIT_DOMAINS?.split(',')[0]}`;
+    const baseUrl = getPublicAppUrl();
     const session = await stripeService.createCheckoutSession(
       customerId,
       validatedData.priceId,
@@ -122,7 +127,7 @@ router.post("/api/stripe/portal", requireAuth, async (req: Request, res: Respons
       return res.status(404).json({ error: "No subscription found" });
     }
 
-    const baseUrl = `https://${process.env.REPLIT_DOMAINS?.split(',')[0]}`;
+    const baseUrl = getPublicAppUrl();
     const session = await stripeService.createCustomerPortalSession(
       user.stripeCustomerId,
       `${baseUrl}/dashboard`
@@ -150,13 +155,15 @@ router.get("/api/stripe/subscription", requireAuth, async (req: Request, res: Re
 
     const subscription = await stripeService.getSubscriptionByCustomerId(user.stripeCustomerId);
     
-    if (subscription && subscription.status === 'active' && !user.isPremium) {
+    const isEntitled = subscription?.status === 'active' || subscription?.status === 'trialing';
+    if (isEntitled && !user.isPremium) {
       await storage.updateUserPremiumStatus(userId, true);
+      req.session.isPremium = true;
     }
 
     res.json({ 
       subscription,
-      isPremium: user.isPremium || (subscription?.status === 'active')
+      isPremium: user.isPremium || isEntitled,
     });
   } catch (error: unknown) {
     console.error("Subscription error:", error);

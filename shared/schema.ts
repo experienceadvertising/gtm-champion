@@ -244,7 +244,10 @@ export const insertUserSchema = createInsertSchema(users).omit({
   fullName: z.string().min(1, "Full name is required").max(200, "Full name must be 200 characters or less"),
   email: z.string().email("Invalid email address").max(254, "Email must be 254 characters or less"),
   password: z.string().min(8, "Password must be at least 8 characters").max(128, "Password must be 128 characters or less"),
-  companyUrl: z.string().url("Invalid company URL").max(2048, "URL must be 2048 characters or less"),
+  companyUrl: z.string().url("Invalid company URL").max(2048, "URL must be 2048 characters or less").refine(value => {
+    const protocol = new URL(value).protocol;
+    return protocol === "http:" || protocol === "https:";
+  }, "Company URL must use http or https"),
 });
 
 export const insertCompanySchema = createInsertSchema(companies).omit({
@@ -517,7 +520,7 @@ export const loginSchema = z.object({
 });
 
 export const recommendationStatusSchema = z.object({
-  status: z.string().min(1, "Status is required").max(50),
+  status: z.enum(["New", "In Progress", "Completed"]),
 });
 
 export const checkoutSchema = z.object({

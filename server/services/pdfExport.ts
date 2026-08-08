@@ -4,6 +4,7 @@ import type {
   ChannelInsightGenerationStatus,
   ChannelInsightStrategyMeta,
 } from "@shared/schema";
+import { fetchPublicHttp } from "./publicHttp";
 
 interface ExportCompany {
   name: string | null;
@@ -68,23 +69,33 @@ export interface PDFExportOptions {
 const MAX_LOGO_BYTES = 2 * 1024 * 1024;
 const ALLOWED_LOGO_MIME = new Set(["image/png", "image/jpeg", "image/jpg"]);
 
+function hasValidImageSignature(buffer: Buffer, contentType: string): boolean {
+  if (contentType === "image/png") {
+    return buffer.length >= 8 && buffer.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]));
+  }
+  return buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff;
+}
+
 export async function fetchLogoBuffer(logoUrl: string | null | undefined): Promise<Buffer | null> {
   if (!logoUrl) return null;
   try {
     const url = new URL(logoUrl);
     if (url.protocol !== "https:" && url.protocol !== "http:") return null;
-    const response = await fetch(logoUrl, {
+    const response = await fetchPublicHttp(logoUrl, {
       headers: { "User-Agent": "GTM-Champion-Logo-Fetcher/1.0" },
-      signal: AbortSignal.timeout(5000),
+      timeoutMs: 5000,
+      maxBytes: MAX_LOGO_BYTES,
     });
     if (!response.ok) return null;
-    const contentType = (response.headers.get("content-type") || "").split(";")[0].trim().toLowerCase();
+    const rawContentType = response.headers["content-type"];
+    const contentType = (Array.isArray(rawContentType) ? rawContentType[0] : rawContentType || "").split(";")[0].trim().toLowerCase();
     if (!ALLOWED_LOGO_MIME.has(contentType)) return null;
-    const contentLength = parseInt(response.headers.get("content-length") || "0", 10);
+    const rawContentLength = response.headers["content-length"];
+    const contentLength = parseInt(Array.isArray(rawContentLength) ? rawContentLength[0] : rawContentLength || "0", 10);
     if (contentLength > MAX_LOGO_BYTES) return null;
-    const arrayBuffer = await response.arrayBuffer();
-    if (arrayBuffer.byteLength > MAX_LOGO_BYTES) return null;
-    return Buffer.from(arrayBuffer);
+    if (response.body.byteLength > MAX_LOGO_BYTES) return null;
+    if (!hasValidImageSignature(response.body, contentType)) return null;
+    return response.body;
   } catch (err) {
     console.warn("[pdfExport] Failed to fetch logo:", err);
     return null;
