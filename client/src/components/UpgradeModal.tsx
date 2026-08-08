@@ -20,11 +20,11 @@ import {
 } from "@/lib/premiumInterceptor";
 
 const PRO_FEATURES = [
-  "🤖 GTM Agent — personal coaching nudges when you stall, celebrates wins, weekly digests",
-  "10x higher AI chat + content generation limits",
-  "Branded, multi-page PDF exports with your logo",
-  "Unlimited re-analysis + 12-month strategy history",
-  "Up to 8 buyer personas + scenario-based budget allocations",
+  "A proactive GTM Agent with weekly coaching and stall alerts",
+  "Unlimited re-analysis and 12-month strategy history",
+  "Branded client-ready PDF exports with your logo",
+  "Scenario-based budget allocations for smarter testing",
+  "Higher AI limits for ongoing marketing production",
 ];
 
 interface PriceRow {
@@ -138,7 +138,7 @@ export function UpgradeModal() {
           <DialogDescription>
             {trigger?.message
               ? trigger.message
-              : "Unlock the full power of your Go-To-Market strategy."}
+              : "Turn your strategy into a proactive weekly marketing system."}
           </DialogDescription>
         </DialogHeader>
 

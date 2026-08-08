@@ -86,6 +86,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import DOMPurify from "dompurify";
+import { ExecutionSprint } from "@/components/ExecutionSprint";
 
 const CHANNELS = [
   { id: "all", label: "All Channels", icon: LayoutDashboard, tooltip: "Overview of all marketing channels" },
@@ -1777,6 +1778,21 @@ export default function Dashboard() {
                   </div>
                 </motion.section>
               )}
+
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.06 }}
+              >
+                <ExecutionSprint
+                  companyId={company.id}
+                  recommendations={normalizedRecommendations}
+                  channelInsights={channelInsights}
+                  topChannelIds={strategyPlan?.topChannelIds ?? []}
+                  onStart={(recommendation) => handleStatusChange(recommendation.id, "In Progress", recommendation.status)}
+                  onViewChannel={handleChannelSelect}
+                />
+              </motion.div>
 
               <motion.div
                 initial={{ opacity: 0, y: 15 }}

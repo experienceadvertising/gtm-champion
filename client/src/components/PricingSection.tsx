@@ -11,28 +11,23 @@ import { createCheckoutSession, getStripeProducts, getSession, type StripeProduc
 import { trackEvent } from "@/lib/analytics";
 
 const FREE_FEATURES = [
-  "AI-powered GTM analysis",
-  "All 13 deep channel strategies",
-  "Top-three channel focus and 90-day plan",
-  "Readiness, evidence, budgets, risks, and roadmaps",
-  "AI chat (20 messages / min)",
-  "Content tools (10 generations / min)",
-  "Weekly strategy emails",
-  "Up to 3 buyer personas",
-  "1 website re-analysis per week",
-  "Standard PDF export (with footer)",
+  "A full GTM diagnosis and channel priorities",
+  "Your first 30-day execution sprint",
+  "Evidence, assumptions, budgets, risks, and roadmaps",
+  "AI chat and content tools for getting started",
+  "One website re-analysis per week",
+  "Standard PDF export with GTM Champion footer",
 ];
 
 const PRO_FEATURES = [
   "Everything in Free",
-  "🤖 GTM Agent — personal coaching nudges, stall alerts & weekly digests",
-  "10x higher AI chat + content limits",
-  "Unlimited website re-analysis",
-  "12-month strategy history & snapshots",
-  "Branded multi-page PDF export with your logo",
-  "Up to 8 buyer personas",
-  "A/B budget scenarios (conservative / balanced / aggressive)",
-  "Priority email support",
+  "A proactive GTM Agent with weekly coaching and stall alerts",
+  "Unlimited re-analysis as your market and website change",
+  "12-month strategy history and snapshots",
+  "Branded client-ready PDF exports with your logo",
+  "Budget scenarios for conservative, balanced, and aggressive plans",
+  "Higher AI limits for ongoing production work",
+  "Priority support while you run the system",
 ];
 
 interface PriceRow {
@@ -136,10 +131,10 @@ export function PricingSection() {
             Pricing
           </motion.span>
           <h2 id="pricing-heading" className="text-3xl md:text-5xl font-display font-bold mb-5">
-            Free to start. Pro when you need more.
+            Get the strategy free. Run the marketing system with Pro.
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Get the full GTM analysis on day one. Upgrade only when you need higher AI limits, branded reports, or unlimited re-analysis.
+            Start with a clear direction and your first execution sprint. Upgrade when you want ongoing coaching, history, proactive check-ins, and client-ready deliverables.
           </p>
         </div>
 
@@ -189,7 +184,7 @@ export function PricingSection() {
             <Card className="h-full border-border/60">
               <CardHeader className="pt-8">
                 <CardTitle className="text-2xl font-bold">Free</CardTitle>
-                <CardDescription>Everything you need to build your first GTM strategy.</CardDescription>
+                <CardDescription>Know where to focus and take the first meaningful action.</CardDescription>
                 <div className="mt-5">
                   <span className="text-5xl font-bold">$0</span>
                   <span className="text-muted-foreground ml-2">forever</span>
@@ -233,7 +228,7 @@ export function PricingSection() {
               </div>
               <CardHeader className="pt-10">
                 <CardTitle className="text-2xl font-bold text-primary">Pro</CardTitle>
-                <CardDescription>For teams turning GTM strategy into a system.</CardDescription>
+                <CardDescription>For founders and marketers who want a proactive operating system, not a one-time plan.</CardDescription>
                 <div className="mt-5">
                   <span className="text-5xl font-bold gradient-text">{displayedAmount}</span>
                   <span className="text-muted-foreground ml-2">/ {displayedInterval}</span>
