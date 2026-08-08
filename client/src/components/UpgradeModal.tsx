@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { createCheckoutSession, getStripeProducts, type StripeProduct } from "@/lib/api";
+import { trackEvent } from "@/lib/analytics";
 import {
   PREMIUM_REQUIRED_EVENT,
   type PremiumRequiredEventDetail,
@@ -82,12 +83,21 @@ export function UpgradeModal() {
       const detail = (event as CustomEvent<PremiumRequiredEventDetail>).detail;
       setTrigger(detail ?? null);
       setOpen(true);
+      trackEvent("paywall_viewed", {
+        source: "feature_gate",
+        reason: detail?.reason,
+      });
     };
     window.addEventListener(PREMIUM_REQUIRED_EVENT, handler);
     return () => window.removeEventListener(PREMIUM_REQUIRED_EVENT, handler);
   }, []);
 
   const handleCheckout = async () => {
+    trackEvent("upgrade_clicked", {
+      source: "upgrade_modal",
+      billing_interval: interval,
+      reason: trigger?.reason,
+    });
     if (!selectedPrice) {
       toast({
         title: "Pricing unavailable",
@@ -99,6 +109,11 @@ export function UpgradeModal() {
     setCheckoutLoading(true);
     try {
       const { url } = await createCheckoutSession(selectedPrice.id);
+      trackEvent("checkout_started", {
+        source: "upgrade_modal",
+        billing_interval: interval,
+        reason: trigger?.reason,
+      });
       window.location.assign(url);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to start checkout";

@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { createCheckoutSession, getStripeProducts, getSession, type StripeProduct } from "@/lib/api";
+import { trackEvent } from "@/lib/analytics";
 
 const FREE_FEATURES = [
   "AI-powered GTM analysis",
@@ -85,11 +86,16 @@ export function PricingSection() {
     return formatPrice(diff, prices.yearly.currency);
   }, [prices]);
 
-  const handleStartFree = () => setLocation("/auth");
+  const handleStartFree = () => {
+    trackEvent("signup_started", { source: "pricing_free" });
+    setLocation("/auth");
+  };
 
   const handleUpgrade = async () => {
+    trackEvent("upgrade_clicked", { source: "pricing", billing_interval: interval });
     const session = getSession();
     if (!session) {
+      trackEvent("upgrade_auth_required", { source: "pricing", billing_interval: interval });
       setLocation(`/auth?redirect=${encodeURIComponent("/dashboard?upgrade=pending")}`);
       return;
     }
@@ -104,6 +110,7 @@ export function PricingSection() {
     setCheckoutLoading(true);
     try {
       const { url } = await createCheckoutSession(selectedPrice.id);
+      trackEvent("checkout_started", { source: "pricing", billing_interval: interval });
       window.location.assign(url);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to start checkout";

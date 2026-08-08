@@ -12,6 +12,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { register, login, saveSession } from "@/lib/api";
+import { trackEvent } from "@/lib/analytics";
 
 const signUpSchema = z.object({
   fullName: z.string().min(2, "Name must be at least 2 characters"),
@@ -58,12 +59,7 @@ export default function AuthPage() {
     try {
       const result = await register(values);
       
-      // Track sign up in GA4
-      if (typeof window !== 'undefined' && (window as any).gtag) {
-        (window as any).gtag('event', 'sign_up', {
-          method: 'email'
-        });
-      }
+      trackEvent("sign_up", { method: "email" });
       
       // Save basic session info and redirect
       saveSession({

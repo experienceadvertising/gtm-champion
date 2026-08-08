@@ -37,6 +37,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { PricingSection } from "@/components/PricingSection";
 import { HERO, STEPS, CHANNELS, CHANNEL_GROUPS, FAQ_ITEMS } from "@shared/siteContent";
+import { trackEvent } from "@/lib/analytics";
 import heroImage from "@assets/generated_images/diverse_marketing_team_collaborating-1200.webp";
 import heroImage800 from "@assets/generated_images/diverse_marketing_team_collaborating-800.webp";
 
@@ -239,6 +240,11 @@ export default function LandingPage() {
   const [, setLocation] = useLocation();
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
+  const startSignup = (source: string) => {
+    trackEvent("signup_started", { source });
+    setLocation("/auth");
+  };
+
   const containerVariants = {
     hidden: { opacity: 1 },
     visible: {
@@ -327,7 +333,7 @@ export default function LandingPage() {
           </div>
           <div className="flex items-center gap-1.5 md:gap-4 shrink-0">
             <Button variant="ghost" size="sm" className="text-xs md:text-sm h-8 px-2 md:px-4" onClick={() => setLocation("/auth?mode=login")} data-testid="button-login">Log in</Button>
-            <Button size="sm" className="text-xs md:text-sm h-8 px-2.5 md:px-4" onClick={() => setLocation("/auth")} data-testid="button-get-started">Get Started</Button>
+            <Button size="sm" className="text-xs md:text-sm h-8 px-2.5 md:px-4" onClick={() => startSignup("navigation")} data-testid="button-get-started">Get Started</Button>
           </div>
         </div>
       </nav>
@@ -375,7 +381,7 @@ export default function LandingPage() {
                   <Button 
                     size="lg" 
                     className="h-12 md:h-14 px-6 md:px-8 text-base md:text-lg shadow-lg shadow-primary/25 relative overflow-hidden group hero-cta-btn" 
-                    onClick={() => setLocation("/auth")}
+                    onClick={() => startSignup("hero")}
                     data-testid="button-analyze-website"
                   >
                     <span className="relative z-10 flex items-center">
@@ -800,7 +806,7 @@ export default function LandingPage() {
                   viewport={{ once: true }}
                   transition={{ delay: 0.25, duration: 0.4 }}
                 >
-                  <Button size="lg" onClick={() => setLocation("/auth")} data-testid="button-try-ai-chat" className="group shadow-lg shadow-primary/20">
+                  <Button size="lg" onClick={() => startSignup("ai_chat_preview")} data-testid="button-try-ai-chat" className="group shadow-lg shadow-primary/20">
                     Try AI Chat Free <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" aria-hidden="true" />
                   </Button>
                 </motion.div>
@@ -966,7 +972,7 @@ export default function LandingPage() {
                   viewport={{ once: true }}
                   transition={{ delay: 0.25, duration: 0.4 }}
                 >
-                  <Button size="lg" onClick={() => setLocation("/auth")} data-testid="button-try-content-tools" className="group shadow-lg shadow-primary/20">
+                  <Button size="lg" onClick={() => startSignup("content_tools_preview")} data-testid="button-try-content-tools" className="group shadow-lg shadow-primary/20">
                     Try Content Tools Free <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" aria-hidden="true" />
                   </Button>
                 </motion.div>
@@ -1053,7 +1059,7 @@ export default function LandingPage() {
                 size="lg" 
                 variant="secondary" 
                 className="h-14 px-8 text-lg shadow-xl group"
-                onClick={() => setLocation("/auth")}
+                onClick={() => startSignup("final_cta")}
                 data-testid="button-final-cta"
               >
                 Get Started Free <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" aria-hidden="true" />

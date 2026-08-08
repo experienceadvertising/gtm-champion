@@ -64,6 +64,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { fetchDashboard, retryAnalysis, updateRecommendationStatus, getSession, logout, createPortalSession, type DashboardData, type ChannelInsight } from "@/lib/api";
+import { trackEvent } from "@/lib/analytics";
 import { useSubscription } from "@/hooks/useSubscription";
 import { AIChat } from "@/components/AIChat";
 import { InteractiveTutorial, useTutorial } from "@/components/InteractiveTutorial";
@@ -426,6 +427,33 @@ export default function Dashboard() {
       return false;
     },
   });
+
+  useEffect(() => {
+    if (!data?.company.name || data.channelInsights.length < 13) return;
+
+    const analysisKey = `gtm_analysis_complete_${data.company.id}_${data.company.lastScraped || "initial"}`;
+    if (sessionStorage.getItem(analysisKey)) return;
+
+    trackEvent("analysis_completed", {
+      company_id: data.company.id,
+      channel_count: data.channelInsights.length,
+      recommendation_count: data.recommendations.length,
+    });
+    sessionStorage.setItem(analysisKey, "1");
+  }, [data]);
+
+  useEffect(() => {
+    if (!data?.company.id || selectedChannel === "all") return;
+
+    const channelKey = `gtm_channel_view_${data.company.id}_${selectedChannel}`;
+    if (sessionStorage.getItem(channelKey)) return;
+
+    trackEvent("channel_strategy_viewed", {
+      company_id: data.company.id,
+      channel: selectedChannel,
+    });
+    sessionStorage.setItem(channelKey, "1");
+  }, [data?.company.id, selectedChannel]);
 
 
   useEffect(() => {
@@ -3057,6 +3085,9 @@ export default function Dashboard() {
                             <Gauge className="h-5 w-5 text-primary" />
                             <h2 id="strategy-readiness-heading" className="text-lg font-bold">Readiness & Evidence</h2>
                           </div>
+                          <p className="text-xs text-muted-foreground mb-4 max-w-3xl">
+                            These are AI planning estimates based on your website and stated assumptions, not observed campaign performance. Validate fit, economics, and budget with your own conversion and pipeline data before scaling.
+                          </p>
                           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                             {[
                               { label: "Channel fit", value: `${channelInsight.strategyMeta.priorityScore}/100` },
