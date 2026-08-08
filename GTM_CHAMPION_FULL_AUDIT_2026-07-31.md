@@ -18,7 +18,7 @@ The highest-confidence P0 and reliability issues found in the follow-up security
 
 - Registration now returns the authenticated user contract expected by the client. Existing accounts with an incorrect password receive a clear non-success response.
 - Checkout now accepts only active recurring prices attached to the intended GTM Champion Pro product.
-- Stripe subscription events now treat only active and trialing as entitled and propagate persistence failures for retry.
+- Stripe subscription events now require active or trialing status plus an eligible Pro price, and persistence failures propagate for retry.
 - Premium authorization now checks current database entitlement instead of trusting a seven-day session cache.
 - Website analysis and remote logo retrieval now use a public-network-only request path with A and AAAA validation, connection pinning, redirect validation, response limits, and image signature checks.
 - Re-analysis now atomically claims the free-plan allowance and rejects overlapping in-process runs.

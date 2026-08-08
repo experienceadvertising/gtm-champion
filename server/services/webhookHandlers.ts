@@ -3,6 +3,7 @@ import { getStripeSync, getUncachableStripeClient } from './stripeClient';
 import { storage } from '../storage';
 import { db } from '../../db/index';
 import { sql } from 'drizzle-orm';
+import { stripeService } from './stripeService';
 
 interface StripeEvent {
   type: string;
@@ -43,11 +44,23 @@ export class WebhookHandlers {
 
       case 'customer.subscription.created':
       case 'customer.subscription.updated': {
-        const subscription = event.data.object as { customer: string; id: string; status: string };
+        const subscription = event.data.object as {
+          customer: string;
+          id: string;
+          status: string;
+          items?: { data?: Array<{ price?: { id?: string } }> };
+        };
         const customerId = subscription.customer;
+        const priceIds = subscription.items?.data
+          ?.map(item => item.price?.id)
+          .filter((priceId): priceId is string => Boolean(priceId)) || [];
+        const eligibility = await Promise.all(priceIds.map(priceId => stripeService.isEligiblePremiumPrice(priceId)));
+        const hasEligiblePrice = eligibility.some(Boolean);
         
-        if (subscription.status === 'active' || subscription.status === 'trialing') {
+        if ((subscription.status === 'active' || subscription.status === 'trialing') && hasEligiblePrice) {
           await WebhookHandlers.activatePremiumByCustomerId(customerId, subscription.id);
+        } else if (subscription.status === 'active' || subscription.status === 'trialing') {
+          await WebhookHandlers.deactivatePremiumBySubscriptionId(customerId, subscription.id);
         } else {
           await WebhookHandlers.deactivatePremiumByCustomerId(customerId);
         }
@@ -114,6 +127,22 @@ export class WebhookHandlers {
       }
     } catch (error) {
       console.error('Error deactivating premium:', error);
+      throw error;
+    }
+  }
+
+  static async deactivatePremiumBySubscriptionId(customerId: string, subscriptionId: string): Promise<void> {
+    try {
+      const result = await db.execute(
+        sql`SELECT id FROM users WHERE stripe_customer_id = ${customerId} AND stripe_subscription_id = ${subscriptionId}`
+      );
+      if (result.rows.length > 0) {
+        const userId = result.rows[0].id as string;
+        await storage.updateUserPremiumStatus(userId, false);
+        console.log(`Deactivated premium for user ${userId} because subscription ${subscriptionId} has no eligible price`);
+      }
+    } catch (error) {
+      console.error('Error validating subscription entitlement:', error);
       throw error;
     }
   }
