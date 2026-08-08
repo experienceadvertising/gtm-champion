@@ -36,10 +36,8 @@ export class WebhookHandlers {
 
     switch (event.type) {
       case 'checkout.session.completed': {
-        const session = event.data.object as { mode?: string; customer?: string };
-        if (session.mode === 'subscription' && session.customer) {
-          await WebhookHandlers.activatePremiumByCustomerId(session.customer);
-        }
+        // Subscription events are the entitlement source of truth. Checkout completion
+        // alone is not enough because it does not prove the subscription is entitled.
         break;
       }
 
@@ -50,7 +48,7 @@ export class WebhookHandlers {
         
         if (subscription.status === 'active' || subscription.status === 'trialing') {
           await WebhookHandlers.activatePremiumByCustomerId(customerId, subscription.id);
-        } else if (subscription.status === 'canceled' || subscription.status === 'unpaid') {
+        } else {
           await WebhookHandlers.deactivatePremiumByCustomerId(customerId);
         }
         break;
@@ -99,6 +97,7 @@ export class WebhookHandlers {
       }
     } catch (error) {
       console.error('Error activating premium:', error);
+      throw error;
     }
   }
 
@@ -115,6 +114,7 @@ export class WebhookHandlers {
       }
     } catch (error) {
       console.error('Error deactivating premium:', error);
+      throw error;
     }
   }
 }

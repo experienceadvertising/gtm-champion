@@ -85,6 +85,7 @@ import { useKeyboardShortcuts, KEYBOARD_SHORTCUTS } from "@/hooks/use-keyboard-s
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
+import DOMPurify from "dompurify";
 
 const CHANNELS = [
   { id: "all", label: "All Channels", icon: LayoutDashboard, tooltip: "Overview of all marketing channels" },
@@ -1163,7 +1164,7 @@ export default function Dashboard() {
 
     const printWindow = window.open('', '_blank');
     if (printWindow) {
-      printWindow.document.write(html);
+      printWindow.document.write(DOMPurify.sanitize(html, { WHOLE_DOCUMENT: true }));
       printWindow.document.close();
       printWindow.onload = () => { printWindow.print(); };
     }

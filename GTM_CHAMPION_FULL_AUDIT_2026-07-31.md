@@ -12,6 +12,22 @@ The highest-risk issues are an inconsistent registration response contract, vuln
 
 Overall assessment: strong product foundation, weak measurement and proof layer, and several pre-scale reliability risks. Do not increase paid acquisition meaningfully until the P0 items are resolved and the activation-to-paid funnel is observable.
 
+## August 7 remediation update
+
+The highest-confidence P0 and reliability issues found in the follow-up security and product review are now fixed locally on this branch:
+
+- Registration now returns the authenticated user contract expected by the client. Existing accounts with an incorrect password receive a clear non-success response.
+- Checkout now accepts only active recurring prices attached to the intended GTM Champion Pro product.
+- Stripe subscription events now treat only active and trialing as entitled and propagate persistence failures for retry.
+- Premium authorization now checks current database entitlement instead of trusting a seven-day session cache.
+- Website analysis and remote logo retrieval now use a public-network-only request path with A and AAAA validation, connection pinning, redirect validation, response limits, and image signature checks.
+- Re-analysis now atomically claims the free-plan allowance and rejects overlapping in-process runs.
+- Recommendation statuses are restricted to the three values used by product and admin metrics.
+- Generated print-preview HTML and signup notification fields are sanitized or escaped.
+- Public redirect origins used by Stripe and Slack now come from configured application origins rather than request host input.
+
+Validation after remediation: seven automated tests pass, TypeScript passes, and the production build completes. Nothing was deployed or merged.
+
 ## Audit scorecard
 
 | Area | Score | Assessment |
@@ -38,7 +54,7 @@ Overall assessment: strong product foundation, weak measurement and proof layer,
 
 Impact: signup measurement inflation, confusing failures for existing users, malformed client state, and lost activation.  
 Recommendation: define one explicit registration response contract, return the authenticated session for successful creation/login, and return a non-success client outcome for an invalid existing-account password while preserving anti-enumeration wording. Add route and client integration tests.  
-Constraint: not changed in this audit because authentication changes were explicitly out of scope.
+Status: fixed locally in the August 7 remediation pass.
 
 #### 2. Production dependency audit reports 14 vulnerabilities, including 9 high severity
 
@@ -61,7 +77,7 @@ Recommendation: create a dedicated dependency-upgrade branch; prioritize `dompur
 
 Impact: billing-path integrity and customer trust risk.  
 Recommendation: server-side allow-list the active Pro monthly/yearly prices sourced from Stripe, reject any other ID, and use a canonical `APP_ORIGIN` configuration with strict host validation.  
-Constraint: not changed because billing was explicitly out of scope.
+Status: fixed locally in the August 7 remediation pass.
 
 #### 4. The product did not provide an observable activation-to-revenue funnel
 

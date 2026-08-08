@@ -14,6 +14,7 @@ import { runMigrations } from 'stripe-replit-sync';
 import { getStripeSync } from "./services/stripeClient";
 import { WebhookHandlers } from "./services/webhookHandlers";
 import { pgRateLimitStore } from "./routes/rateLimitStore";
+import { getPublicAppUrl } from "./appUrl";
 
 const app = express();
 const httpServer = createServer(app);
@@ -59,7 +60,7 @@ async function initStripe() {
     const stripeSync = await getStripeSync();
 
     console.log('Setting up managed webhook...');
-    const webhookBaseUrl = `https://${process.env.REPLIT_DOMAINS?.split(',')[0]}`;
+    const webhookBaseUrl = getPublicAppUrl();
     const { webhook, uuid } = await stripeSync.findOrCreateManagedWebhook(
       `${webhookBaseUrl}/api/stripe/webhook`,
       {

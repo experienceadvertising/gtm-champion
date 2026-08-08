@@ -26,10 +26,15 @@ const loginSchema = z.object({
   password: z.string().min(1, "Password is required"),
 });
 
+function safeRedirectPath(value: string | null): string {
+  if (!value || !value.startsWith("/") || value.startsWith("//") || value.includes("\\")) return "/dashboard";
+  return value;
+}
+
 export default function AuthPage() {
   const [, setLocation] = useLocation();
   const searchString = useSearch();
-  const redirectTo = new URLSearchParams(searchString).get("redirect") || "/dashboard";
+  const redirectTo = safeRedirectPath(new URLSearchParams(searchString).get("redirect"));
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;

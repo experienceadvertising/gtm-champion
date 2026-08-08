@@ -9,6 +9,22 @@ import { pgRateLimitStore } from "./rateLimitStore";
 
 const router = Router();
 
+function sessionPayload(user: {
+  id: string;
+  email: string;
+  fullName: string;
+  isPremium: boolean;
+  isAdmin: boolean;
+}) {
+  return {
+    userId: user.id,
+    email: user.email,
+    fullName: user.fullName,
+    isPremium: user.isPremium,
+    isAdmin: user.isAdmin,
+  };
+}
+
 function regenerateSession(req: Request): Promise<void> {
   return new Promise((resolve, reject) => {
     req.session.regenerate((err) => (err ? reject(err) : resolve()));
@@ -46,32 +62,34 @@ router.post("/api/register", registerLimiter, async (req: Request, res: Response
     const existingUser = await storage.getUserByEmail(validatedData.email);
     if (existingUser) {
       const validPassword = await bcrypt.compare(validatedData.password, existingUser.password);
-      if (validPassword) {
-        const existingCompany = await storage.getCompanyByUserId(existingUser.id);
-        if (!existingCompany) {
-          const company = await storage.createCompany({
-            userId: existingUser.id,
-            url: validatedData.companyUrl,
-            name: null,
-            summary: "Analyzing your website...",
-            gtmMotion: null,
-            icpScore: null,
-          });
-
-          processCompanyAnalysis(company.id, validatedData.companyUrl, validatedData.fullName, validatedData.email).catch(
-            err => console.error("Background analysis failed:", err)
-          );
-        }
-
-        await regenerateSession(req);
-        req.session.userId = existingUser.id;
-        req.session.isPremium = existingUser.isPremium;
-        await saveSession(req);
+      if (!validPassword) {
+        return res.status(409).json({
+          error: "An account already exists for this email. Sign in instead.",
+        });
       }
 
-      return res.status(200).json({
-        message: "Check your email to continue.",
-      });
+      const existingCompany = await storage.getCompanyByUserId(existingUser.id);
+      if (!existingCompany) {
+        const company = await storage.createCompany({
+          userId: existingUser.id,
+          url: validatedData.companyUrl,
+          name: null,
+          summary: "Analyzing your website...",
+          gtmMotion: null,
+          icpScore: null,
+        });
+
+        processCompanyAnalysis(company.id, validatedData.companyUrl, validatedData.fullName, validatedData.email).catch(
+          err => console.error("Background analysis failed:", err)
+        );
+      }
+
+      await regenerateSession(req);
+      req.session.userId = existingUser.id;
+      req.session.isPremium = existingUser.isPremium;
+      await saveSession(req);
+
+      return res.status(200).json(sessionPayload(existingUser));
     }
 
     const hashedPassword = await bcrypt.hash(validatedData.password, 10);
@@ -114,14 +132,12 @@ router.post("/api/register", registerLimiter, async (req: Request, res: Response
     req.session.isPremium = user.isPremium;
     await saveSession(req);
 
-    res.status(201).json({
-      message: "Check your email to continue.",
-    });
+    res.status(201).json(sessionPayload(user));
   } catch (error: unknown) {
     console.error("Registration error:", error);
     const err = error as { code?: string };
     if (err.code === '23505') {
-      return res.status(200).json({ message: "Check your email to continue." });
+      return res.status(409).json({ error: "An account already exists for this email. Sign in instead." });
     }
     if (error instanceof Error && error.message.includes("must be at least")) {
       return res.status(400).json({ error: error.message });
@@ -149,12 +165,7 @@ router.post("/api/login", loginLimiter, async (req: Request, res: Response) => {
     req.session.isPremium = user.isPremium;
     await saveSession(req);
 
-    res.json({
-      userId: user.id,
-      email: user.email,
-      fullName: user.fullName,
-      isPremium: user.isPremium,
-    });
+    res.json(sessionPayload(user));
   } catch (error: unknown) {
     console.error("Login error:", error);
     res.status(500).json({ error: "Login failed" });

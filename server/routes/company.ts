@@ -214,7 +214,11 @@ router.patch("/api/company/:id/icp", requireAuth, async (req: Request, res: Resp
 router.patch("/api/recommendations/:id/status", requireAuth, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const validatedData = recommendationStatusSchema.parse(req.body);
+    const parsed = recommendationStatusSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: "Status must be New, In Progress, or Completed" });
+    }
+    const validatedData = parsed.data;
 
     const userId = req.session.userId!;
     const company = await storage.getCompanyByUserId(userId);
@@ -267,6 +271,7 @@ router.patch("/api/recommendations/:id/status", requireAuth, async (req: Request
 const REANALYSIS_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 
 router.post("/api/retry-analysis/:companyId", requireAuth, async (req: Request, res: Response) => {
+  let reservedRunId: string | undefined;
   try {
     const { companyId } = req.params;
     const cid = parseInt(companyId);
@@ -295,6 +300,27 @@ router.post("/api/retry-analysis/:companyId", requireAuth, async (req: Request, 
         });
       }
     }
+
+    if (activeAnalysisRuns.has(cid)) {
+      return res.status(409).json({ error: "An analysis is already running for this company." });
+    }
+
+    const claimedAt = new Date();
+    if (!user.isPremium) {
+      const claimed = await storage.claimFreeReanalysis(
+        cid,
+        new Date(claimedAt.getTime() - REANALYSIS_WINDOW_MS),
+        claimedAt,
+      );
+      if (!claimed) {
+        return res.status(409).json({
+          error: "A re-analysis was already started. Refresh the dashboard for its progress.",
+        });
+      }
+    }
+
+    reservedRunId = `${cid}-${claimedAt.getTime()}`;
+    activeAnalysisRuns.set(cid, { runId: reservedRunId, startedAt: claimedAt.getTime() });
 
     try {
       const [recommendations, channelInsights, weeklyIdeas, personas, budget] = await Promise.all([
@@ -327,15 +353,20 @@ router.post("/api/retry-analysis/:companyId", requireAuth, async (req: Request, 
       gtmMotion: null,
       icpScore: null,
       lastScraped: new Date(),
-      lastReanalyzedAt: new Date(),
+      lastReanalyzedAt: claimedAt,
     });
 
-    processCompanyAnalysis(cid, company.url, user.fullName, user.email).catch(
+    processCompanyAnalysis(cid, company.url, user.fullName, user.email, reservedRunId).catch(
       err => console.error("Retry analysis failed:", err)
     );
 
     res.json({ message: "Analysis restarted" });
   } catch (error: unknown) {
+    if (reservedRunId) {
+      const cid = parseInt(req.params.companyId);
+      const entry = activeAnalysisRuns.get(cid);
+      if (entry?.runId === reservedRunId) activeAnalysisRuns.delete(cid);
+    }
     console.error("Retry analysis error:", error);
     res.status(500).json({ error: "Failed to retry analysis" });
   }
@@ -345,11 +376,12 @@ export async function processCompanyAnalysis(
   companyId: number,
   companyUrl: string,
   fullName: string,
-  email: string
+  email: string,
+  reservedRunId?: string,
 ): Promise<void> {
+  const totalStart = Date.now();
+  const runId = reservedRunId || `${companyId}-${Date.now()}`;
   try {
-    const totalStart = Date.now();
-    const runId = `${companyId}-${Date.now()}`;
     activeAnalysisRuns.set(companyId, { runId, startedAt: totalStart });
     console.log(`Starting analysis for ${companyUrl} (run: ${runId})...`);
 
@@ -566,6 +598,9 @@ export async function processCompanyAnalysis(
     console.log(`Analysis complete for ${coreAnalysis.companyName} in ${Date.now() - totalStart}ms`);
   } catch (error) {
     console.error(`Failed to process company analysis for company ${companyId}:`, error);
+  } finally {
+    const entry = activeAnalysisRuns.get(companyId);
+    if (entry?.runId === runId) activeAnalysisRuns.delete(companyId);
   }
 }
 
