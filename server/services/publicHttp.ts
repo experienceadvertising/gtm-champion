@@ -7,6 +7,27 @@ const DEFAULT_MAX_BYTES = 5 * 1024 * 1024;
 const DEFAULT_TIMEOUT_MS = 10_000;
 const DEFAULT_MAX_REDIRECTS = 4;
 
+export class UnsafePublicUrlError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "UnsafePublicUrlError";
+  }
+}
+
+function parsePublicUrl(urlString: string): URL {
+  let url: URL;
+  try {
+    url = new URL(urlString);
+  } catch {
+    throw new UnsafePublicUrlError("Invalid HTTP URL");
+  }
+  if (url.protocol !== "http:" && url.protocol !== "https:") {
+    throw new UnsafePublicUrlError("Only http and https URLs are allowed");
+  }
+  if (url.username || url.password) throw new UnsafePublicUrlError("URL credentials are not allowed");
+  return url;
+}
+
 export interface PublicHttpResponse {
   status: number;
   ok: boolean;
@@ -103,34 +124,31 @@ export function isPrivateNetworkAddress(address: string): boolean {
 async function resolvePublicAddress(hostname: string): Promise<{ address: string; family: 4 | 6 }> {
   const literal = hostname.replace(/^\[|\]$/g, "");
   if (net.isIP(literal)) {
-    if (isPrivateNetworkAddress(literal)) throw new Error("Private or special-use network addresses are not allowed");
+    if (isPrivateNetworkAddress(literal)) throw new UnsafePublicUrlError("Private or special-use network addresses are not allowed");
     return { address: literal, family: net.isIP(literal) as 4 | 6 };
   }
 
-  const addresses = await dns.lookup(hostname, { all: true, verbatim: true });
-  if (!addresses.length) throw new Error("Hostname did not resolve");
+  let addresses: Array<{ address: string; family: number }>;
+  try {
+    addresses = await dns.lookup(hostname, { all: true, verbatim: true });
+  } catch {
+    throw new UnsafePublicUrlError("Hostname could not be verified as public");
+  }
+  if (!addresses.length) throw new UnsafePublicUrlError("Hostname did not resolve");
   if (addresses.some(result => isPrivateNetworkAddress(result.address))) {
-    throw new Error("Hostname resolves to a private or special-use network address");
+    throw new UnsafePublicUrlError("Hostname resolves to a private or special-use network address");
   }
   const selected = addresses[0];
   return { address: selected.address, family: selected.family as 4 | 6 };
 }
 
 export async function assertPublicHttpUrl(urlString: string): Promise<void> {
-  const url = new URL(urlString);
-  if (url.protocol !== "http:" && url.protocol !== "https:") {
-    throw new Error("Only http and https URLs are allowed");
-  }
-  if (url.username || url.password) throw new Error("URL credentials are not allowed");
+  const url = parsePublicUrl(urlString);
   await resolvePublicAddress(url.hostname);
 }
 
 async function requestOnce(url: URL, options: PublicHttpOptions): Promise<PublicHttpResponse> {
-  if (url.protocol !== "http:" && url.protocol !== "https:") {
-    throw new Error("Only http and https URLs are allowed");
-  }
-  if (url.username || url.password) throw new Error("URL credentials are not allowed");
-
+  parsePublicUrl(url.href);
   const resolved = await resolvePublicAddress(url.hostname);
   const client = url.protocol === "https:" ? https : http;
   const maxBytes = options.maxBytes ?? DEFAULT_MAX_BYTES;
@@ -180,7 +198,7 @@ async function requestOnce(url: URL, options: PublicHttpOptions): Promise<Public
 }
 
 export async function fetchPublicHttp(urlString: string, options: PublicHttpOptions = {}): Promise<PublicHttpResponse> {
-  let current = new URL(urlString);
+  let current = parsePublicUrl(urlString);
   const maxRedirects = options.maxRedirects ?? DEFAULT_MAX_REDIRECTS;
 
   for (let redirectCount = 0; redirectCount <= maxRedirects; redirectCount++) {
@@ -189,8 +207,14 @@ export async function fetchPublicHttp(urlString: string, options: PublicHttpOpti
 
     const location = response.headers.location;
     if (!location) return response;
-    if (redirectCount === maxRedirects) throw new Error("Remote request exceeded the redirect limit");
-    current = new URL(location, current);
+    if (redirectCount === maxRedirects) throw new UnsafePublicUrlError("Remote request exceeded the redirect limit");
+    let next: URL;
+    try {
+      next = new URL(location, current);
+    } catch {
+      throw new UnsafePublicUrlError("Invalid redirect URL");
+    }
+    current = parsePublicUrl(next.href);
   }
 
   throw new Error("Remote request failed");

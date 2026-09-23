@@ -8,7 +8,7 @@ import {
   markTopChannels,
   type ChannelInsightDraft,
 } from "./channelStrategy";
-import { assertPublicHttpUrl, fetchPublicHttp } from "./publicHttp";
+import { assertPublicHttpUrl, fetchPublicHttp, UnsafePublicUrlError } from "./publicHttp";
 
 // Dynamic imports to handle ESM modules in CJS bundle
 let OpenAI: any;
@@ -186,6 +186,8 @@ async function fetchAndParsePageDirect(url: string): Promise<{ content: string; 
 
 async function fetchAndParsePage(url: string): Promise<{ content: string; links: string[] }> {
   await initPromise;
+  // Never delegate a URL we cannot verify as public to a third-party renderer.
+  await assertPublicHttpUrl(url);
 
   let directResult: { content: string; links: string[]; jsRendered?: true } | null = null;
   let directFailed = false;
@@ -193,6 +195,7 @@ async function fetchAndParsePage(url: string): Promise<{ content: string; links:
   try {
     directResult = await fetchAndParsePageDirect(url);
   } catch (err) {
+    if (err instanceof UnsafePublicUrlError) throw err;
     console.log(`Direct scrape failed for ${url}: ${err instanceof Error ? err.message : err}`);
     directFailed = true;
   }
@@ -274,6 +277,8 @@ export async function scrapeWebsiteDeep(url: string): Promise<ScrapedSite> {
         if (result.status === 'fulfilled') {
           pages[result.value.key] = result.value.content;
           console.log(`  Scraped ${result.value.key}: ${result.value.content.length} chars`);
+        } else if (result.reason instanceof UnsafePublicUrlError) {
+          throw result.reason;
         }
       }
     }
@@ -286,8 +291,29 @@ export async function scrapeWebsiteDeep(url: string): Promise<ScrapedSite> {
     return { combinedContent, pages };
   } catch (error) {
     console.error('Error scraping website:', error);
+    if (error instanceof UnsafePublicUrlError) throw error;
     throw new Error(`Failed to scrape website: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
+}
+
+export async function collectCompanyWebsiteSignals(companyUrl: string): Promise<{
+  scrapedSite: ScrapedSite | null;
+  screenshotData: string | null;
+  pageSpeedData: PageSpeedData | null;
+}> {
+  let scrapedSite: ScrapedSite | null = null;
+  try {
+    scrapedSite = await scrapeWebsiteDeep(companyUrl);
+  } catch (err) {
+    if (err instanceof UnsafePublicUrlError) throw err;
+    console.error("Scraping failed:", err);
+  }
+
+  const [screenshotData, pageSpeedData] = await Promise.all([
+    captureScreenshot(companyUrl),
+    fetchPageSpeedInsights(companyUrl),
+  ]);
+  return { scrapedSite, screenshotData, pageSpeedData };
 }
 
 import type { SiteProfile } from "@shared/schema";

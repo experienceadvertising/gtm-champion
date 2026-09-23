@@ -3,8 +3,9 @@ import { storage } from "../storage";
 import { icpUpdateSchema, recommendationStatusSchema } from "@shared/schema";
 import type { ChannelInsightStrategyMeta, SiteProfile } from "@shared/schema";
 import { requireAuth } from "./middleware";
-import { scrapeWebsiteDeep, extractCompanyProfile, analyzeCompanyFast, analyzeCompanyChannels, captureScreenshot, analyzeScreenshot, fetchPageSpeedInsights, fallbackChannelInsight } from "../services/openai";
+import { collectCompanyWebsiteSignals, extractCompanyProfile, analyzeCompanyFast, analyzeCompanyChannels, analyzeScreenshot, fallbackChannelInsight } from "../services/openai";
 import { sendWelcomeEmail } from "../services/email";
+import { UnsafePublicUrlError } from "../services/publicHttp";
 import {
   buildCrossChannelStrategyPlan,
   buildStrategyMeta,
@@ -396,20 +397,22 @@ export async function processCompanyAnalysis(
       }),
     ]);
 
-    const [scrapedSite, screenshotData, pageSpeedData] = await Promise.all([
-      scrapeWebsiteDeep(companyUrl).catch((err) => {
-        console.error("Scraping failed:", err);
-        return null;
-      }),
-      captureScreenshot(companyUrl).catch((err) => {
-        console.error("Screenshot failed:", err);
-        return null;
-      }),
-      fetchPageSpeedInsights(companyUrl).catch((err) => {
-        console.error("PageSpeed insights failed:", err);
-        return null;
-      }),
-    ]);
+    let scrapedSite: Awaited<ReturnType<typeof collectCompanyWebsiteSignals>>["scrapedSite"];
+    let screenshotData: string | null;
+    let pageSpeedData: Awaited<ReturnType<typeof collectCompanyWebsiteSignals>>["pageSpeedData"];
+    try {
+      ({ scrapedSite, screenshotData, pageSpeedData } = await collectCompanyWebsiteSignals(companyUrl));
+    } catch (err) {
+      if (err instanceof UnsafePublicUrlError) {
+        console.error("Analysis stopped: unsafe company website URL:", err);
+        await storage.updateCompany(companyId, {
+          summary: "We couldn't analyze your website. Please check the URL and try again.",
+          lastScraped: new Date(),
+        });
+        return;
+      }
+      throw err;
+    }
     const websiteContent = scrapedSite?.combinedContent || null;
     console.log(`Phase 1 done in ${Date.now() - totalStart}ms (deep scrape: ${Object.keys(scrapedSite?.pages || {}).length} pages + screenshot + pagespeed)`);
 
