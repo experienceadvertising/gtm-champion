@@ -88,7 +88,7 @@ export default function AboutPage() {
                 GTM Champion was created by a digital marketing professional with deep expertise in 
                 B2B SaaS marketing, online advertising, and go-to-market strategy. With years of 
                 hands-on experience helping SaaS companies scale their marketing efforts, this tool 
-                was born from real-world challenges , the gap between having a great product and 
+                was born from real-world challenges, the gap between having a great product and
                 knowing how to bring it to market effectively.
               </p>
               <p className="text-muted-foreground mb-6">
