@@ -4,7 +4,7 @@ import { selectPremiumSubscription } from '../server/services/subscriptionEntitl
 import { groundEvidence } from '../server/services/grounding';
 import { requestPageSpeed,clearPageSpeedCacheForTests } from '../server/services/pageSpeedRequest';
 import { normalizeBudget } from '../shared/budgetMath';
-const subscription = (id:string,status:string,tier='premium',created=1) => ({id,status,created,items:{data:[{price:{recurring:{interval:'month'},product:{metadata:{tier},name:'Plan',active:false}}}]}});
+const subscription = (id:string,status:string,tier='premium',created=1) => ({id,status,created,items:{data:[{price:{recurring:{interval:'month'},product:{metadata:{tier},name:tier==='premium' ? 'GTM Champion Pro' : 'Other Pro',active:false}}}]}});
 test('only a qualifying active or trialing product grants Pro, including archived price plans', () => {
   assert.equal(selectPremiumSubscription([subscription('canceled','canceled')]),null);
   assert.equal(selectPremiumSubscription([subscription('wrong','active','other')]),null);
@@ -52,4 +52,9 @@ test('website quote attribution uses the retrieved page, not a made-up source UR
 const quote='Our platform helps marketing teams plan their campaigns.';
 const [item]=groundEvidence([{claim:'Marketing planning',source:'website',sourceType:'website',confidence:80,quote,url:'https://made-up.example.com'}],'homepage','https://example.com',[{url:'https://example.com/about',content:quote}]);
 assert.equal(item.verified,true);assert.equal(item.url,'https://example.com/about');
+});
+
+test('a different app with generic premium metadata cannot grant GTM access',()=>{
+const other=subscription('other-app','active');other.items.data[0].price.product.name='MyDetailer Pro';
+assert.equal(selectPremiumSubscription([other]),null);
 });

@@ -12,6 +12,8 @@ function normalizeOrigin(value: string): string | null {
 }
 
 export function getPublicAppUrl(): string {
+  // Production links must stay on this app, even when copied environment settings drift.
+  if (process.env.NODE_ENV === "production") return CANONICAL_APP_URL;
   const configured = process.env.PUBLIC_APP_URL?.trim();
   if (configured) {
     const origin = normalizeOrigin(configured);

@@ -9,6 +9,6 @@ export function selectPremiumSubscription<T extends Subscription>(subscriptions:
     && subscription.items.data.some(({ price }) => {
       const product = price.product;
       return Boolean(price.recurring) && typeof product !== 'string' && !product.deleted
-        && (product.metadata?.tier === 'premium' || product.name === 'GTM Champion Pro');
+        && ((product.metadata?.tier === 'premium' && product.metadata?.app === 'gtm-champion') || product.name === 'GTM Champion Pro');
     })).sort((a, b) => (b.created || 0) - (a.created || 0))[0] || null;
 }

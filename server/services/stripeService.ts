@@ -18,7 +18,7 @@ export class StripeService {
     const stripe = await getUncachableStripeClient();
     return await stripe.checkout.sessions.create({
       customer: customerId,
-      payment_method_types: ['card'],
+      branding_settings: { display_name: 'GTM Champion', icon: { type: 'url', url: 'https://gtmchampion.com/icon-192.png' }, logo: { type: 'url', url: 'https://gtmchampion.com/icon-192.png' }, button_color: '#4f46e5' },
       line_items: [{ price: priceId, quantity: 1 }],
       mode: 'subscription',
       success_url: successUrl,
@@ -56,7 +56,7 @@ export class StripeService {
           FROM stripe.products
           WHERE active = ${active}
             AND (
-              metadata->>'tier' = 'premium'
+              (metadata->>'tier' = 'premium' AND metadata->>'app' = 'gtm-champion')
               OR name = 'GTM Champion Pro'
             )
           ORDER BY name, id DESC
@@ -100,7 +100,7 @@ export class StripeService {
           AND p.active = true
           AND pr.recurring IS NOT NULL
           AND (
-            p.metadata->>'tier' = 'premium'
+            (p.metadata->>'tier' = 'premium' AND p.metadata->>'app' = 'gtm-champion')
             OR p.name = 'GTM Champion Pro'
           )
         LIMIT 1

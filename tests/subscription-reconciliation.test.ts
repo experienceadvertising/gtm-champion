@@ -34,3 +34,11 @@ test('deleting one subscription reconciles remaining valid subscriptions instead
     assert.deepEqual(deactivated,[['cus_fixture']]);
   }finally{read.mock.restore();activate.mock.restore();deactivate.mock.restore();}
 });
+
+test('production recovery and checkout URLs stay canonical despite another app environment',async()=>{
+const {getPublicAppUrl}=await import('../server/appUrl');
+const previous={mode:process.env.NODE_ENV,url:process.env.PUBLIC_APP_URL,domains:process.env.REPLIT_DOMAINS};
+process.env.NODE_ENV='production';process.env.PUBLIC_APP_URL='https://mydetailerpro.com';process.env.REPLIT_DOMAINS='other-app.replit.app';
+try{assert.equal(getPublicAppUrl(),'https://gtmchampion.com');}
+finally{for(const [key,value] of Object.entries({NODE_ENV:previous.mode,PUBLIC_APP_URL:previous.url,REPLIT_DOMAINS:previous.domains})){if(value===undefined)delete process.env[key];else process.env[key]=value;}}
+});
