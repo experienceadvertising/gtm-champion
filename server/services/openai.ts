@@ -268,7 +268,7 @@ export async function scrapeWebsiteDeep(url: string): Promise<ScrapedSite> {
     let sitemapLinks: string[] = [];
     try {
       const response = await fetchPublicHttp(new URL('/sitemap.xml',normalizedUrl).href,{timeoutMs:8000,maxBytes:512*1024});
-      if (response.ok) sitemapLinks = [...response.body.toString('utf8').matchAll(/<loc>\s*([^<]+)\s*<\/loc>/g)].slice(0,1000).map(match => match[1].trim().replace(/&amp;/g,'&'));
+      if (response.ok) sitemapLinks = Array.from(response.body.toString('utf8').matchAll(/<loc>\s*([^<]+)\s*<\/loc>/g)).slice(0,1000).map(match => match[1].trim().replace(/&amp;/g,'&'));
     } catch (error) { if (error instanceof UnsafePublicUrlError) throw error; }
     const subpageUrls = discoverSubpages(normalizedUrl, [...homepageResult.links,...sitemapLinks]);
     console.log(`Discovered subpages: ${Object.keys(subpageUrls).join(', ') || 'none'}`);
