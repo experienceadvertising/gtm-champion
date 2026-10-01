@@ -8,7 +8,8 @@ export async function ensureAnalysisJobs() {
     attempts integer NOT NULL DEFAULT 0, error text, updated_at timestamptz NOT NULL DEFAULT now()
   )`);
   await jobPool.query(`CREATE INDEX IF NOT EXISTS analysis_jobs_pending_idx ON analysis_jobs(updated_at) WHERE status IN ('queued','running')`);
-  await jobPool.query(`INSERT INTO analysis_jobs(company_id) SELECT id FROM companies WHERE name IS NULL AND summary='Analyzing your website...' ON CONFLICT DO NOTHING`);
+  await jobPool.query(`UPDATE analysis_jobs j SET status='failed',error='This older audit needs a fresh retry.',updated_at=now() FROM companies c WHERE j.company_id=c.id AND j.status='queued' AND j.attempts=0 AND c.last_scraped<now()-interval '24 hours'`);
+  await jobPool.query(`INSERT INTO analysis_jobs(company_id) SELECT id FROM companies WHERE name IS NULL AND summary='Analyzing your website...' AND last_scraped>now()-interval '24 hours' ON CONFLICT DO NOTHING`);
 }
 export async function enqueueReanalysis(companyId: number, premium: boolean, cutoff: Date) {
   const client = await jobPool.connect();
