@@ -103,6 +103,7 @@ export interface CompanyAnalysis {
 export interface ScrapedSite {
   combinedContent: string;
   pages: Record<string, string>;
+  pageUrls?: Record<string,string>;
 }
 
 async function fetchWithJinaReader(url: string): Promise<{ content: string; links: string[] }> {
@@ -264,7 +265,12 @@ export async function scrapeWebsiteDeep(url: string): Promise<ScrapedSite> {
     const homepageResult = await fetchAndParsePage(normalizedUrl);
     const pages: Record<string, string> = { homepage: homepageResult.content };
 
-    const subpageUrls = discoverSubpages(normalizedUrl, homepageResult.links);
+    let sitemapLinks: string[] = [];
+    try {
+      const response = await fetchPublicHttp(new URL('/sitemap.xml',normalizedUrl).href,{timeoutMs:8000,maxBytes:512*1024});
+      if (response.ok) sitemapLinks = [...response.body.toString('utf8').matchAll(/<loc>\s*([^<]+)\s*<\/loc>/g)].slice(0,1000).map(match => match[1].trim().replace(/&amp;/g,'&'));
+    } catch (error) { if (error instanceof UnsafePublicUrlError) throw error; }
+    const subpageUrls = discoverSubpages(normalizedUrl, [...homepageResult.links,...sitemapLinks]);
     console.log(`Discovered subpages: ${Object.keys(subpageUrls).join(', ') || 'none'}`);
 
     const subpageEntries = Object.entries(subpageUrls);
@@ -287,11 +293,11 @@ export async function scrapeWebsiteDeep(url: string): Promise<ScrapedSite> {
     }
 
     const sections = Object.entries(pages).map(([key, content]) =>
-      `=== ${key.toUpperCase()} PAGE ===\n${content}`
+      `=== ${key.toUpperCase()} PAGE (${key === "homepage" ? normalizedUrl : subpageUrls[key]}) ===\n${content}`
     );
     const combinedContent = sections.join('\n\n').slice(0, 15000);
 
-    return { combinedContent, pages };
+    return { combinedContent, pages, pageUrls: {homepage:normalizedUrl,...subpageUrls} };
   } catch (error) {
     console.error('Error scraping website:', error);
     if (error instanceof UnsafePublicUrlError) throw error;
@@ -379,7 +385,9 @@ Extract and return JSON:
       brandVoice: result.brandVoice || '',
       existingChannels: result.existingChannels || [],
       icpDetails: result.icpDetails || { persona: '', companySize: '', industry: '', painPoints: [] },
-      contentGaps: result.contentGaps || [],
+      contentGaps: (result.contentGaps || []).filter((gap: string) => typeof gap === 'string')
+        .filter((gap: string) => !(/no blog|no articles/i.test(gap) && /=== BLOG PAGE/.test(scrapedContent)))
+        .map((gap: string) => `Needs verification beyond retrieved pages: ${gap}`),
       keyDifferentiators: result.keyDifferentiators || [],
     };
   } catch (error: any) {
@@ -767,6 +775,7 @@ const generatedChannelInsightSchema = z.object({
     priorityRationale: z.string().min(20).optional(),
     evidence: z.array(z.object({
       claim: z.string().min(10),
+      quote: z.string().max(800).optional(),
       source: z.string().min(2),
       sourceType: z.enum(["website", "benchmark", "best-practice", "assumption"]),
       confidence: z.number().min(0).max(100),
@@ -889,7 +898,7 @@ JSON format:
         "priorityScore": 0,
         "priorityRationale": "Explain the score using fit, intent, speed, cost, capability, and available evidence",
         "evidence": [
-          { "claim": "A strategy claim", "source": "Company website, named public benchmark, GTM best practice, or explicit assumption", "sourceType": "website/benchmark/best-practice/assumption", "confidence": 0 }
+          { "claim": "A strategy claim", "source": "Company website, named public benchmark, GTM best practice, or explicit assumption", "sourceType": "website/benchmark/best-practice/assumption", "confidence": 0, "quote": "For website evidence only, copy an exact sentence from the supplied website text. Omit this field for assumptions." }
         ],
         "prerequisites": ["What must be true before execution or scale"],
         "budgetGuidance": { "minimumMonthly": null, "recommendedMonthly": null, "currency": "USD", "rationale": "Planning range and assumptions" },

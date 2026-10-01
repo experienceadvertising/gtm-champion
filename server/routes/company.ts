@@ -376,7 +376,7 @@ export async function executeCompanyAnalysis(companyId: number, companyUrl: stri
   const byChannel = new Map(insights.map(item => [item.channelId,item]));
   const complete = CHANNEL_IDS.map(channelId => byChannel.get(channelId) || fallbackChannelInsight(channelId,core.companyName,core.summary,core.gtmMotion,siteProfile,'Personalized generation was unavailable.'));
   for (const insight of complete) {
-    if (insight.strategyMeta) insight.strategyMeta.evidence = groundEvidence(insight.strategyMeta.evidence,websiteContent,companyUrl);
+    if (insight.strategyMeta) insight.strategyMeta.evidence = groundEvidence(insight.strategyMeta.evidence,websiteContent,companyUrl,Object.entries(scrapedSite.pages).map(([key,content])=>({url:scrapedSite.pageUrls?.[key] || companyUrl,content})));
   }
   await assertAnalysisLease(companyId,token);
   await publishAnalysis(companyId,token,{core,screenshotData,visualInsights,pageSpeedData,siteProfile,complete});

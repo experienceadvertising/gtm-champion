@@ -47,3 +47,9 @@ test('transactional report email escapes untrusted company and recommendation te
     assert.ok(html.includes('&lt;script&gt;'));assert.equal(html.includes('<script>'),false);assert.equal(html.includes('<img src=x'),false);
   } finally {stub.mock.restore();if(previous)process.env.POSTMARK_SERVER_TOKEN=previous;else delete process.env.POSTMARK_SERVER_TOKEN;}
 });
+
+test('website quote attribution uses the retrieved page, not a made-up source URL',()=>{
+const quote='Our platform helps marketing teams plan their campaigns.';
+const [item]=groundEvidence([{claim:'Marketing planning',source:'website',sourceType:'website',confidence:80,quote,url:'https://made-up.example.com'}],'homepage','https://example.com',[{url:'https://example.com/about',content:quote}]);
+assert.equal(item.verified,true);assert.equal(item.url,'https://example.com/about');
+});

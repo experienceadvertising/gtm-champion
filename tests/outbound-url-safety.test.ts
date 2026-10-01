@@ -76,8 +76,8 @@ test("an unsafe redirect from a discovered company subpage stops analysis before
           headers: Record<string, string>;
         };
         requests++;
-        response.statusCode = requests === 1 ? 200 : 302;
-        response.headers = requests === 1 ? {} : { location: "http://127.0.0.1/private" };
+        response.statusCode = requests === 1 ? 200 : requests === 2 ? 404 : 302;
+        response.headers = requests <= 2 ? {} : { location: "http://127.0.0.1/private" };
         callback(response);
         response.end(requests === 1
           ? `<html><title>Public company</title><a href="/pricing">Pricing</a><h2>Features</h2><p>${"Public product information. ".repeat(20)}</p></html>`
@@ -91,7 +91,7 @@ test("an unsafe redirect from a discovered company subpage stops analysis before
   });
   try {
     await assert.rejects(collectCompanyWebsiteSignals(publicUrl), UnsafePublicUrlError);
-    assert.equal(requests, 2);
+    assert.equal(requests, 3);
     assert.equal(external.mock.callCount(), 0);
   } finally {
     direct.mock.restore();
@@ -117,7 +117,8 @@ test("a public site that fails to load still uses Jina and proceeds to public-si
   try {
     const result = await collectCompanyWebsiteSignals(publicUrl);
     assert.match(result.scrapedSite?.combinedContent || "", /Public website content/);
-    assert.equal(direct.mock.callCount(), 1);
+    assert.equal(direct.mock.callCount(), 2); // Homepage failure plus optional sitemap retrieval.
+    assert.equal((direct.mock.calls[1].arguments[0] as {path:string}).path, "/sitemap.xml");
     assert.equal(external.mock.calls.filter(call => String(call.arguments[0]).startsWith("https://r.jina.ai/")).length, 1);
     assert.ok(external.mock.callCount() > 1);
   } finally {
