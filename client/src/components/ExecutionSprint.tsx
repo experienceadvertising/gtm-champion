@@ -109,7 +109,7 @@ export function ExecutionSprint({
                     </div>
                     <div className="flex items-start gap-2 text-slate-600">
                       <Sparkles className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" aria-hidden="true" />
-                      <span>{evidenceCount ? `${evidenceCount} evidence points support this channel strategy.` : "Validate the key assumptions before scaling spend."}</span>
+                      <span>{evidenceCount ? `${evidenceCount} source notes and assumptions to review before execution.` : "Validate the key assumptions before scaling spend."}</span>
                     </div>
                   </div>
                   <div className="mt-4 flex flex-wrap gap-2">

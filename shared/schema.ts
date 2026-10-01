@@ -233,13 +233,11 @@ export const userIntegrations = pgTable(
   })
 );
 
-export const insertUserSchema = createInsertSchema(users).omit({
-  id: true,
-  createdAt: true,
-  isPremium: true,
-  isAdmin: true,
-  stripeCustomerId: true,
-  stripeSubscriptionId: true,
+export const insertUserSchema = createInsertSchema(users).pick({
+  fullName: true,
+  email: true,
+  password: true,
+  companyUrl: true,
 }).extend({
   fullName: z.string().min(1, "Full name is required").max(200, "Full name must be 200 characters or less"),
   email: z.string().email("Invalid email address").max(254, "Email must be 254 characters or less"),

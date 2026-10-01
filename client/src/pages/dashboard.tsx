@@ -1,3 +1,4 @@
+import { getAnalysisState } from "@shared/analysisState";
 import { useState, useEffect, useRef, useCallback, lazy, Suspense } from "react";
 import { Helmet } from "react-helmet-async";
 import { useLocation, Link, useSearch } from "wouter";
@@ -421,7 +422,11 @@ export default function Dashboard() {
       const d = query.state.data as DashboardData | undefined;
       if (!d) return 4000;
       const analyzing = !d.company.name && d.company.summary === "Analyzing your website...";
-      if (analyzing) return 4000;
+      if (analyzing) {
+        const started = new Date(d.company.lastScraped).getTime();
+        return Date.now() - started < 10 * 60 * 1000 ? 4000 : false;
+      }
+      if (d.analysis?.channelsPending) return 4000;
       const insightCount = d.channelInsights?.length || 0;
       const lastScraped = d.company.lastScraped ? new Date(d.company.lastScraped).getTime() : 0;
       const recentlyAnalyzed = (Date.now() - lastScraped) < 5 * 60 * 1000;
@@ -431,7 +436,7 @@ export default function Dashboard() {
   });
 
   useEffect(() => {
-    if (!data?.company.name || data.channelInsights.length < 13) return;
+    if (!data?.company.name || data.analysis?.channelsPending || data.channelInsights.length < 13) return;
 
     const analysisKey = `gtm_analysis_complete_${data.company.id}_${data.company.lastScraped || "initial"}`;
     if (sessionStorage.getItem(analysisKey)) return;
@@ -844,15 +849,12 @@ export default function Dashboard() {
 
   const { user, company, recommendations = [], weeklyIdeas = [], channelInsights = [], strategyPlan } = data;
   
-  const isAnalyzingRaw = !company.name && company.summary === "Analyzing your website...";
-  const analysisStaleMinutes = 10;
   const lastScrapedTime = company.lastScraped ? new Date(company.lastScraped).getTime() : 0;
-  const minutesSinceLastScrape = (Date.now() - lastScrapedTime) / 60000;
-  const isAnalysisStuck = isAnalyzingRaw && minutesSinceLastScrape > analysisStaleMinutes;
-  const isAnalyzing = isAnalyzingRaw && !isAnalysisStuck;
-  const analysisFailed = isAnalysisStuck || company.summary?.includes("couldn't analyze") || company.summary?.includes("temporarily unavailable");
+  const { analyzing: isAnalyzing, failed: analysisFailed } = getAnalysisState(
+    company, data.analysis?.persistedChannelCount ?? channelInsights.length,
+  );
   const recentlyAnalyzedForInsights = lastScrapedTime > 0 && (Date.now() - lastScrapedTime) < 5 * 60 * 1000;
-  const isChannelInsightsLoading = !isAnalyzing && !analysisFailed && channelInsights.length < 13 && recentlyAnalyzedForInsights;
+  const isChannelInsightsLoading = !isAnalyzing && !analysisFailed && (data.analysis?.channelsPending || (channelInsights.length < 13 && recentlyAnalyzedForInsights));
 
   if (isAnalyzing) {
     const estimatedRemaining = Math.max(Math.round(30 - (analysisProgress * 0.35)), 5);
@@ -1491,7 +1493,7 @@ export default function Dashboard() {
                   <Button variant="outline" size="sm" data-testid="button-download-pdf" onClick={async () => {
                     try {
                       const res = await fetch('/api/export/pdf', { credentials: 'include' });
-                      if (!res.ok) { toast({ title: "Download failed", variant: "destructive" }); return; }
+                      if (!res.ok) throw new Error("Download failed");
                       const blob = await res.blob();
                       const disposition = res.headers.get('content-disposition') || '';
                       const match = disposition.match(/filename="(.+)"/);
@@ -1572,9 +1574,20 @@ export default function Dashboard() {
                     <DropdownMenuContent align="end" className="w-48">
                       <DropdownMenuItem onClick={resetTutorial}><Info className="mr-2 h-4 w-4" /> Take Tour</DropdownMenuItem>
                       <DropdownMenuItem onClick={async () => {
-                        const res = await fetch('/api/export/pdf', { credentials: 'include' });
-                        if (res.ok) { const b = await res.blob(); const u = URL.createObjectURL(b); const a = document.createElement('a'); a.href = u; a.download = 'strategy.pdf'; a.click(); URL.revokeObjectURL(u); }
+                        try {
+                          const res = await fetch('/api/export/pdf', { credentials: 'include' });
+                          if (!res.ok) throw new Error("Download failed");
+                          const blob = await res.blob();
+                          if (!blob.size) throw new Error("Empty PDF");
+                          const url = URL.createObjectURL(blob);
+                          const link = document.createElement('a');
+                          link.href = url; link.download = 'gtm_strategy.pdf';
+                          document.body.appendChild(link); link.click(); link.remove();
+                          URL.revokeObjectURL(url);
+                          toast({ title: "PDF downloaded" });
+                        } catch { toast({ title: "Download failed", description: "Please try again.", variant: "destructive" }); }
                       }}><Download className="mr-2 h-4 w-4" /> Download PDF</DropdownMenuItem>
+                      {isPremium ? <DropdownMenuItem onClick={handleManageSubscription}><Settings className="mr-2 h-4 w-4" /> Manage Subscription</DropdownMenuItem> : <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent("premium-required"))}><Sparkles className="mr-2 h-4 w-4" /> Upgrade to Pro</DropdownMenuItem>}
                       <DropdownMenuItem onClick={handleDownloadCSV}><FileSpreadsheet className="mr-2 h-4 w-4" /> Download CSV</DropdownMenuItem>
                       <DropdownMenuItem onClick={() => setInviteDialogOpen(true)}><UserPlus className="mr-2 h-4 w-4" /> Tell a Friend</DropdownMenuItem>
                       <DropdownMenuItem onClick={() => retryMutation.mutate()}><RefreshCw className="mr-2 h-4 w-4" /> Re-analyze</DropdownMenuItem>
@@ -1586,6 +1599,15 @@ export default function Dashboard() {
 
             <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-8">
               <PushPermissionPrompt triggered={pushPromptTriggered} />
+              {!isAnalyzing && !analysisFailed && company.name && (
+                <div role="status" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900" data-testid="audit-coverage">
+                  <p className="font-semibold">Audit coverage</p>
+                  <p>{isChannelInsightsLoading ? "Personalized channel strategies are still being generated." : `${channelInsights.filter(insight => insight.generationStatus === "generated").length} of ${channelInsights.length} channels have personalized AI strategies. The others use clearly labeled planning playbooks.`}</p>
+                  {!company.siteProfile?.icpDetails?.persona && <p>Target customer details need your input. Review the ICP before using generated content.</p>}
+                  {!company.pageSpeedData && <p>PageSpeed data is unavailable. No performance score was measured for this audit.</p>}
+                  {!company.visualAnalysis && <p>Visual analysis is unavailable. A screenshot alone does not confirm a visual review.</p>}
+                </div>
+              )}
               <div className="grid md:grid-cols-3 gap-6">
                 <Card className={`md:col-span-2 border-none shadow-lg overflow-hidden ${analysisFailed ? 'ring-1 ring-red-200' : 'ring-1 ring-slate-200/50'}`}>
                   <div className={`h-2 w-full ${analysisFailed ? 'bg-gradient-to-r from-red-400 to-red-500' : 'bg-gradient-to-r from-primary via-violet-500 to-purple-500'}`} />
@@ -2305,7 +2327,16 @@ export default function Dashboard() {
                     <Gauge className="h-5 w-5 text-primary" />
                     Website Performance
                   </h2>
-                  <div className="grid md:grid-cols-3 gap-6">
+                  {!isAnalyzing && !analysisFailed && company.name && (
+                <div role="status" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900" data-testid="audit-coverage">
+                  <p className="font-semibold">Audit coverage</p>
+                  <p>{isChannelInsightsLoading ? "Personalized channel strategies are still being generated." : `${channelInsights.filter(insight => insight.generationStatus === "generated").length} of ${channelInsights.length} channels have personalized AI strategies. The others use clearly labeled planning playbooks.`}</p>
+                  {!company.siteProfile?.icpDetails?.persona && <p>Target customer details need your input. Review the ICP before using generated content.</p>}
+                  {!company.pageSpeedData && <p>PageSpeed data is unavailable. No performance score was measured for this audit.</p>}
+                  {!company.visualAnalysis && <p>Visual analysis is unavailable. A screenshot alone does not confirm a visual review.</p>}
+                </div>
+              )}
+              <div className="grid md:grid-cols-3 gap-6">
                     {(() => {
                       const psd = company.pageSpeedData;
                       if (!psd || typeof psd.performanceScore !== 'number' || !psd.coreWebVitals) return null;

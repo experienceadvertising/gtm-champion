@@ -670,7 +670,8 @@ export function enrichGeneratedChannelInsight(
   const strategyMeta: ChannelInsightStrategyMeta = {
     ...defaults,
     ...supplied,
-    evidence: supplied.evidence?.length ? supplied.evidence : defaults.evidence,
+    confidence: normalizeConfidence(supplied.confidence ?? defaults.confidence),
+    evidence: (supplied.evidence?.length ? supplied.evidence : defaults.evidence).map(item => ({ ...item, confidence: normalizeConfidence(item.confidence) })),
     prerequisites: supplied.prerequisites?.length ? supplied.prerequisites : defaults.prerequisites,
     budgetGuidance: { ...defaults.budgetGuidance, ...(supplied.budgetGuidance || {}) },
     cadence: {
@@ -740,4 +741,10 @@ export function buildCrossChannelStrategyPlan(
       days61To90: Array.from(new Set(top.flatMap((insight) => insight.strategyMeta.roadmap.days61To90))).slice(0, 6),
     },
   };
+}
+
+// Older AI responses occasionally returned fractional confidence despite a 0-100 contract.
+export function normalizeConfidence(value: number): number {
+  if (!Number.isFinite(value)) return 0;
+  return Math.round(Math.max(0, Math.min(100, value > 0 && value < 1 ? value * 100 : value)));
 }

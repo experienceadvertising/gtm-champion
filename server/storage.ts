@@ -39,12 +39,14 @@ import {
   type InsertScheduledNudge,
 } from "@shared/schema";
 
+type NewUser = InsertUser & { unsubscribeToken: string };
+
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
   getAllUsers(): Promise<User[]>;
   getUsersWithCompanies(): Promise<Array<{ user: User; company: Company }>>;
-  createUser(user: InsertUser): Promise<User>;
+  createUser(user: NewUser): Promise<User>;
   updateUserPremiumStatus(id: string, isPremium: boolean): Promise<void>;
   updateUserStripeInfo(id: string, info: { stripeCustomerId?: string; stripeSubscriptionId?: string }): Promise<void>;
   updateUserLogoUrl(id: string, logoUrl: string | null): Promise<void>;
@@ -154,7 +156,7 @@ export class DatabaseStorage implements IStorage {
     return rows;
   }
 
-  async createUser(insertUser: InsertUser): Promise<User> {
+  async createUser(insertUser: NewUser): Promise<User> {
     const [user] = await db.insert(users).values(insertUser).returning();
     return user;
   }

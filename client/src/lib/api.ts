@@ -164,6 +164,7 @@ export interface ChannelInsight {
 }
 
 export interface DashboardData {
+  analysis?: { channelsPending: boolean; persistedChannelCount: number };
   user: {
     id: string;
     fullName: string;
@@ -191,6 +192,7 @@ export interface DashboardData {
 const SESSION_KEY = "gtm_session";
 
 export function saveSession(session: UserSession): void {
+  if (getSession()?.userId !== session.userId) queryClient.clear();
   localStorage.setItem(SESSION_KEY, JSON.stringify(session));
 }
 
@@ -209,7 +211,7 @@ export function clearSession(): void {
   queryClient.clear();
 }
 
-export async function register(data: RegisterData): Promise<{ userId: string; email: string }> {
+export async function register(data: RegisterData): Promise<UserSession> {
   const response = await fetch(`${API_BASE}/register`, {
     method: "POST",
     headers: csrfHeaders(),

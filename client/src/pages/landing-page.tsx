@@ -562,7 +562,7 @@ export default function LandingPage() {
                 {
                   icon: <PenTool className="h-8 w-8 text-violet-500" aria-hidden="true" />,
                   title: "AI Content Tools",
-                  description: "Generate ready-to-publish LinkedIn posts, full email campaigns, and long-form blog articles — all written in your brand voice using your actual product details.",
+                  description: "Generate ready-to-publish LinkedIn posts, full email campaigns, and long-form blog articles , all written in your brand voice using your actual product details.",
                   span: "md:col-span-3 lg:col-span-5",
                   gradient: "from-violet-500/10 to-purple-500/10",
                   borderGradient: "from-violet-500/30 via-purple-500/20 to-transparent",
@@ -578,7 +578,7 @@ export default function LandingPage() {
                 {
                   icon: <UserCheck className="h-8 w-8 text-cyan-500" aria-hidden="true" />,
                   title: "ICP Detection & Editing",
-                  description: "Your Ideal Customer Profile is auto-detected from your site — persona, company size, industry, and pain points — and fully editable right on the dashboard.",
+                  description: "Your Ideal Customer Profile is auto-detected from your site , persona, company size, industry, and pain points , and fully editable right on the dashboard.",
                   span: "md:col-span-3 lg:col-span-3",
                   gradient: "from-cyan-500/10 to-sky-500/10",
                   borderGradient: "from-cyan-500/30 via-sky-500/20 to-transparent",
@@ -594,7 +594,7 @@ export default function LandingPage() {
                 {
                   icon: <Mail className="h-8 w-8 text-amber-500" aria-hidden="true" />,
                   title: "Weekly Email Sprints",
-                  description: "Every Monday, a fresh batch of actionable content ideas lands in your inbox — personalized to your business and ready to execute that week.",
+                  description: "Every Monday, a fresh batch of actionable content ideas lands in your inbox , personalized to your business and ready to execute that week.",
                   span: "md:col-span-3 lg:col-span-4",
                   gradient: "from-amber-500/10 to-orange-500/10",
                   borderGradient: "from-amber-500/30 via-orange-500/20 to-transparent",
@@ -626,7 +626,7 @@ export default function LandingPage() {
                 {
                   icon: <History className="h-8 w-8 text-sky-500" aria-hidden="true" />,
                   title: "12-Month Strategy History",
-                  description: "Re-analyze your website anytime and track how your GTM strategy evolves — every snapshot is saved so you can compare progress over time. (Pro)",
+                  description: "Re-analyze your website anytime and track how your GTM strategy evolves , every snapshot is saved so you can compare progress over time. (Pro)",
                   span: "md:col-span-3 lg:col-span-4",
                   gradient: "from-sky-500/10 to-blue-500/10",
                   borderGradient: "from-sky-500/30 via-blue-500/20 to-transparent",
@@ -792,7 +792,7 @@ export default function LandingPage() {
                     "Get personalized answers based on your business model",
                     "Ask about any of the 13 marketing channels",
                     "Receive specific, actionable recommendations",
-                    "Powered by GPT-5 with 2025 B2B marketing knowledge"
+                    "AI guidance grounded in the website details available to your audit"
                   ].map((item, idx) => (
                     <li key={idx} className="flex items-start gap-3">
                       <CheckCircle2 className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" aria-hidden="true" />
@@ -889,17 +889,17 @@ export default function LandingPage() {
                       {
                         label: "LinkedIn Post",
                         color: "bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400",
-                        content: "Most B2B teams waste their biggest GTM asset: their customer success stories. Here's how we helped [Client] 3x their pipeline in 90 days using just two channels...",
+                        content: "Most B2B teams waste their biggest GTM asset: their customer success stories. Start with a real customer story, explain what changed, and show results you can verify.",
                       },
                       {
                         label: "Email Campaign",
                         color: "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400",
-                        content: "Subject: The one GTM mistake costing SaaS teams $50K+\n\nHi [First Name], If you're splitting budget evenly across 13 channels, you're probably funding your 11 weakest ones...",
+                        content: "Subject: Where your GTM plan needs a clearer focus\n\nHi [First Name], If you're splitting budget evenly across 13 channels, you're probably funding your 11 weakest ones...",
                       },
                       {
                         label: "Blog Article",
                         color: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400",
-                        content: "The 2025 B2B SaaS GTM Playbook: Why PLG and Sales-Led Motions Are Converging — and What It Means for Your Channel Mix...",
+                        content: "The B2B SaaS GTM Playbook: Why PLG and Sales-Led Motions Are Converging , and What It Means for Your Channel Mix...",
                       },
                     ].map((item) => (
                       <div key={item.label} className="rounded-xl bg-slate-50 dark:bg-slate-800/50 p-3.5 border border-slate-100 dark:border-slate-700">
@@ -936,7 +936,7 @@ export default function LandingPage() {
                   transition={{ delay: 0.1, duration: 0.4 }}
                   id="content-tools-heading" className="text-3xl md:text-5xl font-display font-bold"
                 >
-                  Strategy Is Just the Start — <span className="gradient-text">We Write the Content Too</span>
+                  Strategy Is Just the Start , <span className="gradient-text">We Write the Content Too</span>
                 </motion.h2>
                 <motion.p
                   initial={{ opacity: 0, y: 15 }}
@@ -945,7 +945,7 @@ export default function LandingPage() {
                   transition={{ delay: 0.15, duration: 0.4 }}
                   className="text-lg text-muted-foreground leading-relaxed"
                 >
-                  Most strategy tools stop at recommendations. GTM Champion goes further — generating publish-ready content using your actual brand voice, product names, and competitive positioning.
+                  Most strategy tools stop at recommendations. GTM Champion goes further , generating publish-ready content using your actual brand voice, product names, and competitive positioning.
                 </motion.p>
                 <motion.ul
                   className="space-y-3"
@@ -1117,7 +1117,7 @@ export default function LandingPage() {
                 <li><a href="/about" className="hover:text-white transition-colors">About</a></li>
                 <li><a href="/contact" className="hover:text-white transition-colors">Contact</a></li>
                 <li><a href="/auth" className="hover:text-white transition-colors">Sign Up</a></li>
-                <li><a href="/auth" className="hover:text-white transition-colors">Log In</a></li>
+                <li><a href="/auth?mode=login" className="hover:text-white transition-colors">Log In</a></li>
               </ul>
             </div>
           </div>

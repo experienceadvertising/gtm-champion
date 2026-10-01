@@ -70,8 +70,8 @@ export default function AuthPage() {
       saveSession({
         userId: result.userId,
         email: result.email,
-        fullName: values.fullName,
-        isPremium: false,
+        fullName: result.fullName,
+        isPremium: result.isPremium,
       });
       
       toast({

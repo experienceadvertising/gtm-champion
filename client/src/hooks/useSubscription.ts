@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
-import { getSubscriptionStatus } from "@/lib/api";
+import { getSession, getSubscriptionStatus } from "@/lib/api";
 
 const SUBSCRIPTION_QUERY_KEY = ["subscription"] as const;
 
@@ -10,12 +10,8 @@ interface SubscriptionState {
 }
 
 async function fetchSubscriptionState(): Promise<SubscriptionState> {
-  try {
-    const result = await getSubscriptionStatus();
-    return { isPremium: !!result.isPremium, subscription: result.subscription };
-  } catch {
-    return { isPremium: false, subscription: null };
-  }
+  const result = await getSubscriptionStatus();
+  return { isPremium: !!result.isPremium, subscription: result.subscription };
 }
 
 export function useSubscription() {
@@ -34,9 +30,10 @@ export function useSubscription() {
   }, [queryClient]);
 
   return {
-    isPremium: query.data?.isPremium ?? false,
+    isPremium: query.data?.isPremium ?? getSession()?.isPremium ?? false,
     subscription: query.data?.subscription ?? null,
     isLoading: query.isLoading,
+    error: query.error,
     refetch: () => queryClient.invalidateQueries({ queryKey: SUBSCRIPTION_QUERY_KEY }),
   };
 }

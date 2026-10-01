@@ -1,6 +1,7 @@
 import { Router, type Request, type Response } from "express";
 import rateLimit from "express-rate-limit";
 import bcrypt from "bcrypt";
+import { ZodError } from "zod";
 import { storage } from "../storage";
 import { insertUserSchema, loginSchema } from "@shared/schema";
 import { sendNewUserNotification } from "../services/email";
@@ -134,6 +135,7 @@ router.post("/api/register", registerLimiter, async (req: Request, res: Response
 
     res.status(201).json(sessionPayload(user));
   } catch (error: unknown) {
+    if (error instanceof ZodError) return res.status(400).json({ error: error.issues[0]?.message || "Invalid registration details" });
     console.error("Registration error:", error);
     const err = error as { code?: string };
     if (err.code === '23505') {
@@ -167,6 +169,7 @@ router.post("/api/login", loginLimiter, async (req: Request, res: Response) => {
 
     res.json(sessionPayload(user));
   } catch (error: unknown) {
+    if (error instanceof ZodError) return res.status(400).json({ error: "Please enter a valid email and password." });
     console.error("Login error:", error);
     res.status(500).json({ error: "Login failed" });
   }

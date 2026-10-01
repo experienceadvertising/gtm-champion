@@ -356,6 +356,7 @@ Extract and return JSON:
   try {
     const response = await openai.chat.completions.create({
       model: "gpt-5-mini",
+      reasoning_effort: "minimal",
       messages: [{ role: "user", content: prompt }],
       response_format: { type: "json_object" },
       max_completion_tokens: 2500,
@@ -594,6 +595,7 @@ export async function analyzeScreenshot(screenshotBase64: string, companyUrl: st
   try {
     const response = await openai.chat.completions.create({
       model: "gpt-5",
+      reasoning_effort: "minimal",
       messages: [
         {
           role: "user",
@@ -975,6 +977,8 @@ JSON format:
   ]
 }
 
+All confidence and priority scores use the 0-100 scale, never fractions. Each strategic pillar needs 3-5 tactics of at least 20 characters, each quick win needs 3-5 steps of at least 10 characters, and each channel needs 3-6 KPIs, 3-8 resources, 2-8 prerequisites, and 2-6 risks. Use concrete, distinct items. All roadmap phases need at least one action. Never invent proof or numeric results. Write naturally and never use em dashes.
+
 Include ALL ${channels.length} channels: ${channelList}. Each needs 2 strategicPillars and 2 quickWins. Every tactic must name ${productRef}, ${companyName}, a verified competitor, a verified buyer/use-case detail, or the exact missing input to validate. Zero generic filler.`;
 
   const channelModel = process.env.CHANNEL_INSIGHTS_MODEL || "gpt-4o-mini";
@@ -982,7 +986,7 @@ Include ALL ${channels.length} channels: ${channelList}. Each needs 2 strategicP
     model: channelModel,
     messages: [{ role: "user", content: prompt }],
     response_format: { type: "json_object" },
-    max_tokens: 6000,
+    max_completion_tokens: 6000,
   });
 
   const content = response.choices[0]?.message?.content;
@@ -1328,6 +1332,7 @@ Do not invent customer proof, performance benchmarks, audience details, or produ
 
         const response = await openai.chat.completions.create({
           model: "gpt-5",
+      reasoning_effort: "minimal",
           messages: [{ role: "user", content: prompt }],
           response_format: { type: "json_object" },
           max_completion_tokens: 4096,
@@ -1463,6 +1468,7 @@ GROWTH:
   try {
     const response = await openai.chat.completions.create({
       model: "gpt-5-mini",
+      reasoning_effort: "minimal",
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: question }
@@ -1539,6 +1545,8 @@ COMPANY CONTEXT:
 - What they do: ${context.summary}
 - GTM Motion: ${context.gtmMotion}
 ${profileCtx}
+Do not invent customer stories, results, statistics, or product capabilities. Write naturally and never use em dashes.
+
 POST REQUIREMENTS:
 - Topic: ${request.topic}
 - Tone: ${request.tone} (${toneDescriptions[request.tone]})
@@ -1573,9 +1581,10 @@ Return JSON:
   try {
     const response = await openai.chat.completions.create({
       model: "gpt-5-mini",
+      reasoning_effort: "minimal",
       messages: [{ role: "user", content: prompt }],
       response_format: { type: "json_object" },
-      max_tokens: 6000,
+      max_completion_tokens: 6000,
     });
 
     const content = response.choices[0]?.message?.content;
@@ -1656,9 +1665,10 @@ Return JSON:
   try {
     const response = await openai.chat.completions.create({
       model: "gpt-5-mini",
+      reasoning_effort: "minimal",
       messages: [{ role: "user", content: prompt }],
       response_format: { type: "json_object" },
-      max_tokens: 8000,
+      max_completion_tokens: 8000,
     });
 
     const content = response.choices[0]?.message?.content;
@@ -1741,9 +1751,10 @@ Return JSON:
   try {
     const response = await openai.chat.completions.create({
       model: "gpt-5-mini",
+      reasoning_effort: "minimal",
       messages: [{ role: "user", content: prompt }],
       response_format: { type: "json_object" },
-      max_tokens: 8000,
+      max_completion_tokens: 8000,
     });
 
     const content = response.choices[0]?.message?.content;
@@ -1834,9 +1845,10 @@ Return JSON:
   try {
     const response = await openai.chat.completions.create({
       model: "gpt-5-mini",
+      reasoning_effort: "minimal",
       messages: [{ role: "user", content: prompt }],
       response_format: { type: "json_object" },
-      max_tokens: 4000,
+      max_completion_tokens: 4000,
     });
 
     const content = response.choices[0]?.message?.content;
@@ -1940,9 +1952,10 @@ Return JSON:
   try {
     const response = await openai.chat.completions.create({
       model: "gpt-5-mini",
+      reasoning_effort: "minimal",
       messages: [{ role: "user", content: prompt }],
       response_format: { type: "json_object" },
-      max_tokens: 6000,
+      max_completion_tokens: 6000,
     });
 
     const content = response.choices[0]?.message?.content;

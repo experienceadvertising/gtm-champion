@@ -10,8 +10,11 @@ import {
   buildCrossChannelStrategyPlan,
   buildStrategyMeta,
   markTopChannels,
+  normalizeConfidence,
   scoreChannelInsightQuality,
 } from "../services/channelStrategy";
+
+import { getAnalysisState } from "@shared/analysisState";
 
 const router = Router();
 
@@ -66,6 +69,8 @@ function withFallbackChannelInsights(
       generationStatus: insight.generationStatus || "generated",
       strategyMeta: {
         ...strategyMeta,
+        confidence: normalizeConfidence(strategyMeta.confidence),
+        evidence: strategyMeta.evidence.map(item => ({ ...item, confidence: normalizeConfidence(item.confidence) })),
         qualityScore: strategyMeta.qualityScore || quality.score,
         qualityIssues: strategyMeta.qualityIssues?.length ? strategyMeta.qualityIssues : quality.issues,
       },
@@ -127,7 +132,9 @@ router.get("/api/dashboard", requireAuth, async (req: Request, res: Response) =>
       storage.getChannelInsightsByCompanyId(company.id),
     ]);
 
-    const completedChannelInsights = company.name && !activeAnalysisRuns.has(company.id)
+    const channelCount = new Set(channelInsights.map(insight => insight.channelId)).size;
+    const { channelsPending } = getAnalysisState(company, channelCount);
+    const completedChannelInsights = company.name && !channelsPending
       ? withFallbackChannelInsights(company, channelInsights)
       : channelInsights;
     const icpDetails = company.siteProfile?.icpDetails;
@@ -165,6 +172,10 @@ router.get("/api/dashboard", requireAuth, async (req: Request, res: Response) =>
         pageSpeedData: company.pageSpeedData,
         lastScraped: company.lastScraped,
         siteProfile: company.siteProfile || null,
+      },
+      analysis: {
+        channelsPending,
+        persistedChannelCount: channelCount,
       },
       recommendations,
       weeklyIdeas,
@@ -601,6 +612,13 @@ export async function processCompanyAnalysis(
     console.log(`Analysis complete for ${coreAnalysis.companyName} in ${Date.now() - totalStart}ms`);
   } catch (error) {
     console.error(`Failed to process company analysis for company ${companyId}:`, error);
+    const current = activeAnalysisRuns.get(companyId);
+    if (current?.runId === runId) {
+      await storage.updateCompany(companyId, {
+        summary: "AI analysis failed. Please try again.",
+        lastScraped: new Date(),
+      }).catch(err => console.error("Failed to save analysis failure:", err));
+    }
   } finally {
     const entry = activeAnalysisRuns.get(companyId);
     if (entry?.runId === runId) activeAnalysisRuns.delete(companyId);
