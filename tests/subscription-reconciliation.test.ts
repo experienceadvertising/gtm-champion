@@ -1,6 +1,6 @@
 import test,{mock} from 'node:test';
 import assert from 'node:assert/strict';
-process.env.DATABASE_URL ||= 'postgresql://fixture:fixture@localhost:55473/isolated';
+process.env.DATABASE_URL = 'postgresql://fixture:fixture@localhost:55473/isolated';
 process.env.STRIPE_SECRET_KEY='sk_test_isolated_fixture';
 process.env.STRIPE_PUBLISHABLE_KEY='pk_test_isolated_fixture';
 test('subscription read revokes stale access, preserves manual grants and writes nothing on provider failure',async()=>{

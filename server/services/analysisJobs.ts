@@ -70,10 +70,9 @@ export function startAnalysisWorker() {
       if (!user) throw new Error('User unavailable');
       const { executeCompanyAnalysis } = await import('../routes/company');
       await executeCompanyAnalysis(owned.company_id, company.url, user.fullName, user.email, owned.token);
-      await jobPool.query(`UPDATE analysis_jobs SET status='completed',lease_until=NULL,updated_at=now() WHERE company_id=$1 AND token=$2`,[owned.company_id,owned.token]);
     } catch {
       console.error('Analysis job failed; previous results retained');
-      if (job) await jobPool.query(`UPDATE analysis_jobs SET status='failed',error='The audit could not finish. Your previous report is unchanged. Please retry.',lease_until=NULL,updated_at=now() WHERE company_id=$1 AND token=$2`,[job.company_id,job.token]).catch(() => {});
+      if (job) await jobPool.query(`UPDATE analysis_jobs SET status='failed',error='The audit could not finish. Your previous report is unchanged. Please retry.',lease_until=NULL,updated_at=now() WHERE company_id=$1 AND token=$2 AND status='running'`,[job.company_id,job.token]).catch(() => {});
     } finally { if (heartbeat) clearInterval(heartbeat); busy=false; }
   };
   const timer = setInterval(() => void tick(),5000); timer.unref(); void tick();
