@@ -1,3 +1,4 @@
+import { normalizeBudget, adjustBudget } from "@shared/budgetMath";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { DollarSign, Loader2, PieChart, RefreshCw, Save, Info } from "lucide-react";
@@ -56,7 +57,7 @@ export function BudgetAllocator() {
       if (!res.ok) return null;
       const data = await res.json();
       if (data && data.allocations) {
-        setAllocations(data.allocations);
+        setAllocations(normalizeBudget(data.totalBudget, data.allocations));
         setTotalBudget(data.totalBudget);
         setBudgetInput(data.totalBudget.toString());
       }
@@ -79,7 +80,7 @@ export function BudgetAllocator() {
       return res.json();
     },
     onSuccess: (data: BudgetAllocationData) => {
-      setAllocations(data.allocations);
+      setAllocations(normalizeBudget(data.totalBudget, data.allocations));
       setTotalBudget(data.totalBudget);
       setHasChanges(false);
       queryClient.invalidateQueries({ queryKey: ["/api/budget/latest"] });
@@ -124,24 +125,7 @@ export function BudgetAllocator() {
   }
 
   function handleSliderChange(index: number, newPercentage: number) {
-    const updated = [...allocations];
-    const diff = newPercentage - updated[index].percentage;
-    updated[index].percentage = newPercentage;
-    updated[index].amount = Math.round(totalBudget * newPercentage / 100);
-
-    const others = updated.filter((_, i) => i !== index && updated[i].percentage > 0);
-    const totalOtherPct = others.reduce((s, a) => s + a.percentage, 0);
-    if (totalOtherPct > 0) {
-      for (let i = 0; i < updated.length; i++) {
-        if (i !== index && updated[i].percentage > 0) {
-          const share = updated[i].percentage / totalOtherPct;
-          updated[i].percentage = Math.max(0, Math.round((updated[i].percentage - diff * share) * 10) / 10);
-          updated[i].amount = Math.round(totalBudget * updated[i].percentage / 100);
-        }
-      }
-    }
-
-    setAllocations(updated);
+    setAllocations(adjustBudget(totalBudget, allocations, index, newPercentage));
     setHasChanges(true);
   }
 

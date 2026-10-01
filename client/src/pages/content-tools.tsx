@@ -284,7 +284,7 @@ export default function ContentTools() {
                     variant="outline"
                     onClick={() => {
                       const allContent = linkedinPosts.map((post, idx) =>
-                        `--- Post ${idx + 1} ---\n\nHook: ${post.hook}\n\n${post.content}\n\nCTA: ${post.cta}`
+                        `--- Post ${idx + 1} ---\n\n${post.content}`
                       ).join("\n\n\n");
                       downloadAsTextFile(allContent, "linkedin-posts.txt");
                     }}
@@ -300,7 +300,7 @@ export default function ContentTools() {
                         <Button
                           size="icon"
                           variant="ghost"
-                          onClick={() => downloadAsTextFile(`Hook: ${post.hook}\n\n${post.content}\n\nCTA: ${post.cta}`, `linkedin-post-${idx + 1}.txt`)}
+                          onClick={() => downloadAsTextFile(post.content, `linkedin-post-${idx + 1}.txt`)}
                           data-testid={`button-download-linkedin-${idx}`}
                         >
                           <Download className="h-4 w-4" />
@@ -319,11 +319,9 @@ export default function ContentTools() {
                         </Button>
                       </div>
                       <Badge className="mb-3">Post {idx + 1}</Badge>
-                      <p className="text-sm font-medium text-primary mb-2">{post.hook}</p>
                       <pre className="whitespace-pre-wrap text-sm font-sans text-slate-700 mb-4">
                         {post.content}
                       </pre>
-                      <p className="text-xs text-muted-foreground italic">CTA: {post.cta}</p>
                     </CardContent>
                   </Card>
                 ))}

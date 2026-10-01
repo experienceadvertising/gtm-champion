@@ -1811,12 +1811,12 @@ HIGH-IMPACT CHANNELS: ${topCategories || "Not yet analyzed"}
 TOTAL MONTHLY BUDGET: $${totalBudget.toLocaleString()}
 
 ALLOCATION RULES:
-- Allocate across the 13 channels: SEO, LLMs, Organic Social, Content, Email Marketing, Paid Search, Paid Social, Partnerships, Events, Community, ABM, Outbound, Referral
+- Allocate across the 13 channels: SEO, LLMs, Organic Social, Content, Email Marketing, Paid Search, Paid Social, Retargeting, Partnerships, Community, ABM, Outbound, CRO
 - Weight allocation based on the company's GTM motion, channel priorities, and industry
 - High-priority channels should receive proportionally more budget
 - Some channels may receive $0 if they're low priority for this company
 - Each allocation must include a specific rationale tied to the company's situation
-- Each allocation must include an expectedROI range (e.g., "3-5x", "2-3x") estimating the return on investment for that channel
+- expectedROI must say "Unvalidated estimate" unless actual measured results were supplied. Never invent ROI, CPL benchmarks, customer results, or statistics. Write naturally and never use em dashes.
 - Each allocation must include timeToImpact (e.g., "1-2 months", "3-6 months") indicating when results start showing
 - Each allocation must include benchmarkCPL with an industry benchmark cost per lead for that channel (e.g., "$50-100")
 - Each allocation must include keyMetrics: an array of 2-3 specific metrics to track for this channel allocation

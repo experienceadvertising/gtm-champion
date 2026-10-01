@@ -4,6 +4,8 @@ import { budgetAllocationRequestSchema } from "@shared/schema";
 import { requireAuth, PREMIUM_REQUIRED_CODE } from "./middleware";
 import { generateBudgetAllocation, type BudgetScenario } from "../services/openai";
 
+import { normalizeBudget } from "@shared/budgetMath";
+
 const router = Router();
 
 const ALLOWED_SCENARIOS: BudgetScenario[] = ["conservative", "balanced", "aggressive"];
@@ -59,7 +61,7 @@ router.post("/api/budget/generate", requireAuth, async (req: Request, res: Respo
           recommendations,
           scenario,
         );
-        return { scenario, ...allocation };
+        return { scenario, ...allocation, allocations: normalizeBudget(parsed.data.totalBudget, allocation.allocations) };
       })
     );
 
@@ -121,14 +123,17 @@ router.post("/api/budget/save", requireAuth, async (req: Request, res: Response)
     }
 
     const { totalBudget, allocations } = req.body;
-    if (!totalBudget || !allocations || !Array.isArray(allocations)) {
+    if (!budgetAllocationRequestSchema.safeParse({ totalBudget }).success || !Array.isArray(allocations)) {
       return res.status(400).json({ error: "Invalid allocation data" });
     }
 
+    let normalized;
+    try { normalized = normalizeBudget(totalBudget, allocations); }
+    catch { return res.status(400).json({ error: "Invalid channel allocation amounts" }); }
     const saved = await storage.createBudgetAllocation({
       companyId: company.id,
       totalBudget,
-      allocations,
+      allocations: normalized,
     });
 
     res.json(saved);
