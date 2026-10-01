@@ -397,7 +397,7 @@ export default function LandingPage() {
                   </div>
                   <div className="flex items-center gap-1.5">
                     <Clock className="h-4 w-4 md:h-5 md:w-5 text-green-500" aria-hidden="true" />
-                    <span>Dashboard starts in 30-60 seconds</span>
+                    <span>Your audit runs in the background</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <Shield className="h-4 w-4 md:h-5 md:w-5 text-green-500" aria-hidden="true" />

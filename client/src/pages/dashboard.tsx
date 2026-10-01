@@ -878,7 +878,7 @@ export default function Dashboard() {
           <div>
             <h2 className="text-2xl font-bold font-display">Building Your GTM Strategy</h2>
             <p className="text-muted-foreground mt-2">
-              Your dashboard starts filling in within 30-60 seconds. Channel strategies continue appearing progressively and can take 1-2 minutes.
+              Your audit runs in the background and can take several minutes. Your dashboard will update when the report is ready.
             </p>
           </div>
 
@@ -1529,7 +1529,7 @@ export default function Dashboard() {
                       <AlertDialogHeader>
                         <AlertDialogTitle>Re-analyze your website?</AlertDialogTitle>
                         <AlertDialogDescription>
-                          This will re-crawl your website and generate fresh AI recommendations. The process takes 30-60 seconds. Your existing recommendations will be replaced with updated ones.
+                          This will re-crawl your website and generate fresh AI recommendations. It can take several minutes. Your current report stays available until the new report is ready.
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
