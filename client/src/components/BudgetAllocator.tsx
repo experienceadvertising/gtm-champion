@@ -1,5 +1,5 @@
 import { normalizeBudget, adjustBudget } from "@shared/budgetMath";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { DollarSign, Loader2, PieChart, RefreshCw, Save, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -55,15 +55,17 @@ export function BudgetAllocator() {
     queryFn: async () => {
       const res = await fetch("/api/budget/latest", { credentials: "include" });
       if (!res.ok) return null;
-      const data = await res.json();
-      if (data && data.allocations) {
-        setAllocations(normalizeBudget(data.totalBudget, data.allocations));
-        setTotalBudget(data.totalBudget);
-        setBudgetInput(data.totalBudget.toString());
-      }
-      return data;
+      return res.json();
     },
   });
+
+  useEffect(() => {
+    if (savedAllocation?.allocations?.length) {
+      setAllocations(normalizeBudget(savedAllocation.totalBudget, savedAllocation.allocations));
+      setTotalBudget(savedAllocation.totalBudget);
+      setBudgetInput(savedAllocation.totalBudget.toString());
+    }
+  }, [savedAllocation]);
 
   const generateMutation = useMutation({
     mutationFn: async (budget: number) => {
