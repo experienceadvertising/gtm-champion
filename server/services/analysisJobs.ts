@@ -1,13 +1,14 @@
 import { Pool } from 'pg';
 import { randomUUID } from 'node:crypto';
 export const jobPool = new Pool({ connectionString: process.env.DATABASE_URL, max: 3 });
-export async function ensureAnalysisJobs() {
+export async function ensureAnalysisJobs(recoverRecent = true) {
   await jobPool.query(`CREATE TABLE IF NOT EXISTS analysis_jobs (
     company_id integer PRIMARY KEY REFERENCES companies(id) ON DELETE CASCADE,
     status text NOT NULL DEFAULT 'queued', token uuid, lease_until timestamptz,
     attempts integer NOT NULL DEFAULT 0, error text, updated_at timestamptz NOT NULL DEFAULT now()
   )`);
   await jobPool.query(`CREATE INDEX IF NOT EXISTS analysis_jobs_pending_idx ON analysis_jobs(updated_at) WHERE status IN ('queued','running')`);
+  if (!recoverRecent) return;
   await jobPool.query(`UPDATE analysis_jobs j SET status='failed',error='This older audit needs a fresh retry.',updated_at=now() FROM companies c WHERE j.company_id=c.id AND j.status='queued' AND j.attempts=0 AND c.last_scraped<now()-interval '24 hours'`);
   await jobPool.query(`INSERT INTO analysis_jobs(company_id) SELECT id FROM companies WHERE name IS NULL AND summary='Analyzing your website...' AND last_scraped>now()-interval '24 hours' ON CONFLICT DO NOTHING`);
 }
