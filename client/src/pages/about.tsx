@@ -88,7 +88,7 @@ export default function AboutPage() {
                 GTM Champion was created by a digital marketing professional with deep expertise in 
                 B2B SaaS marketing, online advertising, and go-to-market strategy. With years of 
                 hands-on experience helping SaaS companies scale their marketing efforts, this tool 
-                was born from real-world challenges — the gap between having a great product and 
+                was born from real-world challenges , the gap between having a great product and 
                 knowing how to bring it to market effectively.
               </p>
               <p className="text-muted-foreground mb-6">
@@ -96,7 +96,7 @@ export default function AboutPage() {
                 world-class GTM strategy, not just the ones that can afford expensive consultants 
                 or large marketing teams. By combining AI with proven marketing frameworks, 
                 GTM Champion delivers the kind of strategic insight that previously required 
-                weeks of agency work — in seconds.
+                weeks of agency work , in seconds.
               </p>
               <a
                 href="https://www.linkedin.com/in/worldsgreatestmarketer/"

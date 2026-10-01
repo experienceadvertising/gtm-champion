@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, serial, timestamp, boolean, integer, jsonb, json, index, primaryKey } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, serial, timestamp, boolean, integer, jsonb, json, index, primaryKey, uuid } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -39,6 +39,8 @@ export type ChannelInsightGenerationStatus = "generated" | "fallback" | "pending
 export type ChannelInsightSourceType = "website" | "benchmark" | "best-practice" | "assumption";
 
 export interface ChannelInsightEvidence {
+  quote?: string;
+  verified?: boolean;
   claim: string;
   source: string;
   sourceType: ChannelInsightSourceType;
@@ -240,8 +242,8 @@ export const insertUserSchema = createInsertSchema(users).pick({
   companyUrl: true,
 }).extend({
   fullName: z.string().min(1, "Full name is required").max(200, "Full name must be 200 characters or less"),
-  email: z.string().email("Invalid email address").max(254, "Email must be 254 characters or less"),
-  password: z.string().min(8, "Password must be at least 8 characters").max(128, "Password must be 128 characters or less"),
+  email: z.string().trim().toLowerCase().email("Invalid email address").max(254, "Email must be 254 characters or less"),
+  password: z.string().min(8, "Password must be at least 8 characters").refine(value => new TextEncoder().encode(value).length <= 72, "Password must be 72 bytes or less"),
   companyUrl: z.string().url("Invalid company URL").max(2048, "URL must be 2048 characters or less").refine(value => {
     const protocol = new URL(value).protocol;
     return protocol === "http:" || protocol === "https:";
@@ -513,7 +515,7 @@ export const shareStrategySchema = z.object({
 });
 
 export const loginSchema = z.object({
-  email: z.string().email("Invalid email").max(254),
+  email: z.string().trim().toLowerCase().email("Invalid email").max(254),
   password: z.string().min(1, "Password is required").max(128),
 });
 
@@ -560,4 +562,26 @@ export const buyerPersonaUpdateSchema = z.object({
   preferredChannels: z.array(z.string().max(100)).max(20).optional(),
   objections: z.array(z.string().max(300)).max(20).optional(),
   dayInTheLife: z.string().max(2000).optional(),
+});
+
+// Additive operational tables are declared here so future schema tooling preserves them.
+export const analysisJobs = pgTable('analysis_jobs', {
+  companyId: integer('company_id').primaryKey().references(() => companies.id,{onDelete:'cascade'}),
+  status: text('status').notNull().default('queued'),
+  token: uuid('token'),
+  leaseUntil: timestamp('lease_until',{withTimezone:true}),
+  attempts: integer('attempts').notNull().default(0),
+  error: text('error'),
+  updatedAt: timestamp('updated_at',{withTimezone:true}).notNull().defaultNow(),
+});
+export const passwordRecovery = pgTable('password_recovery', {
+  userId: varchar('user_id').primaryKey().references(() => users.id,{onDelete:'cascade'}),
+  tokenHash: text('token_hash').notNull().unique(),
+  expiresAt: timestamp('expires_at',{withTimezone:true}).notNull(),
+  requestedAt: timestamp('requested_at',{withTimezone:true}).notNull().defaultNow(),
+});
+export const scheduledRuns = pgTable('scheduled_runs', {
+  jobKey: text('job_key').primaryKey(),
+  claimedAt: timestamp('claimed_at',{withTimezone:true}).notNull().defaultNow(),
+  status: text('status').notNull().default('claimed'),
 });

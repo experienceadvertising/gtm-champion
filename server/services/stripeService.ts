@@ -1,4 +1,5 @@
 import { storage } from '../storage';
+import { selectPremiumSubscription } from './subscriptionEntitlement';
 import { getUncachableStripeClient } from './stripeClient';
 import { sql } from 'drizzle-orm';
 import { db } from '../db';
@@ -123,10 +124,31 @@ export class StripeService {
   }
 
   async getSubscriptionByCustomerId(customerId: string) {
-    const result = await db.execute(
-      sql`SELECT * FROM stripe.subscriptions WHERE customer = ${customerId} AND status IN ('active', 'trialing') ORDER BY created DESC LIMIT 1`
-    );
-    return result.rows[0] || null;
+    // Read Stripe directly so delayed or reordered sync events cannot revoke another plan.
+    const stripe = await getUncachableStripeClient();
+    const subscriptions = [];
+    const products = new Map<string, Awaited<ReturnType<typeof stripe.products.retrieve>>>();
+    for await (const subscription of stripe.subscriptions.list({ customer: customerId, status: 'all', limit: 100 })) {
+      if (!['active','trialing'].includes(subscription.status)) continue;
+      for (const item of subscription.items.data) {
+        if (typeof item.price.product === 'string') {
+          const id = item.price.product;
+          if (!products.has(id)) products.set(id,await stripe.products.retrieve(id));
+          item.price.product = products.get(id)!;
+        }
+      }
+      subscriptions.push(subscription);
+    }
+    return selectPremiumSubscription(subscriptions);
+  }
+
+  async reconcileUser(user: { id: string; stripeCustomerId: string | null; isPremium: boolean }) {
+    if (!user.stripeCustomerId) return { subscription: null, isPremium: user.isPremium };
+    const subscription = await this.getSubscriptionByCustomerId(user.stripeCustomerId);
+    const isPremium = Boolean(subscription);
+    if (isPremium !== user.isPremium) await storage.updateUserPremiumStatus(user.id, isPremium);
+    if (subscription) await storage.updateUserStripeInfo(user.id, { stripeSubscriptionId: subscription.id });
+    return { subscription, isPremium };
   }
 }
 

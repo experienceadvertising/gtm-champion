@@ -151,7 +151,7 @@ export function PushPermissionPrompt({ triggered }: PushPermissionPromptProps) {
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-foreground">Stay on top of your GTM goals</p>
             <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
-              Get instant push alerts when your GTM Agent checks in — stall nudges, win celebrations, and weekly digests.
+              Get instant push alerts when your GTM Agent checks in , stall nudges, win celebrations, and weekly digests.
             </p>
             <div className="flex items-center gap-2 mt-3">
               <Button

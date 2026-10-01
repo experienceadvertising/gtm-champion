@@ -1,3 +1,4 @@
+import { requestPageSpeed } from './pageSpeedRequest';
 import { z } from "zod";
 import type { ChannelInsightStrategyMeta } from "@shared/schema";
 import {
@@ -373,8 +374,8 @@ Extract and return JSON:
       primaryCategory: result.primaryCategory || '',
       features: result.features || [],
       pricingTiers: result.pricingTiers || [],
-      testimonials: result.testimonials || [],
-      competitors: result.competitors || [],
+      testimonials: (result.testimonials || []).filter((item: {quote: string}) => typeof item.quote === "string" && scrapedContent.includes(item.quote)),
+      competitors: (result.competitors || []).filter((name: string) => typeof name === "string" && scrapedContent.toLowerCase().includes(name.toLowerCase())),
       brandVoice: result.brandVoice || '',
       existingChannels: result.existingChannels || [],
       icpDetails: result.icpDetails || { persona: '', companySize: '', industry: '', painPoints: [] },
@@ -434,18 +435,8 @@ async function captureWithScreenshotApi(normalizedUrl: string): Promise<string |
 }
 
 async function captureWithPageSpeed(normalizedUrl: string): Promise<string | null> {
-  const googleScreenshotUrl = `https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=${encodeURIComponent(normalizedUrl)}&category=PERFORMANCE&strategy=DESKTOP`;
-
-  const response = await fetch(googleScreenshotUrl, {
-    signal: AbortSignal.timeout(20000),
-  });
-
-  if (!response.ok) {
-    console.log(`PageSpeed API returned ${response.status}`);
-    return null;
-  }
-
-  const data = await response.json() as Record<string, unknown>;
+  const data = await requestPageSpeed(normalizedUrl);
+  if (!data) return null;
   const lighthouseResult = data?.lighthouseResult as Record<string, unknown> | undefined;
   const audits = lighthouseResult?.audits as Record<string, Record<string, unknown>> | undefined;
   const screenshot = (audits?.['final-screenshot']?.details as Record<string, unknown>)?.data as string | undefined;
@@ -515,21 +506,9 @@ export async function fetchPageSpeedInsights(url: string): Promise<PageSpeedData
     const normalizedUrl = url.startsWith("http") ? url : `https://${url}`;
     await assertPublicHttpUrl(normalizedUrl);
 
-    const apiUrl = `https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=${encodeURIComponent(normalizedUrl)}&category=PERFORMANCE&strategy=DESKTOP`;
-
-    console.log(`Fetching PageSpeed insights for ${normalizedUrl}...`);
     const startTime = Date.now();
-
-    const response = await fetch(apiUrl, {
-      signal: AbortSignal.timeout(30000),
-    });
-
-    if (!response.ok) {
-      console.log(`PageSpeed API returned ${response.status}, skipping insights`);
-      return null;
-    }
-
-    const data = await response.json() as Record<string, unknown>;
+    const data = await requestPageSpeed(normalizedUrl);
+    if (!data) return null;
     const lighthouse = data?.lighthouseResult as Record<string, unknown> | undefined;
     if (!lighthouse) {
       console.log('No Lighthouse data in PageSpeed response');
@@ -547,7 +526,8 @@ export async function fetchPageSpeedInsights(url: string): Promise<PageSpeedData
     const categories = (lighthouse.categories || {}) as Record<string, { score?: number }>;
     const audits = (lighthouse.audits || {}) as Record<string, LighthouseAudit>;
 
-    const performanceScore = Math.round((categories.performance?.score || 0) * 100);
+    if (typeof categories.performance?.score !== 'number') return null;
+    const performanceScore = Math.round(categories.performance.score * 100);
 
     const lcpMs = audits['largest-contentful-paint']?.numericValue || 0;
     const fidMs = audits['max-potential-fid']?.numericValue || 0;
@@ -560,7 +540,7 @@ export async function fetchPageSpeedInsights(url: string): Promise<PageSpeedData
       lcp: { value: Math.round(lcpMs), rating: extractMetricRating(lcpMs, [2500, 4000]) },
       fid: { value: Math.round(fidMs), rating: extractMetricRating(fidMs, [100, 300]) },
       cls: { value: Math.round(clsVal * 1000) / 1000, rating: extractMetricRating(clsVal, [0.1, 0.25]) },
-      inp: { value: Math.round(inpMs), rating: extractMetricRating(inpMs, [200, 500]) },
+      inp: { value: Math.round(inpMs), rating: inpMs === 0 ? 'unavailable' : extractMetricRating(inpMs, [200, 500]) },
       fcp: { value: Math.round(fcpMs), rating: extractMetricRating(fcpMs, [1800, 3000]) },
       ttfb: { value: Math.round(ttfbMs), rating: extractMetricRating(ttfbMs, [800, 1800]) },
     };
@@ -1433,7 +1413,7 @@ export interface ContentContext {
 
 function buildProfileContext(ctx: ContentContext): string {
   const p = ctx.siteProfile;
-  if (!p) return '';
+  if (!p) return '\nProduct details are unavailable. Do not invent offers, prices, button labels, product workflows or customer proof. Use a generic CTA.\n';
   const parts = [];
   if (p.productNames.length) parts.push(`- Products: ${p.productNames.join(', ')}`);
   if (p.features.length) parts.push(`- Key Features: ${p.features.slice(0, 6).join(', ')}`);
@@ -1441,10 +1421,10 @@ function buildProfileContext(ctx: ContentContext): string {
   if (p.competitors.length) parts.push(`- Competitors: ${p.competitors.join(', ')}`);
   if (p.keyDifferentiators.length) parts.push(`- Differentiators: ${p.keyDifferentiators.join(', ')}`);
   if (p.brandVoice) parts.push(`- Brand Voice: ${p.brandVoice}`);
-  if (p.testimonials.length) parts.push(`- Customer Quotes: ${p.testimonials.slice(0, 3).map(t => `"${t.quote.slice(0, 80)}" — ${t.author}`).join(' | ')}`);
+  // Extraction is not sufficient evidence to repeat customer quotes.
   if (p.icpDetails?.persona) parts.push(`- Target Audience: ${p.icpDetails.persona}`);
   if (!parts.length) return '';
-  return `\nCOMPANY PROFILE (use these REAL details in the content):\n${parts.join('\n')}\n`;
+  return `\nEXTRACTED COMPANY CONTEXT (unverified AI extraction, not proof):\n${parts.join('\n')}\nDo not invent exact button labels, navigation steps, trial lengths, discounts, guarantees, customer quotes or numerical outcomes. Use a plain generic CTA. Features and prices require human confirmation before publication.\n`;
 }
 
 export async function generateLinkedInPost(

@@ -1,3 +1,5 @@
+import { publishAnalysis } from '../services/analysisPublication';
+import { groundEvidence } from '../services/grounding';
 import { Router, type Request, type Response } from "express";
 import { storage } from "../storage";
 import { icpUpdateSchema, recommendationStatusSchema } from "@shared/schema";
@@ -14,17 +16,14 @@ import {
   scoreChannelInsightQuality,
 } from "../services/channelStrategy";
 
+import { enqueueAnalysis, enqueueReanalysis, analysisJobState, assertAnalysisLease, jobPool } from "../services/analysisJobs";
 import { getAnalysisState } from "@shared/analysisState";
 
 const router = Router();
 
 const CHANNEL_IDS = ['SEO', 'Content', 'LLMs', 'CRO', 'Email Marketing', 'Paid Search', 'Paid Social', 'Organic Social', 'Retargeting', 'Community', 'ABM', 'Partnerships', 'Outbound'];
 
-const ANALYSIS_TTL_MS = 10 * 60 * 1000;
-const ANALYSIS_CLEANUP_INTERVAL_MS = 5 * 60 * 1000;
-const activeAnalysisRuns = new Map<number, { runId: string; startedAt: number }>();
-
-function withFallbackChannelInsights(
+export function withFallbackChannelInsights(
   company: { id: number; name: string | null; summary: string | null; gtmMotion: string | null; siteProfile?: SiteProfile | null },
   channelInsights: Awaited<ReturnType<typeof storage.getChannelInsightsByCompanyId>>,
 ) {
@@ -70,7 +69,12 @@ function withFallbackChannelInsights(
       strategyMeta: {
         ...strategyMeta,
         confidence: normalizeConfidence(strategyMeta.confidence),
-        evidence: strategyMeta.evidence.map(item => ({ ...item, confidence: normalizeConfidence(item.confidence) })),
+        evidence: strategyMeta.evidence.map(item => ({ ...item,
+          confidence: item.verified ? normalizeConfidence(item.confidence) : Math.min(40,normalizeConfidence(item.confidence)),
+          sourceType: item.verified ? item.sourceType : 'assumption',
+          url: item.verified ? item.url : undefined,
+          source: item.verified ? item.source : 'AI planning suggestion, source not independently verified',
+        })),
         qualityScore: strategyMeta.qualityScore || quality.score,
         qualityIssues: strategyMeta.qualityIssues?.length ? strategyMeta.qualityIssues : quality.issues,
       },
@@ -101,16 +105,6 @@ function withFallbackChannelInsights(
   return markTopChannels(completed);
 }
 
-setInterval(() => {
-  const now = Date.now();
-  for (const [companyId, entry] of Array.from(activeAnalysisRuns.entries())) {
-    if (now - entry.startedAt > ANALYSIS_TTL_MS) {
-      console.log(`Cleaning up stale analysis run for company ${companyId} (started ${Math.round((now - entry.startedAt) / 1000)}s ago)`);
-      activeAnalysisRuns.delete(companyId);
-    }
-  }
-}, ANALYSIS_CLEANUP_INTERVAL_MS).unref();
-
 router.get("/api/dashboard", requireAuth, async (req: Request, res: Response) => {
   try {
     const userId = req.session.userId!;
@@ -133,7 +127,10 @@ router.get("/api/dashboard", requireAuth, async (req: Request, res: Response) =>
     ]);
 
     const channelCount = new Set(channelInsights.map(insight => insight.channelId)).size;
-    const { channelsPending } = getAnalysisState(company, channelCount);
+    const job = await analysisJobState(company.id);
+    const jobPending = job?.status === "queued" || job?.status === "running";
+    const { channelsPending: legacyPending } = getAnalysisState(company, channelCount);
+    const channelsPending = job ? jobPending : legacyPending;
     const completedChannelInsights = company.name && !channelsPending
       ? withFallbackChannelInsights(company, channelInsights)
       : channelInsights;
@@ -176,6 +173,8 @@ router.get("/api/dashboard", requireAuth, async (req: Request, res: Response) =>
       analysis: {
         channelsPending,
         persistedChannelCount: channelCount,
+        status: job?.status || null,
+        error: job?.error || null,
       },
       recommendations,
       weeklyIdeas,
@@ -283,7 +282,6 @@ router.patch("/api/recommendations/:id/status", requireAuth, async (req: Request
 const REANALYSIS_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 
 router.post("/api/retry-analysis/:companyId", requireAuth, async (req: Request, res: Response) => {
-  let reservedRunId: string | undefined;
   try {
     const { companyId } = req.params;
     const cid = parseInt(companyId);
@@ -299,7 +297,9 @@ router.post("/api/retry-analysis/:companyId", requireAuth, async (req: Request, 
       return res.status(401).json({ error: "User not found" });
     }
 
-    if (!user.isPremium && company.lastReanalyzedAt) {
+    const previousJob = await analysisJobState(cid);
+    const retryingFailure = previousJob?.status === "failed";
+    if (!retryingFailure && !user.isPremium && company.lastReanalyzedAt) {
       const elapsed = Date.now() - company.lastReanalyzedAt.getTime();
       if (elapsed < REANALYSIS_WINDOW_MS) {
         const nextEligible = new Date(company.lastReanalyzedAt.getTime() + REANALYSIS_WINDOW_MS);
@@ -313,26 +313,12 @@ router.post("/api/retry-analysis/:companyId", requireAuth, async (req: Request, 
       }
     }
 
-    if (activeAnalysisRuns.has(cid)) {
+    const existingJob = await analysisJobState(cid);
+    if (["queued", "running"].includes(existingJob?.status)) {
       return res.status(409).json({ error: "An analysis is already running for this company." });
     }
 
     const claimedAt = new Date();
-    if (!user.isPremium) {
-      const claimed = await storage.claimFreeReanalysis(
-        cid,
-        new Date(claimedAt.getTime() - REANALYSIS_WINDOW_MS),
-        claimedAt,
-      );
-      if (!claimed) {
-        return res.status(409).json({
-          error: "A re-analysis was already started. Refresh the dashboard for its progress.",
-        });
-      }
-    }
-
-    reservedRunId = `${cid}-${claimedAt.getTime()}`;
-    activeAnalysisRuns.set(cid, { runId: reservedRunId, startedAt: claimedAt.getTime() });
 
     try {
       const [recommendations, channelInsights, weeklyIdeas, personas, budget] = await Promise.all([
@@ -359,270 +345,45 @@ router.post("/api/retry-analysis/:companyId", requireAuth, async (req: Request, 
       console.error("Failed to snapshot strategy before re-analysis:", snapshotError);
     }
 
-    await storage.updateCompany(cid, {
-      summary: "Analyzing your website...",
-      name: null,
-      gtmMotion: null,
-      icpScore: null,
-      lastScraped: new Date(),
-      lastReanalyzedAt: claimedAt,
-    });
-
-    processCompanyAnalysis(cid, company.url, user.fullName, user.email, reservedRunId).catch(
-      err => console.error("Retry analysis failed:", err)
-    );
+    await enqueueReanalysis(cid,user.isPremium,new Date(claimedAt.getTime()-REANALYSIS_WINDOW_MS));
 
     res.json({ message: "Analysis restarted" });
   } catch (error: unknown) {
-    if (reservedRunId) {
-      const cid = parseInt(req.params.companyId);
-      const entry = activeAnalysisRuns.get(cid);
-      if (entry?.runId === reservedRunId) activeAnalysisRuns.delete(cid);
-    }
+    if (error instanceof Error && /already running|already been used/.test(error.message)) return res.status(409).json({error:error.message});
     console.error("Retry analysis error:", error);
     res.status(500).json({ error: "Failed to retry analysis" });
   }
 });
 
-export async function processCompanyAnalysis(
-  companyId: number,
-  companyUrl: string,
-  fullName: string,
-  email: string,
-  reservedRunId?: string,
-): Promise<void> {
-  const totalStart = Date.now();
-  const runId = reservedRunId || `${companyId}-${Date.now()}`;
-  try {
-    activeAnalysisRuns.set(companyId, { runId, startedAt: totalStart });
-    console.log(`Starting analysis for ${companyUrl} (run: ${runId})...`);
+export async function processCompanyAnalysis(companyId: number, _url: string, _name: string, _email: string): Promise<void> {
+  await enqueueAnalysis(companyId);
+}
 
-    await Promise.all([
-      storage.deleteRecommendationsByCompanyId(companyId),
-      storage.deleteWeeklyIdeasByCompanyId(companyId),
-      storage.deleteChannelInsightsByCompanyId(companyId),
-      storage.updateCompany(companyId, {
-        screenshotUrl: null,
-        visualAnalysis: null,
-        pageSpeedData: null,
-      }),
-    ]);
-
-    let scrapedSite: Awaited<ReturnType<typeof collectCompanyWebsiteSignals>>["scrapedSite"];
-    let screenshotData: string | null;
-    let pageSpeedData: Awaited<ReturnType<typeof collectCompanyWebsiteSignals>>["pageSpeedData"];
-    try {
-      ({ scrapedSite, screenshotData, pageSpeedData } = await collectCompanyWebsiteSignals(companyUrl));
-    } catch (err) {
-      if (err instanceof UnsafePublicUrlError) {
-        console.error("Analysis stopped: unsafe company website URL:", err);
-        await storage.updateCompany(companyId, {
-          summary: "We couldn't analyze your website. Please check the URL and try again.",
-          lastScraped: new Date(),
-        });
-        return;
-      }
-      throw err;
-    }
-    const websiteContent = scrapedSite?.combinedContent || null;
-    console.log(`Phase 1 done in ${Date.now() - totalStart}ms (deep scrape: ${Object.keys(scrapedSite?.pages || {}).length} pages + screenshot + pagespeed)`);
-
-    if (!websiteContent) {
-      await storage.updateCompany(companyId, {
-        summary: "We couldn't analyze your website. Please check the URL and try again.",
-        lastScraped: new Date(),
-      });
-      return;
-    }
-
-    let visualInsights = '';
-    let coreAnalysis;
-    let siteProfile: SiteProfile | null;
-
-    try {
-      const phase2Start = Date.now();
-
-      const [visualResult, profileResult] = await Promise.all([
-        screenshotData
-          ? analyzeScreenshot(screenshotData, companyUrl).catch((err) => {
-              console.error("Visual analysis failed:", err);
-              return '';
-            })
-          : Promise.resolve(''),
-        extractCompanyProfile(websiteContent, companyUrl).catch((err) => {
-          console.error("Profile extraction failed:", err);
-          return null;
-        }),
-      ]);
-
-      visualInsights = visualResult;
-      siteProfile = profileResult;
-      console.log(`Phase 2a done in ${Date.now() - phase2Start}ms (profile + visual)`);
-
-      const phase2bStart = Date.now();
-      coreAnalysis = await analyzeCompanyFast(websiteContent, companyUrl, visualInsights, siteProfile || undefined).catch((err) => {
-        console.error("Core analysis failed:", err);
-        return null;
-      });
-      console.log(`Phase 2b done in ${Date.now() - phase2bStart}ms (core analysis with profile)`);
-    } catch (aiError: unknown) {
-      const errorMessage = aiError instanceof Error ? aiError.message : String(aiError);
-      console.error("AI analysis failed:", errorMessage);
-      await storage.updateCompany(companyId, {
-        summary: `AI analysis failed: ${errorMessage.substring(0, 100)}. Please refresh to try again.`,
-        lastScraped: new Date(),
-      });
-      return;
-    }
-
-    if (!coreAnalysis) {
-      await storage.updateCompany(companyId, {
-        summary: "AI analysis failed. Please try again.",
-        lastScraped: new Date(),
-      });
-      return;
-    }
-
-    await storage.updateCompany(companyId, {
-      name: coreAnalysis.companyName,
-      summary: coreAnalysis.summary,
-      gtmMotion: coreAnalysis.gtmMotion,
-      icpScore: coreAnalysis.icpScore,
-      screenshotUrl: screenshotData || null,
-      visualAnalysis: visualInsights || null,
-      pageSpeedData: pageSpeedData || null,
-      siteProfile: siteProfile || null,
-      lastScraped: new Date(),
-    });
-
-    if (coreAnalysis.recommendations && Array.isArray(coreAnalysis.recommendations)) {
-      await Promise.all(coreAnalysis.recommendations.map((rec: { category?: string; title?: string; description?: string; impact?: string; effort?: string; gtmFunnel?: string }) =>
-        storage.createRecommendation({
-          companyId,
-          category: rec.category || "General",
-          title: rec.title || "Recommendation",
-          description: rec.description || "",
-          impact: rec.impact || "Medium",
-          effort: rec.effort || "Medium",
-          status: "New",
-          gtmFunnel: rec.gtmFunnel || "both",
-        }).catch((err) => console.error("Failed to save recommendation:", err))
-      ));
-    }
-
-    if (coreAnalysis.weeklyIdeas && Array.isArray(coreAnalysis.weeklyIdeas)) {
-      await Promise.all(coreAnalysis.weeklyIdeas.map((idea: { title?: string; description?: string; type?: string }) =>
-        storage.createWeeklyIdea({
-          companyId,
-          title: idea.title || "Content Idea",
-          description: idea.description || "",
-          type: idea.type || "Blog Post",
-        }).catch((err) => console.error("Failed to save weekly idea:", err))
-      ));
-    }
-
-    console.log(`Core results saved in ${Date.now() - totalStart}ms — dashboard is now usable`);
-
-    const currentRunId = runId;
-    const saveBatch = async (insights: Array<{
-      channelId?: string;
-      priority?: string;
-      whyItMatters?: string;
-      companyFitSummary?: string;
-      heroStat?: { value: string; label: string };
-      topKpis?: string[];
-      strategicPillars?: Array<{ title: string; objective: string; tactics: string[]; measurement: string }>;
-      quickWins?: Array<{ title: string; steps: string[]; effort: string; duration: string }>;
-      resources?: string[];
-      generationStatus?: "generated" | "fallback" | "pending" | "failed";
-      strategyMeta?: ChannelInsightStrategyMeta;
-    }>) => {
-      const entry = activeAnalysisRuns.get(companyId);
-      if (!entry || entry.runId !== currentRunId) {
-        console.log(`  Skipping stale batch save (run ${currentRunId} superseded)`);
-        return;
-      }
-      await Promise.all(insights.map((insight) =>
-        storage.createChannelInsight({
-          companyId,
-          channelId: insight.channelId || "General",
-          priority: insight.priority || "Medium",
-          whyItMatters: insight.whyItMatters || "",
-          companyFitSummary: insight.companyFitSummary || "",
-          heroStat: insight.heroStat || { value: "N/A", label: "Stat" },
-          topKpis: insight.topKpis || [],
-          strategicPillars: insight.strategicPillars || [],
-          quickWins: insight.quickWins || [],
-          resources: insight.resources || [],
-          generationStatus: insight.generationStatus || "generated",
-          strategyMeta: insight.strategyMeta || null,
-        }).catch((err) => console.error("Failed to save channel insight:", err))
-      ));
-      console.log(`  Saved ${insights.length} channel insights to DB (progressive)`);
-    };
-
-    try {
-      const insights = await analyzeCompanyChannels(
-        coreAnalysis.companyName,
-        coreAnalysis.summary,
-        coreAnalysis.gtmMotion,
-        websiteContent,
-        siteProfile || undefined,
-        saveBatch
-      );
-      console.log(`All channel insights complete: ${insights?.length || 0} channels in ${Date.now() - totalStart}ms`);
-    } catch (err: any) {
-      console.error("Channel insights failed, saving fallback channel playbooks:", err?.message || err);
-      await saveBatch(CHANNEL_IDS.map((channelId) => fallbackChannelInsight(
-        channelId,
-        coreAnalysis.companyName || "Your Company",
-        coreAnalysis.summary || "",
-        coreAnalysis.gtmMotion || "",
-        siteProfile,
-        "The channel strategy generation job failed before personalized strategies could be saved.",
-      )));
-    } finally {
-      const entry = activeAnalysisRuns.get(companyId);
-      if (entry && entry.runId === currentRunId) {
-        activeAnalysisRuns.delete(companyId);
-      }
-    }
-
-    try {
-      const sender = await storage.getUserByEmail(email);
-      await sendWelcomeEmail({
-        toEmail: email,
-        userName: fullName,
-        companyName: coreAnalysis.companyName || "Your Company",
-        summary: coreAnalysis.summary || "Your GTM strategy is ready!",
-        gtmMotion: coreAnalysis.gtmMotion || "Growth",
-        dashboardUrl: "https://gtmchampion.com/dashboard",
-        unsubscribeToken: sender?.unsubscribeToken ?? undefined,
-        recommendations: (coreAnalysis.recommendations || []).map((r: { category?: string; title?: string; impact?: string }) => ({
-          category: r.category || "General",
-          title: r.title || "Recommendation",
-          impact: r.impact || "Medium",
-        })),
-      });
-      console.log(`Welcome email sent to ${email} after channel strategies completed`);
-    } catch (err) {
-      console.error("Failed to send welcome email:", err);
-    }
-
-    console.log(`Analysis complete for ${coreAnalysis.companyName} in ${Date.now() - totalStart}ms`);
-  } catch (error) {
-    console.error(`Failed to process company analysis for company ${companyId}:`, error);
-    const current = activeAnalysisRuns.get(companyId);
-    if (current?.runId === runId) {
-      await storage.updateCompany(companyId, {
-        summary: "AI analysis failed. Please try again.",
-        lastScraped: new Date(),
-      }).catch(err => console.error("Failed to save analysis failure:", err));
-    }
-  } finally {
-    const entry = activeAnalysisRuns.get(companyId);
-    if (entry?.runId === runId) activeAnalysisRuns.delete(companyId);
+export async function executeCompanyAnalysis(companyId: number, companyUrl: string, fullName: string, email: string, token: string): Promise<void> {
+  const { scrapedSite, screenshotData, pageSpeedData } = await collectCompanyWebsiteSignals(companyUrl);
+  const websiteContent = scrapedSite?.combinedContent;
+  if (!websiteContent) throw new Error('Website unavailable');
+  const [visualInsights, siteProfile] = await Promise.all([
+    screenshotData ? analyzeScreenshot(screenshotData,companyUrl).catch(() => '') : Promise.resolve(''),
+    extractCompanyProfile(websiteContent,companyUrl).catch(() => null),
+  ]);
+  const core = await analyzeCompanyFast(websiteContent,companyUrl,visualInsights,siteProfile || undefined);
+  if (!core?.companyName || !core.summary || !core.recommendations?.length) throw new Error('Incomplete core analysis');
+  await assertAnalysisLease(companyId,token);
+  let insights: Awaited<ReturnType<typeof analyzeCompanyChannels>>;
+  try { insights = await analyzeCompanyChannels(core.companyName,core.summary,core.gtmMotion,websiteContent,siteProfile || undefined); }
+  catch { insights = []; }
+  const byChannel = new Map(insights.map(item => [item.channelId,item]));
+  const complete = CHANNEL_IDS.map(channelId => byChannel.get(channelId) || fallbackChannelInsight(channelId,core.companyName,core.summary,core.gtmMotion,siteProfile,'Personalized generation was unavailable.'));
+  for (const insight of complete) {
+    if (insight.strategyMeta) insight.strategyMeta.evidence = groundEvidence(insight.strategyMeta.evidence,websiteContent,companyUrl);
   }
+  await assertAnalysisLease(companyId,token);
+  await publishAnalysis(companyId,token,{core,screenshotData,visualInsights,pageSpeedData,siteProfile,complete});
+  try {
+    const sender = await storage.getUserByEmail(email);
+    await sendWelcomeEmail({toEmail:email,userName:fullName,companyName:core.companyName,summary:core.summary,gtmMotion:core.gtmMotion,dashboardUrl:'https://gtmchampion.com/dashboard',unsubscribeToken:sender?.unsubscribeToken || undefined,recommendations:core.recommendations});
+  } catch { console.error('Report email unavailable; saved report remains accessible'); }
 }
 
 export default router;

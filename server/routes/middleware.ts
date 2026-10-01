@@ -31,6 +31,12 @@ export async function requirePremium(req: Request, res: Response, next: NextFunc
   }
   try {
     const user = await storage.getUser(req.session.userId);
+    if (user?.stripeCustomerId) {
+      const { stripeService } = await import('../services/stripeService');
+      // Provider failures preserve the last known entitlement; signed webhooks retry.
+      try { user.isPremium = (await stripeService.reconcileUser(user)).isPremium; }
+      catch { console.error('Stripe entitlement verification unavailable; preserving last known access'); }
+    }
     if (!user?.isPremium) {
       req.session.isPremium = false;
       return res.status(403).json({

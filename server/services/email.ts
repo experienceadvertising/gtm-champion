@@ -83,11 +83,11 @@ export async function sendWelcomeEmail(data: WelcomeEmailData): Promise<void> {
             return `
           <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px 20px; margin-bottom: 10px; border-left: 4px solid ${colors.dot};">
             <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
-              <span style="background: ${colors.bg}; color: ${colors.text}; font-size: 11px; font-weight: 600; text-transform: uppercase; padding: 2px 8px; border-radius: 4px; letter-spacing: 0.05em;">${rec.impact} Impact</span>
+              <span style="background: ${colors.bg}; color: ${colors.text}; font-size: 11px; font-weight: 600; text-transform: uppercase; padding: 2px 8px; border-radius: 4px; letter-spacing: 0.05em;">${escapeHtml(rec.impact)} Impact</span>
               <span style="color: #94a3b8; font-size: 11px;">·</span>
-              <span style="color: #6366f1; font-size: 12px; font-weight: 500;">${rec.category}</span>
+              <span style="color: #6366f1; font-size: 12px; font-weight: 500;">${escapeHtml(rec.category)}</span>
             </div>
-            <p style="margin: 0; color: #1e293b; font-size: 14px; line-height: 1.5; font-weight: 500;">${rec.title}</p>
+            <p style="margin: 0; color: #1e293b; font-size: 14px; line-height: 1.5; font-weight: 500;">${escapeHtml(rec.title)}</p>
           </div>`;
           }).join('')}
         </div>` : '';
@@ -98,7 +98,7 @@ export async function sendWelcomeEmail(data: WelcomeEmailData): Promise<void> {
           <div style="display: flex; flex-wrap: wrap; gap: 8px;">
             ${uniqueChannels.map(ch => {
               const channelParam = encodeURIComponent(ch);
-              return `<a href="${data.dashboardUrl}?channel=${channelParam}" style="display: inline-block; background: #eef2ff; color: #4338ca; font-size: 13px; font-weight: 500; padding: 6px 14px; border-radius: 6px; text-decoration: none; border: 1px solid #c7d2fe;">${ch}</a>`;
+              return `<a href="${escapeHtml(data.dashboardUrl)}?channel=${channelParam}" style="display: inline-block; background: #eef2ff; color: #4338ca; font-size: 13px; font-weight: 500; padding: 6px 14px; border-radius: 6px; text-decoration: none; border: 1px solid #c7d2fe;">${escapeHtml(ch)}</a>`;
             }).join('')}
           </div>
         </div>` : '';
@@ -120,14 +120,14 @@ export async function sendWelcomeEmail(data: WelcomeEmailData): Promise<void> {
       </div>
 
       <div style="padding: 36px 32px 20px 32px;">
-        <p style="color: #475569; margin: 0 0 4px 0; font-size: 15px;">Hi ${data.userName},</p>
-        <h1 style="color: #0f172a; font-size: 22px; margin: 16px 0 8px 0; font-weight: 700; letter-spacing: -0.02em;">We've analyzed <span style="color: #6366f1;">${data.companyName}</span></h1>
+        <p style="color: #475569; margin: 0 0 4px 0; font-size: 15px;">Hi ${escapeHtml(data.userName)},</p>
+        <h1 style="color: #0f172a; font-size: 22px; margin: 16px 0 8px 0; font-weight: 700; letter-spacing: -0.02em;">We've analyzed <span style="color: #6366f1;">${escapeHtml(data.companyName)}</span></h1>
         <p style="color: #64748b; margin: 0 0 24px 0; font-size: 15px; line-height: 1.6;">Our AI reviewed your website and built a personalized GTM playbook across 13 marketing channels. Here's what we found:</p>
 
         <div style="background: linear-gradient(135deg, #eef2ff 0%, #faf5ff 100%); border: 1px solid #c7d2fe; border-radius: 12px; padding: 24px; margin: 0 0 24px 0;">
           <p style="color: #6366f1; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; margin: 0 0 8px 0;">Your GTM Motion</p>
-          <h2 style="margin: 0 0 12px 0; color: #1e1b4b; font-size: 20px; font-weight: 700;">${data.gtmMotion}</h2>
-          <p style="color: #475569; font-size: 14px; line-height: 1.7; margin: 0;">${data.summary}</p>
+          <h2 style="margin: 0 0 12px 0; color: #1e1b4b; font-size: 20px; font-weight: 700;">${escapeHtml(data.gtmMotion)}</h2>
+          <p style="color: #475569; font-size: 14px; line-height: 1.7; margin: 0;">${escapeHtml(data.summary)}</p>
         </div>
 
         ${recsHtml}
@@ -135,7 +135,7 @@ export async function sendWelcomeEmail(data: WelcomeEmailData): Promise<void> {
         ${channelLinksHtml}
 
         <div style="text-align: center; margin: 32px 0 8px 0;">
-          <a href="${data.dashboardUrl}" style="display: inline-block; background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); color: white; padding: 16px 48px; text-decoration: none; border-radius: 10px; font-weight: 700; font-size: 16px; letter-spacing: -0.01em; box-shadow: 0 4px 14px rgba(99,102,241,0.4);">View My Dashboard →</a>
+          <a href="${escapeHtml(data.dashboardUrl)}" style="display: inline-block; background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); color: white; padding: 16px 48px; text-decoration: none; border-radius: 10px; font-weight: 700; font-size: 16px; letter-spacing: -0.01em; box-shadow: 0 4px 14px rgba(99,102,241,0.4);">View My Dashboard →</a>
         </div>
         <p style="text-align: center; color: #94a3b8; font-size: 12px; margin: 8px 0 0 0;">See all 13 channel strategies, actionable tasks, and weekly ideas</p>
       </div>
@@ -143,7 +143,7 @@ export async function sendWelcomeEmail(data: WelcomeEmailData): Promise<void> {
       <div style="background: #f8fafc; padding: 24px 32px; border-top: 1px solid #e2e8f0;">
         <div style="text-align: center;">
           <p style="color: #64748b; font-size: 13px; margin: 0 0 4px 0;">📬 You'll receive weekly GTM ideas every Monday to keep your strategy fresh.</p>
-          <p style="color: #94a3b8; font-size: 12px; margin: 12px 0 0 0;">Questions? Just reply to this email — a real human will get back to you.</p>
+          <p style="color: #94a3b8; font-size: 12px; margin: 12px 0 0 0;">Questions? Just reply to this email , a real human will get back to you.</p>
           <p style="color: #cbd5e1; font-size: 11px; margin: 16px 0 0 0;">&copy; 2026 GTM Champion. All rights reserved.</p>
           <p style="margin: 10px 0 0 0;">${unsubscribeFooterHtml(data.unsubscribeToken)}</p>
         </div>
@@ -203,7 +203,7 @@ export async function sendWeeklyEmail(data: WeeklyEmailData): Promise<void> {
   const dashboardUrl = "https://gtmchampion.com/dashboard";
 
   const ideasHtml = data.ideas.map((idea) => {
-    let formattedDesc = idea.description;
+    let formattedDesc = escapeHtml(idea.description);
 
     const maxLength = 500;
     if (formattedDesc.length > maxLength) {
@@ -243,9 +243,9 @@ export async function sendWeeklyEmail(data: WeeklyEmailData): Promise<void> {
     return `
     <div style="background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 24px; margin: 20px 0; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
       <div style="margin-bottom: 14px;">
-        <span style="background: #eef2ff; color: #6366f1; font-weight: 600; font-size: 11px; text-transform: uppercase; padding: 4px 10px; border-radius: 4px; display: inline-block;">${idea.type}</span>
+        <span style="background: #eef2ff; color: #6366f1; font-weight: 600; font-size: 11px; text-transform: uppercase; padding: 4px 10px; border-radius: 4px; display: inline-block;">${escapeHtml(idea.type)}</span>
       </div>
-      <h3 style="margin: 0 0 14px 0; color: #0f172a; font-size: 18px; line-height: 1.4;">${idea.title}</h3>
+      <h3 style="margin: 0 0 14px 0; color: #0f172a; font-size: 18px; line-height: 1.4;">${escapeHtml(idea.title)}</h3>
       ${descHtml}
       <div style="margin-top: 16px; padding-top: 14px; border-top: 1px solid #f1f5f9;">
         <a href="${strategyUrl}" style="color: #6366f1; font-size: 14px; font-weight: 600; text-decoration: none;">Read full strategy &rarr;</a>
@@ -272,9 +272,9 @@ export async function sendWeeklyEmail(data: WeeklyEmailData): Promise<void> {
       <div style="padding: 32px;">
         <h1 style="color: #0f172a; font-size: 24px; margin: 0 0 16px 0;">Your ideas for this week 💡</h1>
 
-        <p style="color: #475569; margin: 0 0 8px 0;">Hi ${data.userName},</p>
+        <p style="color: #475569; margin: 0 0 8px 0;">Hi ${escapeHtml(data.userName)},</p>
 
-        <p style="color: #475569; margin: 0 0 24px 0;">Here are <strong>${data.ideas.length} actionable GTM ideas</strong> tailored for <strong>${data.companyName}</strong>:</p>
+        <p style="color: #475569; margin: 0 0 24px 0;">Here are <strong>${data.ideas.length} actionable GTM ideas</strong> tailored for <strong>${escapeHtml(data.companyName)}</strong>:</p>
 
         ${ideasHtml}
 
@@ -295,7 +295,7 @@ export async function sendWeeklyEmail(data: WeeklyEmailData): Promise<void> {
 </html>`;
 
   const ideasText = data.ideas.map((idea, idx) =>
-    `${idx + 1}. [${idea.type}] ${idea.title}\n   ${idea.description}`
+    `${idx + 1}. [${escapeHtml(idea.type)}] ${escapeHtml(idea.title)}\n   ${idea.description}`
   ).join('\n\n');
 
   const textBody = `Here are your ideas for the week
@@ -425,7 +425,7 @@ export async function sendInviteFriendEmail(data: InviteFriendData): Promise<voi
     Hi${safeTo ? ` ${safeTo}` : ''},
   </p>
   <p style="color:#334155;font-size:15px;line-height:1.6;margin:0 0 20px;">
-    <strong>${safeFrom}</strong> has invited you to check out <strong>GTM Champion</strong> — a free AI-powered platform that builds personalized go-to-market strategies for B2B/SaaS companies.
+    <strong>${safeFrom}</strong> has invited you to check out <strong>GTM Champion</strong> , a free AI-powered platform that builds personalized go-to-market strategies for B2B/SaaS companies.
   </p>
 
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;border-radius:8px;padding:20px;margin:0 0 24px;">
@@ -451,7 +451,7 @@ export async function sendInviteFriendEmail(data: InviteFriendData): Promise<voi
 
 <tr><td style="padding:20px 40px;background:#f8fafc;border-top:1px solid #e2e8f0;">
   <p style="color:#94a3b8;font-size:12px;text-align:center;margin:0;">
-    Sent via <a href="https://gtmchampion.com" style="color:#4F46E5;text-decoration:none;">GTM Champion</a> — Free AI-Powered GTM Strategies
+    Sent via <a href="https://gtmchampion.com" style="color:#4F46E5;text-decoration:none;">GTM Champion</a> , Free AI-Powered GTM Strategies
   </p>
 </td></tr>
 
@@ -462,7 +462,7 @@ export async function sendInviteFriendEmail(data: InviteFriendData): Promise<voi
 </html>`;
 
   if (!postmarkClient) {
-    console.log("Postmark not configured — invite email:", JSON.stringify(data));
+    console.log("Postmark not configured , invite email:", JSON.stringify(data));
     return;
   }
 
@@ -472,7 +472,7 @@ export async function sendInviteFriendEmail(data: InviteFriendData): Promise<voi
       To: data.toEmail,
       Subject: `${data.fromName} invited you to GTM Champion`,
       HtmlBody: htmlBody,
-      TextBody: `Hi${data.toName ? ` ${data.toName}` : ''},\n\n${data.fromName} has invited you to check out GTM Champion — a free AI-powered platform that builds personalized go-to-market strategies for B2B/SaaS companies.\n\nGet your free strategy: https://gtmchampion.com\n\nTakes less than 60 seconds. No credit card required.`,
+      TextBody: `Hi${data.toName ? ` ${data.toName}` : ''},\n\n${data.fromName} has invited you to check out GTM Champion , a free AI-powered platform that builds personalized go-to-market strategies for B2B/SaaS companies.\n\nGet your free strategy: https://gtmchampion.com\n\nYour audit may take several minutes. No credit card required.`,
       MessageStream: "outbound",
     });
     console.log(`Invite email sent to ${data.toEmail} from ${data.fromName}`);
@@ -601,7 +601,7 @@ export async function sendShareStrategyEmail(data: ShareStrategyData): Promise<v
 
 <tr><td style="padding:20px 40px;background:#f8fafc;border-top:1px solid #e2e8f0;">
   <p style="color:#94a3b8;font-size:12px;text-align:center;margin:0;">
-    Powered by <a href="https://gtmchampion.com" style="color:#4F46E5;text-decoration:none;">GTM Champion</a> — Free AI-Powered GTM Strategies for B2B/SaaS
+    Powered by <a href="https://gtmchampion.com" style="color:#4F46E5;text-decoration:none;">GTM Champion</a> , Free AI-Powered GTM Strategies for B2B/SaaS
   </p>
 </td></tr>
 
@@ -616,7 +616,7 @@ export async function sendShareStrategyEmail(data: ShareStrategyData): Promise<v
   ).join('\n\n');
 
   if (!postmarkClient) {
-    console.log("Postmark not configured — share strategy email:", JSON.stringify({ to: data.toEmail, channel: data.channelName }));
+    console.log("Postmark not configured , share strategy email:", JSON.stringify({ to: data.toEmail, channel: data.channelName }));
     return;
   }
 
@@ -882,7 +882,7 @@ export async function sendAgentMilestoneEmail(data: AgentMilestoneEmailData): Pr
   <div style="padding:32px;">
     <p style="color:#475569;margin:0 0 4px;">Hi ${firstName},</p>
     <h2 style="color:#0f172a;font-size:20px;margin:12px 0 8px;font-weight:700;">Great start on your <span style="color:#6366f1;">${channelName}</span> strategy!</h2>
-    <p style="color:#64748b;font-size:15px;line-height:1.6;margin:0 0 20px;">You've taken the first step on your ${channelName} channel. I'm your GTM Agent — I'll check in to keep your momentum going and make sure nothing stalls.</p>
+    <p style="color:#64748b;font-size:15px;line-height:1.6;margin:0 0 20px;">You've taken the first step on your ${channelName} channel. I'm your GTM Agent , I'll check in to keep your momentum going and make sure nothing stalls.</p>
     <div style="background:#fefce8;border-left:4px solid #eab308;border-radius:0 8px 8px 0;padding:14px 16px;margin:0 0 16px;">
       <p style="color:#854d0e;font-size:13px;font-weight:700;margin:0 0 4px;text-transform:uppercase;letter-spacing:0.05em;">Why this matters for you</p>
       <p style="color:#713f12;font-size:14px;margin:0;line-height:1.5;">${why}</p>
@@ -900,7 +900,7 @@ export async function sendAgentMilestoneEmail(data: AgentMilestoneEmailData): Pr
   </div>
 </div></div></body></html>`;
 
-  if (!postmarkClient) { console.log("Postmark not configured — agent milestone email:", data.toEmail); return; }
+  if (!postmarkClient) { console.log("Postmark not configured , agent milestone email:", data.toEmail); return; }
   try {
     await postmarkClient.sendEmail({
       From: FROM_ADDRESS, To: data.toEmail,
@@ -928,7 +928,7 @@ export async function sendAgentStallEmail(data: AgentStallEmailData): Promise<vo
   const firstName = escapeHtml(data.userName.split(' ')[0]);
   const channelName = escapeHtml(data.channelId);
   const dashboardUrl = `https://gtmchampion.com/dashboard?channel=${encodeURIComponent(data.channelId)}`;
-  const nudgeText = escapeHtml(data.personalizedNudge || `It's been 3 days since you started working on ${data.channelId}. You have items in progress — let's keep the momentum going.`);
+  const nudgeText = escapeHtml(data.personalizedNudge || `It's been 3 days since you started working on ${data.channelId}. You have items in progress , let's keep the momentum going.`);
   const actionText = escapeHtml(data.personalizedAction || `Spend 20 minutes today on one specific task from your ${data.channelId} recommendations list.`);
   const quickWinHtml = data.quickWin ? `
     <div style="background:#f0fdf4;border-radius:12px;padding:20px;margin:0 0 24px;border-left:4px solid #22c55e;">
@@ -966,7 +966,7 @@ export async function sendAgentStallEmail(data: AgentStallEmailData): Promise<vo
   </div>
 </div></div></body></html>`;
 
-  if (!postmarkClient) { console.log("Postmark not configured — agent stall email:", data.toEmail); return; }
+  if (!postmarkClient) { console.log("Postmark not configured , agent stall email:", data.toEmail); return; }
   try {
     await postmarkClient.sendEmail({
       From: FROM_ADDRESS, To: data.toEmail,
@@ -1005,7 +1005,7 @@ export async function sendAgentCongratsEmail(data: AgentCongratsEmailData): Prom
   <div style="padding:32px;">
     <p style="color:#475569;margin:0 0 4px;">Hi ${firstName},</p>
     <h2 style="color:#0f172a;font-size:20px;margin:12px 0 8px;font-weight:700;">You've completed your <span style="color:#16a34a;">${channelName}</span> strategy!</h2>
-    <p style="color:#64748b;font-size:15px;line-height:1.6;margin:0 0 20px;">Excellent work! You've completed all ${channelName} recommendations for ${escapeHtml(data.companyName)}. This is a real milestone — most companies never get this far.</p>
+    <p style="color:#64748b;font-size:15px;line-height:1.6;margin:0 0 20px;">Excellent work! You've completed all ${channelName} recommendations for ${escapeHtml(data.companyName)}. This is a real milestone , most companies never get this far.</p>
     <div style="background:#f0fdf4;border-radius:12px;padding:20px;margin:0 0 24px;border:1px solid #bbf7d0;">
       <p style="color:#166534;font-size:14px;margin:0;font-weight:600;">What to do next:</p>
       <p style="color:#475569;font-size:14px;margin:8px 0 0;line-height:1.6;">Review your other channels and start working on the next highest-priority strategy. Your GTM Agent has already identified what needs attention.</p>
@@ -1019,7 +1019,7 @@ export async function sendAgentCongratsEmail(data: AgentCongratsEmailData): Prom
   </div>
 </div></div></body></html>`;
 
-  if (!postmarkClient) { console.log("Postmark not configured — agent congrats email:", data.toEmail); return; }
+  if (!postmarkClient) { console.log("Postmark not configured , agent congrats email:", data.toEmail); return; }
   try {
     await postmarkClient.sendEmail({
       From: FROM_ADDRESS, To: data.toEmail,
@@ -1103,7 +1103,7 @@ export async function sendAgentWeeklyDigestEmail(data: AgentWeeklyDigestEmailDat
   </div>
 </div></div></body></html>`;
 
-  if (!postmarkClient) { console.log("Postmark not configured — agent weekly digest:", data.toEmail); return; }
+  if (!postmarkClient) { console.log("Postmark not configured , agent weekly digest:", data.toEmail); return; }
   try {
     await postmarkClient.sendEmail({
       From: FROM_ADDRESS, To: data.toEmail,
@@ -1182,7 +1182,7 @@ export async function sendFeatureAnnouncementEmail(data: FeatureAnnouncementEmai
 
       <div style="background: #f8fafc; padding: 24px 32px; border-top: 1px solid #e2e8f0;">
         <div style="text-align: center;">
-          <p style="color: #94a3b8; font-size: 12px; margin: 0 0 4px 0;">Questions? Just reply to this email — a real human will get back to you.</p>
+          <p style="color: #94a3b8; font-size: 12px; margin: 0 0 4px 0;">Questions? Just reply to this email , a real human will get back to you.</p>
           <p style="color: #cbd5e1; font-size: 11px; margin: 12px 0 0 0;">&copy; 2026 GTM Champion. All rights reserved.</p>
           <p style="margin: 12px 0 0 0;">${unsubscribeFooterHtml(data.unsubscribeToken)}</p>
         </div>
@@ -1229,4 +1229,12 @@ ${unsubscribeFooterText(data.unsubscribeToken)}
     console.error(`Failed to send feature announcement email (${data.featureName}):`, error);
     throw error;
   }
+}
+
+export function recoveryEmailConfigured() { return Boolean(postmarkClient); }
+export async function sendPasswordRecoveryEmail(to: string, resetUrl: string) {
+  if (!postmarkClient) throw new Error('Recovery email is not configured');
+  await postmarkClient.sendEmail({From:FROM_ADDRESS,To:to,Subject:'Reset your GTM Champion password',
+    HtmlBody:`<p>A password reset was requested for your GTM Champion account.</p><p><a href="${escapeHtml(resetUrl)}">Choose a new password</a></p><p>This link expires in 15 minutes and can be used once. If you did not request this, you can ignore this email.</p>`,
+    TextBody:`A password reset was requested for your GTM Champion account. Choose a new password: ${resetUrl}\nThis link expires in 15 minutes and can be used once. If you did not request this, you can ignore this email.`});
 }

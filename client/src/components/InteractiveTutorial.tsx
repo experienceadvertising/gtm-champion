@@ -51,7 +51,7 @@ const TUTORIAL_STEPS: TutorialStep[] = [
   },
   {
     title: "Content Tools",
-    description: "Generate LinkedIn posts, email campaigns, and blog articles tailored to your company — all powered by AI. Find this in the sidebar.",
+    description: "Generate LinkedIn posts, email campaigns, and blog articles tailored to your company , all powered by AI. Find this in the sidebar.",
     icon: PenTool,
     targetSelector: "[data-tour='content-tools']",
     position: "right",

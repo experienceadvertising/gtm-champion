@@ -827,7 +827,7 @@ export default function AdminPage() {
                       Agent Events
                       {agentData && (
                         <span className="ml-1 text-sm font-normal text-muted-foreground">
-                          — {agentData.total} total
+                          , {agentData.total} total
                           {agentEventType !== "all" && ` · filtered by ${eventTypeLabel(agentEventType)}`}
                           {agentDateRange !== "all" && ` · last ${agentDateRange} days`}
                         </span>
@@ -878,7 +878,7 @@ export default function AdminPage() {
                                   </td>
                                   <td className="px-4 py-3">
                                     <span className="text-xs text-muted-foreground">
-                                      {event.channelId ?? <span className="italic opacity-60">—</span>}
+                                      {event.channelId ?? <span className="italic opacity-60">,</span>}
                                     </span>
                                   </td>
                                   <td className="px-4 py-3">

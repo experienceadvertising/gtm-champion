@@ -1,3 +1,4 @@
+import PasswordRecoveryPage from './pages/password-recovery';
 import { Switch, Route, useLocation } from "wouter";
 import { lazy, Suspense, useEffect } from "react";
 import { HelmetProvider } from "react-helmet-async";
@@ -50,6 +51,8 @@ function Router() {
         <Switch>
           <Route path="/" component={LandingPage} />
           <Route path="/auth" component={AuthPage} />
+          <Route path="/forgot-password" component={PasswordRecoveryPage} />
+          <Route path="/reset-password" component={PasswordRecoveryPage} />
           <Route path="/dashboard" component={Dashboard} />
           <Route path="/emails" component={EmailPreview} />
           <Route path="/admin" component={AdminPage} />

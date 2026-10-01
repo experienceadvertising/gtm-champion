@@ -29,15 +29,15 @@ function verifyCronSecret(req: Request, res: Response): boolean {
 
 const GTM_TIPS = [
   { title: "GTM Tip: Focus on One Channel", body: "The most successful B2B SaaS companies master one marketing channel before expanding. Pick your highest-impact channel and double down.", url: "/dashboard" },
-  { title: "Weekly Strategy Check", body: "Have you reviewed your GTM recommendations this week? Companies that act on their top 3 recommendations see 2x faster growth.", url: "/dashboard" },
-  { title: "Content is King", body: "B2B buyers consume 3-7 pieces of content before talking to sales. Use our content tools to create LinkedIn posts, emails, and blog articles.", url: "/content-tools" },
-  { title: "SEO Quick Win", body: "Update your page titles and meta descriptions with your target keywords. This simple change can boost organic traffic by 20-30%.", url: "/dashboard?channel=SEO" },
-  { title: "Email Marketing Reminder", body: "Segmented email campaigns see 26% higher open rates. Review your email strategy and target the right audience segments.", url: "/dashboard?channel=Email%20Marketing" },
-  { title: "Product-Led Growth Tip", body: "Offer a free trial or freemium tier to let users experience value before purchasing. PLG companies grow 2-3x faster than sales-led.", url: "/dashboard" },
-  { title: "ABM Strategy Insight", body: "Account-Based Marketing delivers 97% higher ROI than other strategies. Identify your top 10 target accounts and create personalized outreach.", url: "/dashboard?channel=ABM" },
-  { title: "Social Proof Matters", body: "92% of B2B buyers read reviews before purchasing. Collect and showcase customer testimonials on your website and social channels.", url: "/dashboard?channel=Organic%20Social" },
+  { title: "Weekly Strategy Check", body: "Have you reviewed your GTM recommendations this week? Choose the most useful next step and track what changes.", url: "/dashboard" },
+  { title: "Content is King", body: "Useful content helps buyers understand their options before speaking to sales. Use our content tools to create LinkedIn posts, emails, and blog articles.", url: "/content-tools" },
+  { title: "SEO Quick Win", body: "Update your page titles and meta descriptions with your target keywords. Track search impressions and clicks to see whether the change helps.", url: "/dashboard?channel=SEO" },
+  { title: "Email Marketing Reminder", body: "Group subscribers by relevant needs and compare results. Review your email strategy and target the right audience segments.", url: "/dashboard?channel=Email%20Marketing" },
+  { title: "Product-Led Growth Tip", body: "Offer a free trial or freemium tier to let users experience value before purchasing. Use a trial only when it helps customers experience the product.", url: "/dashboard" },
+  { title: "ABM Strategy Insight", body: "Account-based marketing needs a clear account list and relevant messaging. Identify your top 10 target accounts and create personalized outreach.", url: "/dashboard?channel=ABM" },
+  { title: "Social Proof Matters", body: "Real customer reviews can help buyers evaluate your product. Collect and showcase customer testimonials on your website and social channels.", url: "/dashboard?channel=Organic%20Social" },
   { title: "Quick Win Available", body: "Check your dashboard for quick-win recommendations -- these are high-impact, low-effort actions you can complete this week.", url: "/dashboard" },
-  { title: "Community Building", body: "Companies with active user communities see 5x higher retention. Start a Slack group, Discord server, or forum for your users.", url: "/dashboard?channel=Community" },
+  { title: "Community Building", body: "A community can support customers when there is a clear reason to participate. Start a Slack group, Discord server, or forum for your users.", url: "/dashboard?channel=Community" },
 ];
 
 router.post("/api/cron/send-tips", async (req: Request, res: Response) => {

@@ -18,7 +18,7 @@ const signUpSchema = z.object({
   fullName: z.string().min(2, "Name must be at least 2 characters"),
   email: z.string().email("Invalid email address"),
   companyUrl: z.string().url("Please enter a valid URL (e.g., https://example.com)"),
-  password: z.string().min(8, "Password must be at least 8 characters"),
+  password: z.string().min(8, "Password must be at least 8 characters").refine(value => new TextEncoder().encode(value).length <= 72, "Password must be 72 bytes or less"),
 });
 
 const loginSchema = z.object({
@@ -265,6 +265,7 @@ export default function AuthPage() {
                   </form>
                 </Form>
               )}
+              {isLoginMode && <a href="/forgot-password" className="block text-sm text-primary mt-4 text-center hover:underline">Forgot your password?</a>}
             </CardContent>
             <CardFooter className="flex justify-center border-t p-6 bg-slate-50/50">
               <p className="text-sm text-muted-foreground">

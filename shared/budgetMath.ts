@@ -2,8 +2,8 @@ type BudgetItem = { amount: number; percentage: number };
 
 function distribute(total: number, weights: number[]): number[] {
   const sum = weights.reduce((a, b) => a + b, 0);
-  if (!sum) throw new Error("At least one channel needs a positive allocation.");
-  const exact = weights.map(weight => total * weight / sum);
+  if (!sum || !Number.isFinite(sum)) throw new Error("At least one channel needs a positive allocation.");
+  const exact = weights.map(weight => total * (weight / sum));
   const units = exact.map(Math.floor);
   const order = exact.map((value, index) => ({ index, fraction: value - units[index] }))
     .sort((a, b) => b.fraction - a.fraction || a.index - b.index);
@@ -13,7 +13,7 @@ function distribute(total: number, weights: number[]): number[] {
 }
 
 export function normalizeBudget<T extends BudgetItem>(totalBudget: number, items: T[]): T[] {
-  if (!Number.isFinite(totalBudget) || totalBudget <= 0 || !items.length || items.length > 30) {
+  if (!Number.isFinite(totalBudget) || !Number.isSafeInteger(Math.round(totalBudget * 100)) || totalBudget <= 0 || !items.length || items.length > 30) {
     throw new Error("Invalid budget allocation.");
   }
   const weights = items.map(item => {

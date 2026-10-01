@@ -153,18 +153,9 @@ router.get("/api/stripe/subscription", requireAuth, async (req: Request, res: Re
       return res.json({ subscription: null, isPremium: user.isPremium });
     }
 
-    const subscription = await stripeService.getSubscriptionByCustomerId(user.stripeCustomerId);
-    
-    const isEntitled = subscription?.status === 'active' || subscription?.status === 'trialing';
-    if (isEntitled && !user.isPremium) {
-      await storage.updateUserPremiumStatus(userId, true);
-      req.session.isPremium = true;
-    }
-
-    res.json({ 
-      subscription,
-      isPremium: user.isPremium || isEntitled,
-    });
+    const result = await stripeService.reconcileUser(user);
+    req.session.isPremium = result.isPremium;
+    res.json(result);
   } catch (error: unknown) {
     console.error("Subscription error:", error);
     res.status(500).json({ error: "Failed to get subscription" });

@@ -8,7 +8,7 @@ export default function ContactPage() {
     <div className="min-h-screen bg-background">
       <PageMeta
         title="Contact GTM Champion - Get in Touch"
-        description="Have questions about Go-To-Market strategy or GTM Champion? Reach out by email or LinkedIn — we typically respond within one business day."
+        description="Have questions about Go-To-Market strategy or GTM Champion? Reach out by email or LinkedIn , we typically respond within one business day."
         path="/contact"
       />
       <nav className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50" role="navigation" aria-label="Main navigation">
@@ -77,7 +77,7 @@ export default function ContactPage() {
             data-testid="link-linkedin"
           >
             <Linkedin className="h-5 w-5" aria-hidden="true" />
-            LinkedIn — Creator Profile
+            LinkedIn , Creator Profile
           </a>
         </div>
 

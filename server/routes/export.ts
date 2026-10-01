@@ -1,3 +1,4 @@
+import { withFallbackChannelInsights } from './company';
 import { Router, type Request, type Response } from "express";
 import { PassThrough } from "stream";
 import { storage } from "../storage";
@@ -100,7 +101,7 @@ router.get("/api/export/pdf", requireAuth, async (req: Request, res: Response) =
         status: r.status,
         gtmFunnel: r.gtmFunnel,
       })),
-      channelInsights: channelInsights.map(ci => ({
+      channelInsights: withFallbackChannelInsights(company,channelInsights).map(ci => ({
         channelId: ci.channelId,
         priority: ci.priority,
         generationStatus: ci.generationStatus,

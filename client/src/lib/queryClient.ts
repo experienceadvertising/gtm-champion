@@ -14,7 +14,7 @@ export async function apiRequest(
 ): Promise<Response> {
   const res = await fetch(url, {
     method,
-    headers: data ? { "Content-Type": "application/json" } : {},
+    headers: { ...(data ? { "Content-Type": "application/json" } : {}), "X-CSRF-Token": document.cookie.match(/(?:^|;\s*)csrf-token=([^;]+)/)?.[1] || "" },
     body: data ? JSON.stringify(data) : undefined,
     credentials: "include",
   });

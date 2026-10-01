@@ -1,3 +1,6 @@
+import { ensureScheduledRuns } from './services/scheduledRuns';
+import { ensurePasswordRecovery } from './services/passwordRecovery';
+import { ensureAnalysisJobs, startAnalysisWorker } from './services/analysisJobs';
 import crypto from "crypto";
 import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
@@ -315,9 +318,13 @@ app.use((req, res, next) => {
 
 (async () => {
   await ensureSessionTable();
+  await ensureAnalysisJobs();
+  await ensurePasswordRecovery();
+  await ensureScheduledRuns();
   await ensureChannelInsightStrategyColumns();
   await initStripe();
   await registerRoutes(httpServer, app);
+  startAnalysisWorker();
 
   app.use((err: Error & { status?: number; statusCode?: number }, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;

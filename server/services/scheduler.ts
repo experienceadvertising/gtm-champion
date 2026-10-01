@@ -1,3 +1,4 @@
+import { runScheduledOnce } from './scheduledRuns';
 import cron from "node-cron";
 import pLimit from "p-limit";
 import { storage } from "../storage";
@@ -26,6 +27,7 @@ export function startWeeklyEmailScheduler() {
   console.log("Starting weekly email scheduler...");
 
   cron.schedule("0 9 * * 1", async () => {
+    await runScheduledOnce(`weekly:${new Date().toISOString().slice(0,10)}`,async () => {
     const weekNum = getWeekNumber();
     const isChannelWeek = weekNum % 2 === 0;
 
@@ -41,15 +43,18 @@ export function startWeeklyEmailScheduler() {
     await sendWeeklyDigestsToAllProUsers().catch(err =>
       console.error("GTM Agent weekly digests error:", err)
     );
+    });
   }, {
     timezone: "America/New_York"
   });
 
   cron.schedule("0 2 * * *", async () => {
+    await runScheduledOnce(`nudges:${new Date().toISOString().slice(0,10)}`,async () => {
     console.log("Running GTM Agent stall nudges - 2 AM ET...");
     await processStallNudges().catch(err =>
       console.error("GTM Agent stall nudge error:", err)
     );
+    });
   }, {
     timezone: "America/New_York"
   });

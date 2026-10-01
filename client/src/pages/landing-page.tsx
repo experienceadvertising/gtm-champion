@@ -546,7 +546,7 @@ export default function LandingPage() {
                 {
                   icon: <Brain className="h-8 w-8 text-indigo-500" aria-hidden="true" />,
                   title: "Deep Personalization",
-                  description: "GTM Champion crawls your key pages and extracts verified product names, features, pricing, competitors, positioning, and ICP signals without filling missing inputs with invented details.",
+                  description: "GTM Champion crawls your key pages and extracts product details, pricing, positioning, and audience signals from the pages it can reach. Missing inputs and assumptions are shown in your report.",
                   span: "md:col-span-4 lg:col-span-7",
                   gradient: "from-indigo-500/10 to-violet-500/10",
                   borderGradient: "from-indigo-500/30 via-violet-500/20 to-transparent",
@@ -562,7 +562,7 @@ export default function LandingPage() {
                 {
                   icon: <PenTool className="h-8 w-8 text-violet-500" aria-hidden="true" />,
                   title: "AI Content Tools",
-                  description: "Generate ready-to-publish LinkedIn posts, full email campaigns, and long-form blog articles , all written in your brand voice using your actual product details.",
+                  description: "Draft LinkedIn posts, email campaigns, and blog articles using your company context. Review facts, offers, and wording before publishing.",
                   span: "md:col-span-3 lg:col-span-5",
                   gradient: "from-violet-500/10 to-purple-500/10",
                   borderGradient: "from-violet-500/30 via-purple-500/20 to-transparent",
@@ -610,7 +610,7 @@ export default function LandingPage() {
                 {
                   icon: <Globe className="h-8 w-8 text-teal-500" aria-hidden="true" />,
                   title: "PageSpeed Insights",
-                  description: "Automatic performance audits with Core Web Vitals, loading scores, and top optimization opportunities pulled directly from Google PageSpeed.",
+                  description: "Google PageSpeed performance scores and optimization opportunities when the provider is available. Your report shows when performance data could not be retrieved.",
                   span: "md:col-span-3 lg:col-span-4",
                   gradient: "from-teal-500/10 to-emerald-500/10",
                   borderGradient: "from-teal-500/30 via-emerald-500/20 to-transparent",

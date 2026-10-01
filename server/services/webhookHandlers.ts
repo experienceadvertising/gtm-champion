@@ -43,33 +43,15 @@ export class WebhookHandlers {
       }
 
       case 'customer.subscription.created':
-      case 'customer.subscription.updated': {
-        const subscription = event.data.object as {
-          customer: string;
-          id: string;
-          status: string;
-          items?: { data?: Array<{ price?: { id?: string } }> };
-        };
-        const customerId = subscription.customer;
-        const priceIds = subscription.items?.data
-          ?.map(item => item.price?.id)
-          .filter((priceId): priceId is string => Boolean(priceId)) || [];
-        const eligibility = await Promise.all(priceIds.map(priceId => stripeService.isEligiblePremiumPrice(priceId)));
-        const hasEligiblePrice = eligibility.some(Boolean);
-        
-        if ((subscription.status === 'active' || subscription.status === 'trialing') && hasEligiblePrice) {
-          await WebhookHandlers.activatePremiumByCustomerId(customerId, subscription.id);
-        } else if (subscription.status === 'active' || subscription.status === 'trialing') {
-          await WebhookHandlers.deactivatePremiumBySubscriptionId(customerId, subscription.id);
-        } else {
-          await WebhookHandlers.deactivatePremiumByCustomerId(customerId);
-        }
-        break;
-      }
-
-      case 'customer.subscription.deleted': {
-        const subscription = event.data.object as { customer: string };
-        await WebhookHandlers.deactivatePremiumByCustomerId(subscription.customer);
+      case 'customer.subscription.updated':
+      case 'customer.subscription.deleted':
+      case 'customer.subscription.paused':
+      case 'customer.subscription.resumed': {
+        const object = event.data.object as { customer: string | { id: string } };
+        const customerId = typeof object.customer === 'string' ? object.customer : object.customer.id;
+        const subscription = await stripeService.getSubscriptionByCustomerId(customerId);
+        if (subscription) await WebhookHandlers.activatePremiumByCustomerId(customerId, subscription.id);
+        else await WebhookHandlers.deactivatePremiumByCustomerId(customerId);
         break;
       }
 

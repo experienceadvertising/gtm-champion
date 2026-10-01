@@ -92,21 +92,21 @@ import { ExecutionSprint } from "@/components/ExecutionSprint";
 const CHANNELS = [
   { id: "all", label: "All Channels", icon: LayoutDashboard, tooltip: "Overview of all marketing channels" },
   { id: "divider1", label: "ORGANIC", divider: true },
-  { id: "SEO", label: "SEO", icon: Search, tooltip: "Search engine optimization — rank higher on Google for relevant keywords" },
-  { id: "LLMs", label: "LLMs / AEO", icon: Bot, tooltip: "AI & Answer Engine Optimization — appear in ChatGPT, Perplexity, and AI search results" },
-  { id: "Organic Social", label: "Organic Social", icon: Share2, tooltip: "Unpaid social media — LinkedIn, Twitter/X posts and engagement" },
-  { id: "Content", label: "Content", icon: PenTool, tooltip: "Content marketing — blogs, guides, whitepapers, and thought leadership" },
-  { id: "Email Marketing", label: "Email Marketing", icon: Mail, tooltip: "Email campaigns — newsletters, drip sequences, and nurture flows" },
-  { id: "CRO", label: "CRO", icon: MousePointerClick, tooltip: "Conversion Rate Optimization — improve website and funnel performance" },
-  { id: "Community", label: "Community", icon: MessageSquare, tooltip: "Community building — forums, Slack/Discord groups, user communities" },
+  { id: "SEO", label: "SEO", icon: Search, tooltip: "Search engine optimization , rank higher on Google for relevant keywords" },
+  { id: "LLMs", label: "LLMs / AEO", icon: Bot, tooltip: "AI & Answer Engine Optimization , appear in ChatGPT, Perplexity, and AI search results" },
+  { id: "Organic Social", label: "Organic Social", icon: Share2, tooltip: "Unpaid social media , LinkedIn, Twitter/X posts and engagement" },
+  { id: "Content", label: "Content", icon: PenTool, tooltip: "Content marketing , blogs, guides, whitepapers, and thought leadership" },
+  { id: "Email Marketing", label: "Email Marketing", icon: Mail, tooltip: "Email campaigns , newsletters, drip sequences, and nurture flows" },
+  { id: "CRO", label: "CRO", icon: MousePointerClick, tooltip: "Conversion Rate Optimization , improve website and funnel performance" },
+  { id: "Community", label: "Community", icon: MessageSquare, tooltip: "Community building , forums, Slack/Discord groups, user communities" },
   { id: "divider2", label: "PAID", divider: true },
-  { id: "Paid Social", label: "Paid Social", icon: Megaphone, tooltip: "Paid social ads — LinkedIn Ads, Facebook/Instagram Ads, and promoted posts" },
-  { id: "Paid Search", label: "Paid Search", icon: DollarSign, tooltip: "Paid search ads — Google Ads, Bing Ads, and PPC campaigns" },
-  { id: "Retargeting", label: "Retargeting", icon: RotateCcw, tooltip: "Retargeting — re-engage website visitors across ad networks" },
-  { id: "ABM", label: "ABM", icon: Building2, tooltip: "Account-Based Marketing — target and engage specific high-value accounts" },
+  { id: "Paid Social", label: "Paid Social", icon: Megaphone, tooltip: "Paid social ads , LinkedIn Ads, Facebook/Instagram Ads, and promoted posts" },
+  { id: "Paid Search", label: "Paid Search", icon: DollarSign, tooltip: "Paid search ads , Google Ads, Bing Ads, and PPC campaigns" },
+  { id: "Retargeting", label: "Retargeting", icon: RotateCcw, tooltip: "Retargeting , re-engage website visitors across ad networks" },
+  { id: "ABM", label: "ABM", icon: Building2, tooltip: "Account-Based Marketing , target and engage specific high-value accounts" },
   { id: "divider3", label: "GROWTH", divider: true },
-  { id: "Partnerships", label: "Partnerships", icon: Handshake, tooltip: "Strategic partnerships — co-marketing, integrations, and affiliate programs" },
-  { id: "Outbound", label: "Outbound", icon: Phone, tooltip: "Outbound sales — cold outreach, SDR sequences, and prospecting" },
+  { id: "Partnerships", label: "Partnerships", icon: Handshake, tooltip: "Strategic partnerships , co-marketing, integrations, and affiliate programs" },
+  { id: "Outbound", label: "Outbound", icon: Phone, tooltip: "Outbound sales , cold outreach, SDR sequences, and prospecting" },
 ] as const;
 
 function formatStrategyDescription(desc: string, compact = false) {
@@ -217,7 +217,7 @@ function SlackConnectSection({
           <div>
             <p className="text-xs font-semibold text-foreground">Slack notifications</p>
             <p className="text-xs text-muted-foreground">
-              {slackConnected ? "Connected — nudges sent to your Slack channel" : "Get nudges directly in Slack"}
+              {slackConnected ? "Connected , nudges sent to your Slack channel" : "Get nudges directly in Slack"}
             </p>
           </div>
         </div>
@@ -330,10 +330,10 @@ export default function Dashboard() {
     } else if (slackError) {
       const messages: Record<string, string> = {
         cancelled: "Slack authorization was cancelled.",
-        invalid_state: "Authorization failed — please try again.",
+        invalid_state: "Authorization failed , please try again.",
         no_webhook: "Slack did not return a webhook. Make sure you select a channel.",
         not_configured: "Slack is not configured. Contact support.",
-        server_error: "Something went wrong — please try again.",
+        server_error: "Something went wrong , please try again.",
       };
       toast({ title: "Slack connection failed", description: messages[slackError] ?? "Please try again.", variant: "destructive" });
       const clean = new URLSearchParams(searchString);
@@ -421,6 +421,8 @@ export default function Dashboard() {
     refetchInterval: (query) => {
       const d = query.state.data as DashboardData | undefined;
       if (!d) return 4000;
+      if (["queued", "running"].includes(d.analysis?.status || "")) return 4000;
+      if (d.analysis?.status === "failed") return false;
       const analyzing = !d.company.name && d.company.summary === "Analyzing your website...";
       if (analyzing) {
         const started = new Date(d.company.lastScraped).getTime();
@@ -850,10 +852,12 @@ export default function Dashboard() {
   const { user, company, recommendations = [], weeklyIdeas = [], channelInsights = [], strategyPlan } = data;
   
   const lastScrapedTime = company.lastScraped ? new Date(company.lastScraped).getTime() : 0;
-  const { analyzing: isAnalyzing, failed: analysisFailed } = getAnalysisState(
+  const { analyzing: legacyAnalyzing, failed: legacyFailed } = getAnalysisState(
     company, data.analysis?.persistedChannelCount ?? channelInsights.length,
   );
   const recentlyAnalyzedForInsights = lastScrapedTime > 0 && (Date.now() - lastScrapedTime) < 5 * 60 * 1000;
+  const isAnalyzing = data.analysis?.status ? (!company.name && ["queued", "running"].includes(data.analysis.status)) : legacyAnalyzing;
+  const analysisFailed = (!company.name && data.analysis?.status === 'failed') || (!data.analysis?.status && legacyFailed);
   const isChannelInsightsLoading = !isAnalyzing && !analysisFailed && (data.analysis?.channelsPending || (channelInsights.length < 13 && recentlyAnalyzedForInsights));
 
   if (isAnalyzing) {
@@ -1599,6 +1603,8 @@ export default function Dashboard() {
 
             <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-8">
               <PushPermissionPrompt triggered={pushPromptTriggered} />
+              {company.name && data.analysis?.status === 'failed' && <p role="status" className="rounded-lg bg-amber-50 p-4 text-sm text-amber-900">The new audit could not finish. Your previous report is unchanged. You can retry without using another weekly re-analysis.</p>}
+              {company.name && ["queued", "running"].includes(data.analysis?.status || "") && <p role="status" className="rounded-lg bg-blue-50 p-4 text-sm text-blue-900">Your new audit is running. You can keep using this report until the replacement is ready.</p>}
               {!isAnalyzing && !analysisFailed && company.name && (
                 <div role="status" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900" data-testid="audit-coverage">
                   <p className="font-semibold">Audit coverage</p>
@@ -1690,7 +1696,7 @@ export default function Dashboard() {
                         <div>
                           <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">ICP Score</p>
                           <p className="font-semibold text-sm" data-testid="text-icp-score">
-                            {company.icpStatus === "missing" ? "Needs input" : `${company.icpScore ?? "—"}/100`}
+                            {company.icpStatus === "missing" ? "Needs input" : `${company.icpScore ?? ","}/100`}
                           </p>
                         </div>
                       </div>
@@ -1904,7 +1910,7 @@ export default function Dashboard() {
                           <div>
                             <Badge variant="secondary" className="mb-1 bg-indigo-100 text-indigo-700 hover:bg-indigo-100">Pro</Badge>
                             <CardTitle className="text-lg font-display">GTM Agent</CardTitle>
-                            <CardDescription className="text-xs">Your personal marketing coach — checks in when you stall and celebrates wins</CardDescription>
+                            <CardDescription className="text-xs">Your personal marketing coach , checks in when you stall and celebrates wins</CardDescription>
                           </div>
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
@@ -1967,7 +1973,7 @@ export default function Dashboard() {
                                   </p>
                                   <p className="text-xs text-muted-foreground mt-0.5">
                                     {nudgeLabel[nextCheckIn.nudgeType] ?? nextCheckIn.nudgeType}
-                                    {nextCheckIn.channelId ? ` — ${nextCheckIn.channelId}` : ""}
+                                    {nextCheckIn.channelId ? ` , ${nextCheckIn.channelId}` : ""}
                                   </p>
                                 </div>
                               ) : (
@@ -2049,7 +2055,7 @@ export default function Dashboard() {
                           <div>
                             <Badge variant="secondary" className="mb-1 bg-indigo-100 text-indigo-700 hover:bg-indigo-100">Pro</Badge>
                             <CardTitle className="text-lg font-display">GTM Agent</CardTitle>
-                            <CardDescription className="text-xs">Your personal marketing coach — checks in when you stall and celebrates wins</CardDescription>
+                            <CardDescription className="text-xs">Your personal marketing coach , checks in when you stall and celebrates wins</CardDescription>
                           </div>
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
@@ -2390,7 +2396,7 @@ export default function Dashboard() {
                                 const metric = psd.coreWebVitals?.[key as keyof typeof psd.coreWebVitals];
                                 if (!metric || typeof metric.value !== 'number' || (metric.value === 0 && key === 'inp')) return null;
                                 const displayValue = isNaN(metric.value) ? 0 : metric.value;
-                                const ratingColor = metric.rating === 'good' ? 'bg-green-500' : metric.rating === 'needs-improvement' ? 'bg-amber-500' : 'bg-red-500';
+                                const ratingColor = metric.rating === 'unavailable' ? 'bg-slate-300' : metric.rating === 'good' ? 'bg-green-500' : metric.rating === 'needs-improvement' ? 'bg-amber-500' : 'bg-red-500';
                                 return (
                                   <Tooltip key={key}>
                                     <TooltipTrigger asChild>
@@ -2400,12 +2406,12 @@ export default function Dashboard() {
                                           <span className="text-sm font-medium">{label}</span>
                                         </div>
                                         <span className="text-sm text-muted-foreground tabular-nums">
-                                          {key === 'cls' ? displayValue.toFixed(3) : `${displayValue.toLocaleString()}${unit}`}
+                                          {metric.rating === 'unavailable' ? 'Not measured' : key === 'cls' ? displayValue.toFixed(3) : `${displayValue.toLocaleString()}${unit}`}
                                         </span>
                                       </div>
                                     </TooltipTrigger>
                                     <TooltipContent side="left">
-                                      <p className="text-xs">{desc}: {metric.rating === 'good' ? 'Good' : metric.rating === 'needs-improvement' ? 'Needs improvement' : 'Poor'}</p>
+                                      <p className="text-xs">{desc}: {metric.rating === 'unavailable' ? 'Not measured' : metric.rating === 'good' ? 'Good' : metric.rating === 'needs-improvement' ? 'Needs improvement' : 'Poor'}</p>
                                     </TooltipContent>
                                   </Tooltip>
                                 );
@@ -2423,7 +2429,7 @@ export default function Dashboard() {
                             </CardHeader>
                             <CardContent>
                               {!Array.isArray(psd.opportunities) || psd.opportunities.length === 0 ? (
-                                <p className="text-sm text-muted-foreground">No major opportunities found — your site is well optimized.</p>
+                                <p className="text-sm text-muted-foreground">No major opportunities found , your site is well optimized.</p>
                               ) : (
                                 <div className="space-y-3">
                                   {psd.opportunities.map((opp, idx) => (
@@ -3052,7 +3058,7 @@ export default function Dashboard() {
                       >
                         <div className="rounded-xl border border-primary/10 bg-primary/3 p-4 flex items-center gap-3">
                           <Loader2 className="h-4 w-4 animate-spin text-primary shrink-0" />
-                          <p className="text-sm text-primary font-medium">Generating your personalized {CHANNELS.find(c => c.id === selectedChannel)?.label || selectedChannel} strategy. Completed channels appear progressively, usually within 1-2 minutes.</p>
+                          <p className="text-sm text-primary font-medium">Generating your personalized {CHANNELS.find(c => c.id === selectedChannel)?.label || selectedChannel} strategy. Your current report stays available until the new audit finishes.</p>
                         </div>
                         <div>
                           <div className="flex items-center gap-2 mb-4">
@@ -3140,7 +3146,7 @@ export default function Dashboard() {
                             {[
                               { label: "Channel fit", value: `${channelInsight.strategyMeta.priorityScore}/100` },
                               { label: "Confidence", value: `${channelInsight.strategyMeta.confidence}/100` },
-                              { label: "Quality check", value: `${channelInsight.strategyMeta.qualityScore}/100` },
+                              { label: "Completeness", value: `${channelInsight.strategyMeta.qualityScore}/100` },
                               {
                                 label: "Recommended monthly test",
                                 value: formatMonthlyBudget(
@@ -3179,7 +3185,7 @@ export default function Dashboard() {
                               {channelInsight.strategyMeta.evidence.map((item, index) => (
                                 <div key={`${item.claim}-${index}`} className="text-xs">
                                   <div className="flex items-center gap-2 mb-1">
-                                    <Badge variant="outline" className="text-[10px] px-1.5 py-0">{item.sourceType}</Badge>
+                                    <Badge variant="outline" className="text-[10px] px-1.5 py-0">{item.verified ? 'Website quote' : 'Planning assumption'}</Badge>
                                     <span className="text-muted-foreground">{item.confidence}% confidence</span>
                                   </div>
                                   <p className="text-slate-700 leading-relaxed">{item.claim}</p>
@@ -3311,7 +3317,7 @@ export default function Dashboard() {
                                 </div>
                                 <span className="text-xs font-semibold text-indigo-700 dark:text-indigo-300 uppercase tracking-wide">AEO / GEO</span>
                               </div>
-                              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">Demonstrate expertise across an <strong>entire topic ecosystem</strong> so AI encounters your brand across multiple sub-queries — not just the commercial one.</p>
+                              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">Demonstrate expertise across an <strong>entire topic ecosystem</strong> so AI encounters your brand across multiple sub-queries , not just the commercial one.</p>
                             </div>
                           </div>
 
@@ -3320,7 +3326,7 @@ export default function Dashboard() {
                               <Zap className="h-3.5 w-3.5" /> AI Topic Coverage Score
                             </h4>
                             <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed mb-3">
-                              Measures how consistently your brand appears across the full fan-out cluster — not just one commercial keyword.
+                              Measures how consistently your brand appears across the full fan-out cluster , not just one commercial keyword.
                             </p>
                             <div className="bg-indigo-50/80 dark:bg-indigo-950/40 rounded-lg p-3 font-mono text-xs text-center space-y-1">
                               <div className="text-indigo-700 dark:text-indigo-300 font-bold">Brand Mentions ÷ Total Fan-out Prompts × 100</div>

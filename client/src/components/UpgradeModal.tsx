@@ -117,7 +117,7 @@ export function UpgradeModal() {
       window.location.assign(url);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to start checkout";
-      // If checkout itself returns 401, the user isn't logged in — bounce to auth.
+      // If checkout itself returns 401, the user isn't logged in , bounce to auth.
       if (/401/.test(message)) {
         window.location.href = `/auth?redirect=${encodeURIComponent("/dashboard?upgrade=pending")}`;
         return;

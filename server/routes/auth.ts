@@ -6,6 +6,9 @@ import { storage } from "../storage";
 import { insertUserSchema, loginSchema } from "@shared/schema";
 import { sendNewUserNotification } from "../services/email";
 import { processCompanyAnalysis } from "./company";
+import { issueRecoveryToken, redeemRecoveryToken, validRecoveryInput } from "../services/passwordRecovery";
+import { recoveryEmailConfigured, sendPasswordRecoveryEmail } from "../services/email";
+import { getPublicAppUrl } from "../appUrl";
 import { pgRateLimitStore } from "./rateLimitStore";
 
 const router = Router();
@@ -80,7 +83,7 @@ router.post("/api/register", registerLimiter, async (req: Request, res: Response
           icpScore: null,
         });
 
-        processCompanyAnalysis(company.id, validatedData.companyUrl, validatedData.fullName, validatedData.email).catch(
+        await processCompanyAnalysis(company.id, validatedData.companyUrl, validatedData.fullName, validatedData.email).catch(
           err => console.error("Background analysis failed:", err)
         );
       }
@@ -118,7 +121,7 @@ router.post("/api/register", registerLimiter, async (req: Request, res: Response
       throw companyError;
     }
 
-    processCompanyAnalysis(company.id, validatedData.companyUrl, validatedData.fullName, validatedData.email).catch(
+    await processCompanyAnalysis(company.id, validatedData.companyUrl, validatedData.fullName, validatedData.email).catch(
       err => console.error("Background analysis failed:", err)
     );
 
@@ -173,6 +176,33 @@ router.post("/api/login", loginLimiter, async (req: Request, res: Response) => {
     console.error("Login error:", error);
     res.status(500).json({ error: "Login failed" });
   }
+});
+
+const recoveryLimiter = rateLimit({windowMs:15*60*1000,max:10,standardHeaders:true,legacyHeaders:false,
+  store:pgRateLimitStore('password-recovery',15*60*1000),message:{error:'Too many attempts. Please try again later.'}});
+router.post('/api/forgot-password', recoveryLimiter, async (req,res) => {
+  const email = typeof req.body.email === 'string' ? req.body.email.trim().toLowerCase() : '';
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length>254) return res.status(400).json({error:'Please enter a valid email address.'});
+  if (!recoveryEmailConfigured()) return res.status(503).json({error:'Password recovery is temporarily unavailable. Please try again later.'});
+  // Match observable response and timing for known and unknown addresses.
+  const started = Date.now();
+  try {
+    const user = await storage.getUserByEmail(email);
+    if (user) {
+      const token = await issueRecoveryToken(user.id);
+      if (token) await sendPasswordRecoveryEmail(email,`${getPublicAppUrl()}/reset-password#token=${token}`);
+    }
+  } catch { console.error('Password recovery delivery unavailable'); }
+  await new Promise(resolve => setTimeout(resolve, Math.max(0,1500-(Date.now()-started))));
+  res.json({message:'If an account uses that email, a reset link will arrive shortly. Check your spam folder too.'});
+});
+router.post('/api/reset-password', recoveryLimiter, async (req,res) => {
+  if (!validRecoveryInput(req.body.token,req.body.password)) return res.status(400).json({error:'Enter a valid reset link and a password of 8 to 72 bytes.'});
+  try {
+    if (!await redeemRecoveryToken(req.body.token,req.body.password)) return res.status(400).json({error:'This reset link has expired or was already used. Request a new one.'});
+    res.clearCookie('connect.sid');
+    res.json({message:'Password updated. Sign in with your new password.'});
+  } catch { res.status(503).json({error:'Password recovery is temporarily unavailable. Please try again later.'}); }
 });
 
 router.post("/api/logout", (req: Request, res: Response) => {

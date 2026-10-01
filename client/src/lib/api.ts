@@ -133,6 +133,8 @@ export interface ChannelInsight {
     isTopChannel: boolean;
     evidence: Array<{
       claim: string;
+      verified?: boolean;
+      quote?: string;
       source: string;
       sourceType: "website" | "benchmark" | "best-practice" | "assumption";
       confidence: number;
@@ -164,7 +166,7 @@ export interface ChannelInsight {
 }
 
 export interface DashboardData {
-  analysis?: { channelsPending: boolean; persistedChannelCount: number };
+  analysis?: { channelsPending: boolean; persistedChannelCount: number; status?: string | null; error?: string | null };
   user: {
     id: string;
     fullName: string;
