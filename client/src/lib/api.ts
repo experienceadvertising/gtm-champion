@@ -1,3 +1,4 @@
+import { acceptedRegistration, type AcceptedRegistration } from "./registration-result";
 import { queryClient } from "./queryClient";
 
 const API_BASE = "/api";
@@ -213,7 +214,7 @@ export function clearSession(): void {
   queryClient.clear();
 }
 
-export async function register(data: RegisterData): Promise<UserSession> {
+export async function register(data: RegisterData): Promise<AcceptedRegistration> {
   const response = await fetch(`${API_BASE}/register`, {
     method: "POST",
     headers: csrfHeaders(),
@@ -226,7 +227,7 @@ export async function register(data: RegisterData): Promise<UserSession> {
     throw new Error(error.error || "Registration failed");
   }
 
-  return response.json();
+  return acceptedRegistration(response.status, await response.json());
 }
 
 export async function login(data: LoginData): Promise<UserSession> {
