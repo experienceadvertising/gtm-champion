@@ -64,7 +64,7 @@ export default function AuthPage() {
     try {
       const result = await register(values);
       
-      trackEvent("sign_up", { method: "email" });
+      if (result.newlyCreated) trackEvent("sign_up", { method: "email" });
       
       // Save basic session info and redirect
       saveSession({
